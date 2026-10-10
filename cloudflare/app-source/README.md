@@ -67,4 +67,10 @@ SignOs 自身 OTA 渠道及共用签名/TLS 材料不属于本服务，不应删
 覆盖安装完成后应用正常打开，原有 `mac_pc` 连接仍可用。
 此前 Wi-Fi 环境访问曾超时，此结果只证明本次可用网络下通过；未进行大 IPA
 或真机跨网络续传测试。服务端 Range/If-Range 续传及完整 IPA SHA-256 已验证。
-超过 300 MiB 文件的 S3 上传路径尚未配置凭据或实测。
+同日已创建 `yao-app-source-remote-publisher` R2 Account API 令牌，仅授权
+`yao-app-source` 的对象读和写；已验证读取清单及临时对象上传、读取、删除。
+本机凭据保存在仓库外 `~/.config/yao-app-source/remote-publisher.env`（权限 0600），
+包含 `AWS_ACCESS_KEY_ID` 和 `AWS_SECRET_ACCESS_KEY` 的 export 声明。
+在受信任发布机安全放置该文件后，可先 `source` 此文件，再执行
+`sync --transport s3`，无需 Wrangler 登录。不要提交或打印密钥。
+大 IPA 与 S3 multipart 上传尚未实测。
