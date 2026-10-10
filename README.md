@@ -120,6 +120,12 @@ on the phone's `127.0.0.1`; `https://api.palera.in/genPlist` supplies only the H
 manifest. Signing stays on the phone, and the signed IPA is not uploaded to that
 service. Safari and iOS still require installation confirmation.
 
+Starting with 1.0.3 (build 4), **Semi Local** and **Only use localhost address**
+are the defaults whenever those preferences have not been saved. Installation Type
+continues to default to **Server**. Settings, manual installation and background
+installation share the same fallback values in `InstallationDefaults`; explicit
+existing choices (including Fully Local or a disabled localhost switch) are preserved.
+
 On 2026-10-10, SignOs 1.0.2 (3) on iPhone 17 Pro / iOS 27.0 completed manual
 MuseumMuse installation and the Get → download → automatic signing → installation
 prompt flow for a 183 MB Bilibili IPA without the local CA. Both apps opened after
