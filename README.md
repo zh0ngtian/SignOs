@@ -78,9 +78,12 @@ contributors for their work, this wouldn't exist without them.
 ## Install
 
 Download `SignOs.ipa` from [Releases](../../releases/latest) and sign it with SideStore,
-Sideloadly, AltStore, TrollStore or SignOs itself. Every push to main builds a fresh IPA
-automatically, and tagging a version publishes a release. The app can also update itself
-from its own repository right on your device.
+Sideloadly, AltStore, TrollStore or SignOs itself. The GitHub workflow is configured to
+build on pushes to `main` and publish releases for version tags, but currently does not
+provision the private TLS files required by `make iphoneos`. A configured workflow is
+not proof of a successful build or release; use the local OTA procedure below for this
+checkout. `app-repo.json` still describes the upstream public 1.0.0 channel, separately
+from this machine's private OTA releases.
 
 ## Building
 
@@ -89,6 +92,8 @@ make iphoneos
 ```
 
 That produces packages/SignOs.ipa. You need Xcode 26 or newer on macOS.
+Initialize both Git submodules with `git submodule update --init --recursive` first.
+Project workflow and post-test delivery requirements are in [AGENTS.md](AGENTS.md).
 
 Fully Local installation needs a TLS certificate trusted by the target device.
 `make` reads `server.crt` (certificate), `server.pem` (leaf private key), and
@@ -98,16 +103,14 @@ with `make iphoneos TLS_DIR="/private/path/to/tls"` on another machine. Keep the
 CA private key outside the app and repository. SignOs also supports these three
 files in its Documents directory, which takes precedence over bundled files.
 
-On 2026-10-10, an iPhone 17 Pro running iOS 27.0 (24A437) reproduced a manifest
-timeout because the old build used `*.backloop.dev` as a literal hostname.
-The upstream public certificate service has also [been discontinued](https://backloop.dev/).
-This machine now uses `signos.backloop.dev` (public DNS resolves to loopback)
-with a leaf certificate issued by the existing device-trusted local CA. The
-device rejected a literal `127.0.0.1` manifest URL as non-external, so a concrete
-hostname is required for this tested configuration. System installation logs
-confirmed a successful Codex Mobile 0.2.140 (2140) OTA upgrade through SignOs
-1.0.1; launching it retained the existing `mac_pc` connection. These TLS overrides
-are already in the connected phone's SignOs Documents directory.
+The tested local configuration uses `signos.backloop.dev` with a leaf certificate
+issued by the device-trusted local CA. Use a concrete hostname: the device rejected
+a literal `127.0.0.1` manifest URL, and `*.backloop.dev` must not be used as a hostname.
+The 2026-10-10 device verification of SignOs 1.0.1 is retained locally in
+`packages/SignOs-1.0.1-device-check.txt`; the phone's Documents TLS overrides take
+precedence over a newly installed package. The Settings **Update SSL Certificates**
+button still targets the legacy `https://backloop.dev/pack.json` endpoint and is not
+the provisioning path for this local CA setup.
 
 ### Local Ad Hoc OTA release
 
@@ -125,6 +128,13 @@ Use the skill's `release_ipa.py` with the private configuration, the generated I
 and its actual version/build number; run `--plan` before publishing. The publisher
 verifies signing, stages versioned resources, checks HTTPS downloads, and then
 switches the fixed `current` entry.
+
+The fixed release metadata endpoint is
+`https://192.168.123.79:8769/channels/signos/current/latest-ios.json`; its sibling
+`manifest.plist` identifies the active IPA. On 2026-10-10, both launch agents were
+running, HTTPS verification with the configured CA succeeded, and the OTA manifest
+pointed to SignOs 1.0.1 (build 2). This is a dated server-side snapshot, not a new
+device-install acceptance result. Recheck the live endpoints after every deployment.
 
 The installed 1.0.0 release is this project's upgrade baseline. The private
 configuration now uses `compatibilityIpa` plus `compatibilityIpaSha256`, with

@@ -1,6 +1,6 @@
 # Contributing
 
-Feather is a sideloading app meant to be used on stock versions, to keep compatibility we have to utililize stock features to keep it working. As such, we have specific contribution rules in place to maintain this and Feathers integrity.
+SignOs is based on Feather and targets stock iOS. Contributions must preserve that compatibility. Project workflow and delivery requirements live in [AGENTS.md](AGENTS.md).
 
 Any contributions should follow the [Code of Conduct](./CODE_OF_CONDUCT.md).
 
@@ -9,7 +9,7 @@ Any contributions should follow the [Code of Conduct](./CODE_OF_CONDUCT.md).
 - **No usage of any exploits of any kind**.
 - **No contributions related to retrieving any signing certificates owned by companies**.
 - **Modifying any hardcoded links should be discussed before changing**.
-- **If you're planning on making a large contribution, please [make an issue](https://github.com/khcrysalis/Feather) beforehand**.
+- **If you're planning on making a large contribution, discuss it in this repository's issue tracker beforehand**.
 - **Your contributions should be licensed appropriately**. 
   - Feather: GPLv3
   - AltSourceKit: MIT
@@ -19,23 +19,23 @@ Any contributions should follow the [Code of Conduct](./CODE_OF_CONDUCT.md).
   - This includes localizations
 - **Code cleaning contributions are okay**.
 
-## Contributing to Feather
+## Contributing to SignOs
 
 #### Compiling requirements
 
-- Xcode 16.0
-- Swift 6.0
-- iOS 16.0
+- Xcode 26 or newer on macOS (the project uses Swift language mode 5)
+- iOS deployment target: 16.0
+- Private TLS files configured as described in [README.md](README.md#building)
 
 1. Clone repository
     ```sh
-    git clone https://github.com/khcrysalis/Feather --recursive
+    git clone --recursive https://github.com/zh0ngtian/SignOs.git
     ```
-    - `Zsign` is a submodule, recursive is required.
+    - `Zsign` and `IDeviceKitten` are submodules; recursive checkout is required.
 
 2. Opening with Xcode
     ```sh
-    cd Feather && open Feather.xcworkspace
+    cd SignOs && open Feather.xcworkspace
     ```
 
 #### Localizations
@@ -56,7 +56,7 @@ Any contributions should follow the [Code of Conduct](./CODE_OF_CONDUCT.md).
 
 When contributing to Zsign, head over to [khcrysalis/Zsign-Package](https://github.com/khcrysalis/Zsign-Package/tree/package) and make your contributions.
 
-Any contributions to here will be immediately updated to here, to keep things consistent.
+Submodule changes require an explicit commit-reference update in this repository; they are not synchronized automatically.
 
 ## Contributing to the wiki
 - If you want to add a page or suggest edits, make an issue with your proposed changes.
