@@ -4,6 +4,22 @@
 `/appstore` 是同一 JSON 的兼容入口。R2 bucket 为 `yao-app-source`，保持私有；
 Worker 只开放清单和 `files/*.ipa` / `files/*.png` 的 GET、HEAD。
 
+## 软件源图标
+
+源图标使用 iOS 27 App Store 图标，仓库副本为
+[`assets/app-store-ios27.png`](assets/app-store-ios27.png)（512 × 512）。
+素材来自 [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:App_Store_Logo_(iOS_27).webp)，
+页面署名 Apple Inc.、标注 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)；
+仅将原始 WebP 转为 PNG。
+
+清单顶层 `iconURL` 和 `sourceicon` 均指向
+`https://yao-app-source.305301890.workers.dev/files/84960d13a202a74b211d.png`，
+PNG SHA-256 为 `84960d13a202a74b211dd5a4ef7116cbf761b15d177bdfc10de7239ef5822f01`。
+应用条目各自的图标保持独立，后续 `publish` 会保留源图标。
+替换源图标时，先核对本机与公网清单一致，再上传并核验新摘要命名的 PNG，
+最后仅更新上述两个顶层字段并核验 `/source.json` 和 `/appstore`。
+此操作无需重新部署 Worker 或发布客户端。
+
 ## 部署
 
 前提：Cloudflare 账户已开通 R2，并完成 `wrangler login`。
