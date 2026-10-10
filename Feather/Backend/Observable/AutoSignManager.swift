@@ -12,6 +12,8 @@ import Foundation
 import CoreData
 import UIKit
 import IDeviceSwift
+import SafariServices
+import NimbleExtensions
 
 @MainActor
 final class AutoSignManager: ObservableObject {
@@ -38,6 +40,8 @@ final class AutoSignManager: ObservableObject {
 	@Published private(set) var currentJob: Job?
 	@Published private(set) var completedCount = 0
 	@Published private(set) var lastErrorMessage: String?
+	@Published private(set) var confirmedInstallUUIDs: Set<String> = []
+	@Published private(set) var installErrors: [String: String] = [:]
 
 	private var _isRunning = false
 
@@ -260,6 +264,7 @@ final class AutoSignManager: ObservableObject {
 	/// system prompt immediately (app in foreground) or present a
 	/// "tap to install" notification that completes on open.
 	private func _attemptSilentInstall(_ app: Signed) async {
+		if let identifier = app.identifier { installErrors.removeValue(forKey: identifier) }
 		let method = UserDefaults.standard.integer(forKey: "Feather.installationMethod")
 		guard method == 0 || method == 1 else { return }
 
@@ -288,6 +293,7 @@ final class AutoSignManager: ObservableObject {
 
 				let proxy = InstallationProxy(viewModel: viewModel)
 				try await proxy.install(at: packageUrl, suspend: false)
+				if let uuid = app.uuid { confirmedInstallUUIDs.insert(uuid) }
 
 				ActivityLog.shared.log(.installed, app: app.name ?? "App")
 
@@ -301,6 +307,7 @@ final class AutoSignManager: ObservableObject {
 			}
 		} catch {
 			lastErrorMessage = error.localizedDescription
+			if let identifier = app.identifier { installErrors[identifier] = error.localizedDescription }
 			ActivityLog.shared.log(.failed, app: app.name ?? "App", detail: error.localizedDescription)
 			AutoUpdateManager.shared.notify(
 				title: "Couldn't Install \(app.name ?? "App")",
@@ -321,9 +328,20 @@ final class AutoSignManager: ObservableObject {
 		Self._retainInstaller(installer)
 
 		if UIApplication.shared.applicationState == .active {
-			if let url = URL(string: installer.iTunesLink) {
-				await UIApplication.shared.open(url)
-				ActivityLog.shared.log(.installed, app: app.name ?? "App", detail: "install prompt shown")
+			if installer.getServerMethod() == 1 {
+				guard let presenter = UIApplication.topViewController(),
+					!(presenter is SFSafariViewController), !presenter.isBeingDismissed else {
+					throw NSError(domain: "SignOs.Install", code: 1, userInfo: [
+						NSLocalizedDescriptionKey: "Couldn't show the installation page. Tap Install to try again."
+					])
+				}
+				presenter.present(SFSafariViewController(url: installer.pageEndpoint), animated: true)
+			} else {
+				guard let url = URL(string: installer.iTunesLink), await UIApplication.shared.open(url) else {
+					throw NSError(domain: "SignOs.Install", code: 2, userInfo: [
+						NSLocalizedDescriptionKey: "iOS did not accept the installation request. Check Settings > Installation, then tap Install to try again."
+					])
+				}
 			}
 		} else if let uuid = app.uuid {
 			AutoUpdateManager.shared.notify(

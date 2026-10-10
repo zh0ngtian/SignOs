@@ -90,6 +90,48 @@ make iphoneos
 
 That produces packages/SignOs.ipa. You need Xcode 26 or newer on macOS.
 
+### Local Ad Hoc OTA release
+
+`make iphoneos` produces a device build with a temporary ad-hoc code signature;
+it still needs distribution signing before OTA installation. The local release
+configuration lives outside this repository at
+`~/Library/Application Support/IOSAdHocOTA/signos/release.local.json` and references
+the shared signing materials without copying them into the project.
+
+`scripts/serve_ios_ota.py` serves the isolated SignOs channel using the installed
+`ios-adhoc-ota` skill's allowlisted handler and the existing LAN TLS certificate.
+The local launch agent is `local.ios-adhoc-ota.signos`.
+
+Use the skill's `release_ipa.py` with the private configuration, the generated IPA,
+and its actual version/build number; run `--plan` before publishing. The publisher
+verifies signing, stages versioned resources, checks HTTPS downloads, and then
+switches the fixed `current` entry.
+
+The installed 1.0.0 release is this project's upgrade baseline. The private
+configuration now uses `compatibilityIpa` plus `compatibilityIpaSha256`, with
+`firstInstall` removed. Preserve that signed IPA and do not reuse another app's
+installation baseline.
+
+OneView keeps a signed archive in the Install state until an installation is
+confirmed. Server-based OTA requests cannot confirm completion and keep the
+retry action available. The state regression checks can be run on macOS with:
+
+```sh
+xcrun swiftc Feather/Utilities/OneViewPhase.swift Tests/OneViewPhaseRegression.swift -o /tmp/signos-phase-regression
+/tmp/signos-phase-regression
+rm /tmp/signos-phase-regression
+```
+
+### Yao App Source（本机软件源）
+
+- 固定源地址：`https://192.168.123.79:8770/source.json`；`/appstore` 为同一清单的兼容入口。
+- 使用 SignOs / AltStore 格式，IPA 原样保存为版本、构建号和摘要组成的独立文件；不重新签名。
+- 首个应用为 Codex Mobile `0.2.140 (2140)`，来自对话 `01a12463-0613-7803-93db-066e26ed467d`。
+- 运行脚本：`scripts/app_source.py`；后台服务：`local.yao.app-source`。
+- 私有配置：`~/Library/Application Support/YaoAppSource/server.local.json`；公开清单和 IPA 位于同目录的 `public/`。
+- 复用本机现有局域网 TLS 证书。手机须在同一局域网，并已信任该 CA；Mac 需保持运行。
+- 后续收录使用 `app_source.py --config <配置> publish --ipa <IPA> --sha256 <完整摘要> --icon <PNG> --developer <开发者> --description <介绍> --notes <更新说明>`。清单原子更新并保留其他应用及历史版本；目前不自动跟踪上游更新。
+
 ## Contact
 
 Questions, feature ideas, anything else: **[@ihateios on Telegram](https://t.me/ihateios)**

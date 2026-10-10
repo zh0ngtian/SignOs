@@ -13,14 +13,7 @@ import AltSourceKit
 import NimbleViews
 
 // MARK: - Phase
-enum OneViewPhase: Equatable {
-	case idle
-	case downloading
-	case preparing
-	case needsSign
-	case ready
-	case installed
-
+extension OneViewPhase {
 	var buttonTitle: String {
 		switch self {
 		case .idle: return "Get"
@@ -42,31 +35,22 @@ struct OneViewTracker {
 
 	@MainActor
 	func phase(downloadManager: DownloadManager, autoSignManager: AutoSignManager, signed: [Signed], imported: [Imported]) -> OneViewPhase {
-		if downloadManager.getDownload(by: app.currentUniqueId) != nil {
-			return .downloading
-		}
-
 		let queueJobs = (autoSignManager.currentJob.map { [$0] } ?? []) + autoSignManager.queue
-		if queueJobs.contains(where: { $0.appIdentifier == app.id }) {
-			return .preparing
-		}
 
 		let identifier = app.id
 		let newestSigned = signed
-			.filter { $0.identifier == identifier && ($0.date ?? .distantPast) >= startedAt }
+			.filter { $0.identifier == identifier && (($0.date ?? .distantPast) >= startedAt || $0.version == app.currentVersion) }
 			.max { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }
-		if newestSigned != nil {
-			return .installed
-		}
-
 		let newestImported = imported
-			.filter { $0.identifier == identifier && ($0.date ?? .distantPast) >= startedAt }
+			.filter { $0.identifier == identifier && (($0.date ?? .distantPast) >= startedAt || $0.version == app.currentVersion) }
 			.max { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }
-		if newestImported != nil, AutoSignManager.shared.isAutoSignEnabled == false {
-			return .needsSign
-		}
-
-		return .idle
+		return .resolve(
+			downloading: downloadManager.getDownload(by: app.currentUniqueId) != nil,
+			queued: queueJobs.contains { $0.appIdentifier == app.id },
+			signed: newestSigned != nil,
+			installed: newestSigned?.uuid.map { autoSignManager.confirmedInstallUUIDs.contains($0) } ?? false,
+			imported: newestImported != nil
+		)
 	}
 }
 
@@ -85,6 +69,7 @@ struct WSOneViewGetButton: View {
 	@ObservedObject private var downloadManager = DownloadManager.shared
 	@ObservedObject private var autoSignManager = AutoSignManager.shared
 	@State private var _tappedGet = false
+	@State private var _installError: String?
 	@FetchRequest(
 		entity: Signed.entity(),
 		sortDescriptors: [NSSortDescriptor(keyPath: \Signed.date, ascending: false)],
@@ -217,6 +202,17 @@ struct WSOneViewGetButton: View {
 			}
 		}
 		.animation(.easeInOut(duration: 0.3), value: phase)
+		.onChange(of: autoSignManager.installErrors[app.id ?? ""]) { message in
+			_installError = message
+		}
+		.alert(.localized("Install"), isPresented: Binding(
+			get: { _installError != nil },
+			set: { if !$0 { _installError = nil } }
+		)) {
+			Button(.localized("OK"), role: .cancel) { _installError = nil }
+		} message: {
+			Text(_installError ?? "")
+		}
 		.sheet(isPresented: $_presentingInstall) {
 			if let installed = _newestSigned() {
 				InstallPreviewView(app: installed)
@@ -232,7 +228,7 @@ struct WSOneViewGetButton: View {
 			_setupObserver()
 		}
 		.onChange(of: phase) { newPhase in
-			if newPhase == .installed { _tappedGet = false }
+			if newPhase == .installed || newPhase == .ready || newPhase == .needsSign { _tappedGet = false }
 		}
 		.onDisappear { _cancellable?.cancel() }
 		.onChange(of: downloadManager.downloads.description) { _ in
@@ -262,13 +258,13 @@ struct WSOneViewGetButton: View {
 
 	private func _newestSigned() -> Signed? {
 		_signedApps
-			.filter { $0.identifier == app.id && ($0.date ?? .distantPast) >= _startedAt }
+			.filter { $0.identifier == app.id && (($0.date ?? .distantPast) >= _startedAt || $0.version == app.currentVersion) }
 			.max { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }
 	}
 
 	private func _newestImported() -> Imported? {
 		_importedApps
-			.filter { $0.identifier == app.id && ($0.date ?? .distantPast) >= _startedAt }
+			.filter { $0.identifier == app.id && (($0.date ?? .distantPast) >= _startedAt || $0.version == app.currentVersion) }
 			.max { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }
 	}
 }
@@ -298,6 +294,7 @@ struct OneViewInstallView: View {
 	@State private var _presentingInstall = false
 	@State private var _signingApp: Imported?
 	@State private var _tappedGet = false
+	@State private var _installError: String?
 
 	private var tracker: OneViewTracker {
 		OneViewTracker(sourceURL: sourceURL, source: source, app: app, startedAt: _startedAt)
@@ -309,13 +306,13 @@ struct OneViewInstallView: View {
 
 	private var _newestInstalled: Signed? {
 		_signedApps
-			.filter { $0.identifier == app.id && ($0.date ?? .distantPast) >= _startedAt }
+			.filter { $0.identifier == app.id && (($0.date ?? .distantPast) >= _startedAt || $0.version == app.currentVersion) }
 			.max { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }
 	}
 
 	private var _newestImported: Imported? {
 		_importedApps
-			.filter { $0.identifier == app.id && ($0.date ?? .distantPast) >= _startedAt }
+			.filter { $0.identifier == app.id && (($0.date ?? .distantPast) >= _startedAt || $0.version == app.currentVersion) }
 			.max { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }
 	}
 
@@ -391,6 +388,17 @@ struct OneViewInstallView: View {
 			.toolbar {
 				NBToolbarButton(role: .dismiss)
 			}
+			.onChange(of: autoSignManager.installErrors[app.id ?? ""]) { message in
+				_installError = message
+			}
+			.alert(.localized("Install"), isPresented: Binding(
+				get: { _installError != nil },
+				set: { if !$0 { _installError = nil } }
+			)) {
+				Button(.localized("OK"), role: .cancel) { _installError = nil }
+			} message: {
+				Text(_installError ?? "")
+			}
 			.sheet(isPresented: $_presentingInstall) {
 				if let installed = _newestInstalled {
 					InstallPreviewView(app: installed)
@@ -401,7 +409,7 @@ struct OneViewInstallView: View {
 			}
 			.onAppear { _startedAt = Date() }
 			.onChange(of: _phase) { newPhase in
-				if newPhase == .installed { _tappedGet = false }
+				if newPhase == .installed || newPhase == .ready || newPhase == .needsSign { _tappedGet = false }
 			}
 		}
 	}
