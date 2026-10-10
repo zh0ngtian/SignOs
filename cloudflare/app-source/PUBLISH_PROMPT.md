@@ -1,20 +1,24 @@
-# 软件源发布入口已迁移
+# 将普通 IPA 发布到 Yao App Source
 
-原 Cloudflare/R2 发布流程于 2026-10-11 停用。不要再向旧 Worker 或 R2 上传新版本，
-也不要重新开启 workers.dev 或云端 Cron。原历史文件和凭证保留。
+软件源已迁移到家中服务器：`https://${APP_SOURCE_DOMAIN}:15006/source.json`。
+Cloudflare Worker、预览和 Cron 继续停用；旧 R2 文件和凭证保留，不恢复旧云端发布。
 
-当前入口：`https://${APP_SOURCE_DOMAIN}:15006/source.json`。
-
-发布必须在家中服务器的最新 SignOs 仓库中执行，配置为
-`hosting/home-source/source.config.json`。其他机器先把 IPA、图标和发布凭证复制到
-家中服务器，再运行发布；不要覆盖服务器现有清单和版本历史。
-
-SignOs 必须先完成本机 OTA，之后使用同一正式签名 IPA 和对应凭证：
+使用本目录的 `upload_ipa.py` 和管理员提供的共享 token 文件，先执行 `--plan`，
+核对 IPA 路径、大小和 SHA-256，再上传原始 IPA。不要重新签名或手写覆盖源清单。
 
 ```sh
-python3 scripts/publish_signos.py --ipa /private/path/signed.ipa --release-json /private/path/release.json --plan
-python3 scripts/publish_signos.py --ipa /private/path/signed.ipa --release-json /private/path/release.json
+python3 cloudflare/app-source/upload_ipa.py --ipa /path/app.ipa --plan
+python3 cloudflare/app-source/upload_ipa.py \
+  --ipa /path/app.ipa --token-file /private/path/upload-token \
+  --developer 'Your name' --description '应用说明' --notes '更新说明'
 ```
 
-通用应用、失败重试、HTTPS 校验和证书续期见
-[家中软件源说明](../../hosting/home-source/README.md)。
+成功返回 201；完全相同的已发布版本返回 200。核对响应里的大小、完整 SHA-256、
+版本、构建号和家中 HTTPS 下载地址；服务器已在切换清单前完成 HTTPS 资源校验。
+同版本不同内容返回 409，应递增构建号。502/503 可用同一包稍后重试。
+不要在输出、URL、仓库或截图中暴露 token。
+
+如果发布的是 `com.signos.app`，共享上传接口不接受此身份。必须先完成独立的
+本机 OTA，再在家中服务器运行 `scripts/publish_signos.py --plan` 和正式发布命令，
+使用同一正式签名 IPA 及对应的 OTA 凭证，核对两个渠道。详情见
+[家中软件源说明](../../hosting/home-source/README.md) 和 [上传协议](README.md)。

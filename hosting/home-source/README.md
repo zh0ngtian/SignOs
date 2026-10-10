@@ -10,7 +10,8 @@ Cloudflare Worker 的 workers.dev、preview URL 和 Cron 已停用；R2 私有�
   Padavan 虚拟服务器名为 `signos-source`，NVRAM 持久化，NAT 规则在兜底 DMZ 前。
 - Docker 容器 `signos-home-source` 使用 Nginx，`unless-stopped` 自动重启。
   依赖现有 Colima/Docker 和用户登录会话；本机须在线且不休眠。
-- 只开放 GET/HEAD `/source.json`、`/appstore`、`/files/<name>.ipa|png`。
+- 下载开放 GET/HEAD `/source.json`、`/appstore`、`/files/<name>.ipa|png`，
+  上传开放带 token 的 POST `/api/upload`。
   其他路径 404，无目录索引。清单不缓存；带版本/摘要的资源长期缓存，支持
   HEAD、Range、If-Range、ETag。
 - `packages/home-source/staging/` 是发布准备目录，`packages/home-source/public/`
@@ -41,13 +42,76 @@ python3 scripts/publish_signos.py \
 python3 scripts/app_source.py --config hosting/home-source/source.config.json sync
 ```
 
-其他机器先复制新包、图标和凭证到家中服务器，然后在服务器运行上述命令。
+其他机器发布普通应用时使用下述 HTTPS 上传接口；SignOs 的正式包和 OTA 凭证
+仍交给家中服务器的 `publish_signos.py`。
 不要覆盖服务器现有清单或已有版本目录。配置的相对路径按仓库根目录解释。
 原 `cloudflare/app-source/source.config.json` 已标记 disabled，发布器拒绝向它发布。
 
+## IPA 上传接口
+
+`POST https://${APP_SOURCE_DOMAIN}:15006/api/upload`，单个共享 token 通过
+`Authorization: Bearer <token>` 校验。请求体是 IPA 原始字节，**不是 multipart**；
+必须有 `Content-Length`，类型为 `application/octet-stream`，单包上限 2 GiB。
+可选 `X-IPA-SHA256` 校验上传内容；可选查询参数 `developer`、`description`、
+`notes` 各最多 2000 字符，使用 UTF-8 URL 编码；编码后的查询参数合计不超过 8 KiB。
+
+任何持有 token 的人都可以上传普通应用并更新其后续版本。服务器读取 IPA 的
+bundle ID、名称、版本、构建号和最低系统版本；保留包的原始字节，不重新签名。
+优先读取包内普通 PNG 图标；只有编译资产或 Apple 优化 PNG 时使用软件源默认图标。
+已有应用未填写开发者/描述时沿用旧值，新应用默认开发者为 Community。
+接口不承诺上传包可安装；安装仍取决于包的签名、设备和分发条件。
+
+单 token 保存在服务器私有 `~/.config/yao-app-source/upload-token`（0600）；不进入
+仓库、清单、URL 或日志。管理员将这个 token 私下交给需要上传的人，他们保存到
+自己的私有文件。可直接使用跨机器上传器：
+
+```sh
+python3 cloudflare/app-source/upload_ipa.py --ipa /path/app.ipa --plan
+python3 cloudflare/app-source/upload_ipa.py \
+  --ipa /path/app.ipa --token-file /private/path/upload-token \
+  --developer 'Your name' --description '应用说明' --notes '更新说明'
+```
+
+也可使用 `APP_SOURCE_UPLOAD_TOKEN` 环境变量代替 `--token-file`。
+上传器用分块读取控制内存，校验 HTTPS 证书，自动发送本地大小和完整 SHA-256，
+核对返回的发布凭证。协议和 curl 示例见
+[上传指南](../../cloudflare/app-source/README.md)。
+
+新版本返回 **201**，内容包括 `sourceURL`、`bundleIdentifier`、`version`、
+`buildVersion`、`downloadURL`、`size`、`sha256` 和 `duplicate: false`。
+同 bundle/version/build、同摘要返回 **200**、`duplicate: true`，不改元数据或当前版本；
+同版本不同内容返回 **409**，请递增构建号再上传。未授权 401；包或元数据非法 400；
+摘要不匹配 422；太大 413；请求类型不符 415；并发已满 503；空间/预算不足 507；
+发布验证失败 502。失败后旧清单保持可用，客户端可用同一 IPA 重试。
+
+上传同时最多接收两个包，发布阶段按同一文件锁串行执行。既有 CLI 准备但尚未发布时
+返回 409，须先完成或恢复该次本机发布。上传临时文件在请求完成或失败时清理，
+与签名历史和发布凭证分开保存。
+
+`com.signos.app` 返回 403：SignOs 必须保留 OTA 与软件源同包、匹配凭证的正式发布
+流程，使用 `publish_signos.py`。上传 token 不代替 OTA 发布凭证。
+
+上传后端是 `local.yao-app-source.upload` LaunchAgent，监听 `127.0.0.1:15007`。
+Nginx 经 Colima 的 `host.docker.internal` 转发到该本机回环服务，外网仍只有 15006。
+后端登录时启动，退出后由 launchd 重启，与现有 Docker 服务一样依赖用户登录会话。
+
+```sh
+# 首次自动生成 token；重复安装沿用原 token，不打印内容
+python3 scripts/install_home_upload.py --plan
+python3 scripts/install_home_upload.py
+launchctl print "gui/$(id -u)/local.yao-app-source.upload"
+```
+
+修改 token 文件后重启后端即生效：
+
+```sh
+launchctl kickstart -k "gui/$(id -u)/local.yao-app-source.upload"
+```
+
 ### 原子切换与失败重试
 
-发布持有本机文件锁，核对准备阶段的清单基线，拒绝旧工作副本覆盖新版本。
+上传与正式 SignOs 发布将准备和公开切换放在同一文件锁下，失败恢复准备清单。
+发布核对准备阶段的清单基线，拒绝旧工作副本覆盖新版本。
 清单每个应用最多保留 10 个版本，当前版本始终保留。所有本地 IPA 核对大小和完整
 SHA-256；新增资源先复制，再从 HTTPS 下载验证，已有可信凭证且内容未变的资源
 做 HEAD 大小检查，最后原子切换清单并检查两个入口。失败保留或回滚旧清单。
@@ -72,10 +136,14 @@ python3 scripts/home_source.py --verify-all
 `HOME_SOURCE_ROOT` 和独立 ACME 根目录 `HOME_SOURCE_CERTIFICATES`。
 
 ```sh
+# 先安装/启动上传后端，再检查和部署 Nginx
+python3 scripts/install_home_upload.py
 docker-compose --env-file "$HOME/.config/yao-app-source/home-source.env" \
   -f hosting/home-source/compose.yaml run --rm --no-deps source nginx -t
 docker-compose --env-file "$HOME/.config/yao-app-source/home-source.env" \
   -f hosting/home-source/compose.yaml up -d
+docker-compose --env-file "$HOME/.config/yao-app-source/home-source.env" \
+  -f hosting/home-source/compose.yaml exec source nginx -s reload
 ```
 
 ## 证书自动续期

@@ -2,7 +2,7 @@
 """Prepare and publish unchanged IPAs to the configured app source backend."""
 import argparse
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from datetime import datetime, timezone
 import fcntl
 import hashlib
@@ -149,7 +149,16 @@ def atomic_copy(source, target):
     temporary.replace(target)
 
 
-def publish(args, config):
+@contextmanager
+def source_lock(config):
+    root = Path(config['root']).expanduser().resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    with (root / '.publish.lock').open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield
+
+
+def publish(args, config, *, locked=False, quiet=False):
     if config.get('disabled'):
         raise ValueError('This source is retired; use hosting/home-source/source.config.json')
     ipa = Path(args.ipa).expanduser().resolve(strict=True)
@@ -170,8 +179,7 @@ def publish(args, config):
     base = config['baseUrl'].rstrip('/')
     if urlsplit(base).scheme != 'https':
         raise ValueError('An HTTPS base URL is required')
-    with (root / '.publish.lock').open('a') as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+    with nullcontext() if locked else source_lock(config):
         files = root / 'files'
         files.mkdir(exist_ok=True)
         filename = re.sub(r'[^A-Za-z0-9._-]', '_', f'{bundle}-{version}-{build}-{digest[:16]}.ipa')
@@ -218,7 +226,43 @@ def publish(args, config):
         source['sourceicon'] = source['iconURL']
         source['message'] = source['description']
         atomic_write(path, (json.dumps(source, ensure_ascii=False, indent=2) + '\n').encode())
-    print(json.dumps({'sourceURL': source['sourceURL'], 'app': app}, ensure_ascii=False, indent=2))
+    result = {'sourceURL': source['sourceURL'], 'app': app}
+    if not quiet:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    return result
+
+
+def publish_home(args, config, *, locked=False, quiet=False):
+    """Stage and expose one release under the same lock, restoring staging on failure."""
+    if config.get('disabled') or config.get('backend') != 'home':
+        raise ValueError('An active home source is required')
+    import home_source
+    with nullcontext() if locked else source_lock(config):
+        root = Path(config['root']).expanduser().resolve()
+        manifest, baseline = root / 'source.json', root / '.publish-base.sha256'
+        previous = {p: p.read_bytes() if p.exists() else None for p in (manifest, baseline)}
+        public = Path(config['publicRoot']).expanduser().resolve() / 'source.json'
+        live_before = public.read_bytes() if public.exists() else None
+        try:
+            result = publish(args, config, locked=True, quiet=quiet)
+            home_source.mirror({'mode': 'primary', 'sourceRoot': str(root),
+                               'sourceBaseUrl': config['baseUrl'], 'root': str(public.parent),
+                               'baseUrl': config['baseUrl']},
+                              verify_all=getattr(args, 'verify_all', False))
+            return result
+        except Exception:
+            live_after = public.read_bytes() if public.exists() else None
+            if live_after is not None and live_after != live_before:
+                # Public verification completed but a later staging write failed.
+                home_source.atomic_write(manifest, live_after)
+                baseline.unlink(missing_ok=True)
+            else:
+                for path, raw in previous.items():
+                    if raw is None:
+                        path.unlink(missing_ok=True)
+                    else:
+                        home_source.atomic_write(path, raw)
+            raise
 
 
 def migrate(args, config):

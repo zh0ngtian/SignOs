@@ -67,8 +67,12 @@ def main():
         'sourceURL': config['baseUrl'].rstrip('/') + '/source.json', 'transport': args.transport,
     }, ensure_ascii=False, indent=2))
     if not args.plan:
-        app_source.publish(publish_args, config)
-        app_source.sync(args, config)
+        if config.get('backend') == 'home':
+            publish_args.verify_all = args.verify_all
+            app_source.publish_home(publish_args, config)
+        else:
+            app_source.publish(publish_args, config)
+            app_source.sync(args, config)
 
 
 if __name__ == '__main__':
