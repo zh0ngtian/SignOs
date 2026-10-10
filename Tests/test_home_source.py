@@ -5,8 +5,11 @@ import io
 import json
 from pathlib import Path
 import tempfile
+import sys
 import unittest
 from unittest.mock import patch
+
+sys.path.insert(0, str(Path(__file__).parents[1] / 'scripts'))
 
 spec = importlib.util.spec_from_file_location('home_source', Path(__file__).parents[1] / 'scripts/home_source.py')
 home = importlib.util.module_from_spec(spec)
@@ -74,6 +77,39 @@ class HomeSourceTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'manifest mismatch'):
                 home.mirror(self.config)
         self.assertEqual((root / 'source.json').read_bytes(), b'previous manifest')
+
+    def test_primary_publish_never_reads_cloud_and_clears_baseline(self):
+        self.config['mode'] = 'primary'
+        root = Path(self.config['root'])
+        root.mkdir(parents=True)
+        (root / 'source.json').write_bytes(self.raw)
+        marker = Path(self.config['sourceRoot']) / '.publish-base.sha256'
+        marker.write_text(hashlib.sha256(self.raw).hexdigest())
+        _, encoded, _ = home.prepare(self.config)
+        with patch.object(home, 'urlopen', side_effect=[io.BytesIO(encoded), io.BytesIO(encoded)]) as request, \
+             patch.object(home, 'verify_file'):
+            home.mirror(self.config)
+        self.assertTrue(all(c.args[0].full_url.startswith(self.config['baseUrl']) for c in request.call_args_list))
+        self.assertEqual((root / 'source.json').read_bytes(), encoded)
+        self.assertFalse(marker.exists())
+
+    def test_primary_rejects_stale_staging_before_writing(self):
+        self.config['mode'] = 'primary'
+        root = Path(self.config['root'])
+        root.mkdir(parents=True)
+        (root / 'source.json').write_bytes(b'newer published manifest')
+        with patch.object(home, 'verify_file') as verify:
+            with self.assertRaisesRegex(ValueError, 'changed since staging'):
+                home.mirror(self.config)
+        verify.assert_not_called()
+        self.assertEqual((root / 'source.json').read_bytes(), b'newer published manifest')
+
+    def test_retired_source_is_rejected_before_network_or_staging(self):
+        import app_source
+        with self.assertRaisesRegex(ValueError, 'retired'):
+            app_source.publish(None, {'disabled': True})
+        with self.assertRaisesRegex(ValueError, 'retired'):
+            app_source.sync(None, {'disabled': True})
 
 
 if __name__ == '__main__':

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare and publish unchanged IPAs to the Cloudflare app source."""
+"""Prepare and publish unchanged IPAs to the configured app source backend."""
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
@@ -150,6 +150,8 @@ def atomic_copy(source, target):
 
 
 def publish(args, config):
+    if config.get('disabled'):
+        raise ValueError('This source is retired; use hosting/home-source/source.config.json')
     ipa = Path(args.ipa).expanduser().resolve(strict=True)
     digest = file_digest(ipa)
     if digest != args.sha256:
@@ -191,7 +193,7 @@ def publish(args, config):
         source = json.loads(path.read_text()) if path.exists() else {
             'name': config['name'], 'identifier': config['identifier'],
             'subtitle': 'Yao 的应用软件源',
-            'description': '个人应用软件源，由 Cloudflare 提供 HTTPS 下载。',
+            'description': '个人应用软件源，提供 HTTPS 下载。',
             'apps': [], 'news': [],
         }
         date = args.date or datetime.now(timezone.utc).isoformat(timespec='seconds')
@@ -249,9 +251,15 @@ def migrate(args, config):
 
 
 def sync(args, config):
+    if config.get('disabled'):
+        raise ValueError('This source is retired; use hosting/home-source/source.config.json')
     root = Path(config['root']).expanduser().resolve(strict=True)
     with (root / '.publish.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
+        if config.get('backend') == 'home':
+            import home_source
+            home_source.publish_local(config, getattr(args, 'verify_all', False))
+            return
         _sync_locked(args, config)
         # This publishing host can also serve the same bytes from its home network.
         # A mirror failure is reported after cloud success and can be retried alone.
@@ -486,7 +494,7 @@ def main():
     migration = commands.add_parser('migrate')
     migration.add_argument('--from-root', required=True)
     upload_cloud = commands.add_parser('sync')
-    upload_cloud.add_argument('--transport', choices=['wrangler', 's3'], default='wrangler')
+    upload_cloud.add_argument('--transport', choices=['wrangler', 's3', 'local'], default='local')
     upload_cloud.add_argument('--upload-workers', type=upload_workers, default=4)
     upload_cloud.add_argument('--verify-all', action='store_true', help='Ignore receipts and download every resource for verification')
     upload = commands.add_parser('publish')

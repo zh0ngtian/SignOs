@@ -212,28 +212,15 @@ xcrun swiftc Feather/Utilities/OneViewPhase.swift Tests/OneViewPhaseRegression.s
 rm /tmp/signos-phase-regression
 ```
 
-### Yao App Source（家中下载入口）
+### Yao App Source（家中软件源）
 
-- 新入口：`https://${APP_SOURCE_DOMAIN}:15006/source.json`；`/appstore` 为兼容入口。
+- 唯一公开入口：`https://${APP_SOURCE_DOMAIN}:15006/source.json`；`/appstore` 为兼容入口。
 - 家中 Mac mini 通过路由器 TCP 15006 提供 HTTPS 下载，使用公开受信任的证书，无需安装 CA。
-- 原 Cloudflare 源保留；本机发布完成 Cloudflare 同步后自动同步家中入口，IPA 原样保存。
-- 部署、重试、跨机器发布限制和证书续期要求见 [家中软件源说明](hosting/home-source/README.md)。
-  当前复用的证书于 2026-12-05 到期，原证书配置为手动 DNS 验证，尚无自动续期。
-
-### Yao App Source（Cloudflare 软件源）
-
-- 固定源地址：`https://yao-app-source.305301890.workers.dev/source.json`；`/appstore` 为同一清单的兼容入口。
-- Worker `yao-app-source` 通过绑定读取私有 R2 bucket `yao-app-source`；不依赖本机开机或局域网。
-- 使用 SignOs / AltStore 格式，IPA 原样保存为版本、构建号和摘要组成的独立文件；不重新签名。
-- 首个应用为 Codex Mobile `0.2.140 (2140)`，来自对话 `01a12463-0613-7803-93db-066e26ed467d`。
-- 发布工具：`scripts/app_source.py`；配置：`cloudflare/app-source/source.config.json`；本机发布副本：`packages/app-source/public/`。
-- SignOs 专用发布入口：`scripts/publish_signos.py`，先 `--plan`，再使用相同参数正式发布。入口核对 OTA 凭证与 IPA 的身份、版本、构建号、大小和 SHA-256，然后生成软件源清单、上传并核验公网字节。完整命令见 [SignOs 标准发布步骤](cloudflare/app-source/README.md#signos-标准发布步骤)。
-- 先用 `publish` 生成新版本，再用 `sync` 上传资源，完整校验新增或变化资源的公网 SHA-256；未改动的历史资源只做 HEAD 存在性和大小检查（无需已有校验记录），最后发布清单。超过 300 MiB 的 IPA 使用 S3 分片上传。
-- 软件源每个应用保留 10 个版本（必保留当前版本）；退役 IPA/图标至少 7 天后由云端每日北京时间 04:00 清理。发布前按全桶占用检查 8 GB 预算，超出便停止；跨机器发布与清理共用 R2 锁。所有发布机须更新脚本并配置 R2 S3 凭据。
-- 清单不缓存；IPA 流式下载，支持 HEAD、Range、If-Range 和 ETag。部署与发布命令见 [Cloudflare 软件源说明](cloudflare/app-source/README.md)。
-- 2026-10-10 已停用并删除 `local.yao.app-source` LaunchAgent、旧 `YaoAppSource` 服务目录及 Python `serve` 入口，8770 端口不再监听。
-- 同日真机通过新源添加、IPA 下载、签名与覆盖安装验证；Codex Mobile 正常启动，原 `mac_pc` 连接保留。此前 Wi-Fi 访问曾超时，用户调整网络后通过；大 IPA 与真机跨网络续传尚未实测。
-- SignOs 自身 OTA 服务、共用 TLS 和签名材料不受本次迁移影响。软件源目前不自动跟踪上游更新。
+- `scripts/publish_signos.py` 默认发布到本机，配置为 `hosting/home-source/source.config.json`；不再依赖 Cloudflare。仍需先完成独立的本机 OTA 发布，再使用同一正式签名 IPA 及凭证发布软件源。
+- 首次运行先 `--plan`。IPA 原样保存，先校验资源，最后切换清单；版本、构建号、大小和 SHA-256 必须与 OTA 凭证一致。
+- 证书由本机 launchd 每 12 小时检查，通过腾讯云 DNS-01 自动续期，成功后校验并重载 Nginx。配置、凭据和证书均在仓库外。
+- 完整发布、部署、重试、续期与验收步骤见 [家中软件源说明](hosting/home-source/README.md)。
+- 原 `yao-app-source.305301890.workers.dev` 入口与 Cron 已停用；原 R2 私有文件和发布凭证保留为历史备份。旧配置标记为 disabled，发布器拒绝向它发布；[Cloudflare 文档](cloudflare/app-source/README.md)仅用于历史追溯。
 
 ## Contact
 

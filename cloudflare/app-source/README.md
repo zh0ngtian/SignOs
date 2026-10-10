@@ -1,13 +1,10 @@
-# Yao App Source on Cloudflare
+# Cloudflare 软件源历史档案（已停用）
 
-已部署：`https://yao-app-source.305301890.workers.dev/source.json`。
-`/appstore` 是同一 JSON 的兼容入口。R2 bucket 为 `yao-app-source`，保持私有；
-Worker 只开放清单和 `files/*.ipa` / `files/*.png` 的 GET、HEAD。
+2026-10-11 已迁移到家中软件源。Worker 的 workers.dev、preview URL 和 Cron 均停用，
+R2 保持私有并保留历史文件。source.config.json 已标记 disabled，不能再用于发布。
+当前入口、发布和证书自动续期以 [家中软件源说明](../../hosting/home-source/README.md) 为准。
 
-另有家中入口 `https://${APP_SOURCE_DOMAIN}:15006/source.json`，用于直接从家中服务器
-下载同一 IPA。当前本机发布器在 Cloudflare 成功后自动校验并同步该入口；失败时
-只需重试 `python3 scripts/home_source.py`。其他发布机、证书续期及部署方式见
-[家中软件源说明](../../hosting/home-source/README.md)。Cloudflare 入口保持可用。
+以下记录是停用前的历史事实和命令，不代表当前部署状态，也不要据此重新开启旧源。
 
 ## 软件源图标
 

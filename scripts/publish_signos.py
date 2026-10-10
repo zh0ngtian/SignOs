@@ -45,8 +45,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--ipa', required=True, help='Distribution-signed IPA from the OTA release')
     parser.add_argument('--release-json', required=True, help='Matching OTA latest-ios.json / saved release receipt')
-    parser.add_argument('--config', default=str(REPO / 'cloudflare/app-source/source.config.json'))
-    parser.add_argument('--transport', choices=['s3', 'wrangler'], default='s3')
+    parser.add_argument('--config', default=str(REPO / 'hosting/home-source/source.config.json'))
+    parser.add_argument('--transport', choices=['local', 's3', 'wrangler'], default='local')
     parser.add_argument('--upload-workers', type=app_source.upload_workers, default=4)
     parser.add_argument('--verify-all', action='store_true', help='Ignore receipts and download every resource for verification')
     parser.add_argument('--plan', action='store_true', help='Validate inputs without staging or uploading')
@@ -55,6 +55,11 @@ def main():
     # The source configuration's relative root is repository-relative, as in the documented CLI.
     root = Path(config['root']).expanduser()
     config['root'] = str(root if root.is_absolute() else REPO / root)
+    if 'publicRoot' in config:
+        public = Path(config['publicRoot']).expanduser()
+        config['publicRoot'] = str(public if public.is_absolute() else REPO / public)
+    if config.get('disabled'):
+        raise ValueError('This source is retired; use the home source configuration')
     publish_args, receipt = prepare(args)
     print(json.dumps({
         'plan': args.plan, 'version': receipt['version'], 'buildNumber': receipt['buildNumber'],

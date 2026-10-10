@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Publish a verified local HTTPS mirror of the committed Cloudflare source."""
+"""Publish staged IPAs to the home HTTPS source, with an optional legacy mirror mode."""
 import argparse
 import fcntl
 import hashlib
@@ -35,10 +35,13 @@ def atomic_write(path, data):
 
 def prepare(config):
     source_root = Path(config['sourceRoot']).expanduser().resolve(strict=True)
-    if (source_root / '.publish-base.sha256').exists():
+    if config.get('mode') != 'primary' and (source_root / '.publish-base.sha256').exists():
         raise ValueError('Cloud publication is pending; finish it before mirroring')
     raw = (source_root / 'source.json').read_bytes()
     source = json.loads(raw)
+    if config.get('mode') == 'primary':
+        from app_source import trim_versions
+        trim_versions(source)
     old = config['sourceBaseUrl'].rstrip('/')
     new = config['baseUrl'].rstrip('/')
     if not old.startswith('https://') or not new.startswith('https://'):
@@ -105,9 +108,21 @@ def mirror(config, plan=False, verify_all=False):
     with (root.parent / '.home-publish.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         raw, encoded, files = prepare(config)
-        with urlopen(Request(config['sourceBaseUrl'].rstrip('/') + '/source.json', headers=HEADERS), timeout=30) as response:
-            if response.read() != raw:
-                raise ValueError('Local source differs from the live cloud manifest')
+        baseline = source_root / '.publish-base.sha256'
+        if config.get('mode') == 'primary':
+            live = root / 'source.json'
+            previous = live.read_bytes() if live.exists() else None
+            expected = baseline.read_text().strip() if baseline.exists() else hashlib.sha256(raw).hexdigest()
+            if previous is not None and hashlib.sha256(previous).hexdigest() != expected and previous != raw:
+                raise ValueError('Home source changed since staging; refresh before publishing')
+            occupied = sum(p.stat().st_size for p in root.rglob('*') if p.is_file())
+            new_bytes = sum(e['size'] for k, e in files.items() if not (root / k).exists())
+            if occupied + new_bytes + len(encoded) > 8_000_000_000:
+                raise ValueError('Home source exceeds the 8 GB publication budget')
+        else:
+            with urlopen(Request(config['sourceBaseUrl'].rstrip('/') + '/source.json', headers=HEADERS), timeout=30) as response:
+                if response.read() != raw:
+                    raise ValueError('Local source differs from the live cloud manifest')
         receipt_path = root.parent / 'verified-files.json'
         receipts = json.loads(receipt_path.read_text()) if receipt_path.exists() else {}
         if receipts.get('baseUrl') != base:
@@ -153,8 +168,18 @@ def mirror(config, plan=False, verify_all=False):
             else:
                 path.unlink(missing_ok=True)
             raise
+        if config.get('mode') == 'primary':
+            atomic_write(source_root / 'source.json', encoded)
+            baseline.unlink(missing_ok=True)
     return {'sourceURL': base + '/source.json', 'files': len(files),
             'bytes': sum(f['size'] for f in files.values()), 'plan': False}
+
+
+def publish_local(config, verify_all=False):
+    """Called while app_source holds the staging directory's publish lock."""
+    home = {'mode': 'primary', 'sourceRoot': config['root'], 'sourceBaseUrl': config['baseUrl'],
+            'root': config['publicRoot'], 'baseUrl': config['baseUrl']}
+    print('Home source:', json.dumps(mirror(home, verify_all=verify_all), ensure_ascii=False))
 
 
 def sync_if_configured(source_config):
@@ -177,5 +202,11 @@ if __name__ == '__main__':
     parser.add_argument('--plan', action='store_true')
     parser.add_argument('--verify-all', action='store_true')
     args = parser.parse_args()
-    print(json.dumps(mirror(json.loads(Path(args.config).expanduser().read_text()),
-                            args.plan, args.verify_all), ensure_ascii=False, indent=2))
+    config = json.loads(Path(args.config).expanduser().read_text())
+    source_root = Path(config['sourceRoot']).expanduser()
+    if args.plan:
+        print(json.dumps(mirror(config, plan=True), ensure_ascii=False, indent=2))
+    else:
+        with (source_root / '.publish.lock').open('a') as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            print(json.dumps(mirror(config, verify_all=args.verify_all), ensure_ascii=False, indent=2))

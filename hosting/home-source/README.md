@@ -1,85 +1,129 @@
 # 家中软件源
 
-入口为 `https://${APP_SOURCE_DOMAIN}:15006/source.json`，`/appstore` 返回相同清单。
-使用同一 Yao App Source identifier 和原始 IPA，保持版本、构建号、SHA-256 与
-Cloudflare 源一致，只把清单中的资源 URL 改为家中地址。旧 Cloudflare 入口保留。
+唯一公开入口：`https://${APP_SOURCE_DOMAIN}:15006/source.json`，`/appstore` 返回相同清单。
+软件源保持 `tech.zh0ngtian.yao-app-source` 身份，IPA 原样保存，不重新签名。
+Cloudflare Worker 的 workers.dev、preview URL 和 Cron 已停用；R2 私有历史文件保留。
 
-## 部署结构
+## 服务与目录
 
-- 路由器 TCP `15006` → Mac mini `192.168.123.79:15006`。Mac mini 有 DHCP 静态绑定。
-  Padavan 的虚拟服务器配置名为 `signos-source`；持久化在 NVRAM，运行时在
-  NAT `vserver` 链内、兜底 DMZ 规则之前。
-- Docker 容器 `signos-home-source` 使用 Nginx，重启策略为 `unless-stopped`。
-  容器依赖现有 Colima/Docker；本机必须在线且不休眠。
-- 只开放 GET/HEAD `/source.json`、`/appstore` 和 `/files/<name>.ipa|png`。
-  其他路径返回 404，不公开目录、发布记录或签名材料。
-- 清单 `Cache-Control: no-store`；资源有版本/摘要路径，长期缓存，支持
-  HEAD、Range、If-Range、ETag。IPA 不重签名。
-- 私有配置 `~/.config/yao-app-source/home-source.json` 指定 `sourceRoot`、
-  `sourceBaseUrl`、`root`、`baseUrl`。部署环境文件为同目录 `home-source.env`，
-  包含 `HOME_SOURCE_ROOT` 和 `HOME_SOURCE_CERTIFICATES`。
-- 当前本机公开文件位于 `packages/home-source/public/`；校验记录与旧清单备份
-  位于其父目录，不在 Nginx 允许的 URL 范围内。历史资源保留，不自动删除。
+- 路由器 TCP `15006` → Mac mini `192.168.123.79:15006`，Mac mini 有 DHCP 静态绑定。
+  Padavan 虚拟服务器名为 `signos-source`，NVRAM 持久化，NAT 规则在兜底 DMZ 前。
+- Docker 容器 `signos-home-source` 使用 Nginx，`unless-stopped` 自动重启。
+  依赖现有 Colima/Docker 和用户登录会话；本机须在线且不休眠。
+- 只开放 GET/HEAD `/source.json`、`/appstore`、`/files/<name>.ipa|png`。
+  其他路径 404，无目录索引。清单不缓存；带版本/摘要的资源长期缓存，支持
+  HEAD、Range、If-Range、ETag。
+- `packages/home-source/staging/` 是发布准备目录，`packages/home-source/public/`
+  是实际服务目录；仅后者只读挂载到容器。`packages/home-source/manifests/`
+  和 `verified-files.json` 保存旧清单及校验凭证，不公开。
+- 旧 `packages/app-source/public/`、OTA 包、签名材料和发布凭证保留。
+- 公网 DNS 由路由器已有腾讯云 DDNS 更新。DNS-01 自动续期只管理验证 TXT，
+  不修改 `home` 的 A 记录，也不更改路由器 DDNS。
 
-部署命令在仓库根目录运行（本机使用独立的 `docker-compose` 命令）：
+## 标准发布
+
+正式发布在家中服务器的仓库根目录执行，默认配置
+`hosting/home-source/source.config.json`。SignOs 先完成独立的本机 OTA，再将
+同一正式签名包及发布凭证交给软件源发布器：
+
+```sh
+python3 scripts/publish_signos.py \
+  --ipa /private/path/signed.ipa --release-json /private/path/release.json --plan
+python3 scripts/publish_signos.py \
+  --ipa /private/path/signed.ipa --release-json /private/path/release.json
+```
+
+默认 backend 为 home、transport 为 local，不访问 Cloudflare，也无需 R2 凭据。
+通用应用继续使用 `app_source.py publish` 的 IPA、SHA-256、PNG 图标、开发者、
+描述、更新说明等参数，但配置改为 `hosting/home-source/source.config.json`；准备后执行：
+
+```sh
+python3 scripts/app_source.py --config hosting/home-source/source.config.json sync
+```
+
+其他机器先复制新包、图标和凭证到家中服务器，然后在服务器运行上述命令。
+不要覆盖服务器现有清单或已有版本目录。配置的相对路径按仓库根目录解释。
+原 `cloudflare/app-source/source.config.json` 已标记 disabled，发布器拒绝向它发布。
+
+### 原子切换与失败重试
+
+发布持有本机文件锁，核对准备阶段的清单基线，拒绝旧工作副本覆盖新版本。
+清单每个应用最多保留 10 个版本，当前版本始终保留。所有本地 IPA 核对大小和完整
+SHA-256；新增资源先复制，再从 HTTPS 下载验证，已有可信凭证且内容未变的资源
+做 HEAD 大小检查，最后原子切换清单并检查两个入口。失败保留或回滚旧清单。
+
+历史资源暂不自动删除，发布前按公开目录总占用和新增文件检查 8 GB 预算；
+达到预算时停止发布。旧清单备份、私有日志及其他目录不计入此预算。
+
+私有 `~/.config/yao-app-source/home-source.json` 使用 `mode: primary`，配置
+`sourceRoot`（staging）、`root`（public），两个 base URL 均为家中入口。
+失败后无需重签名、递增版本或重发 OTA，只重试：
+
+```sh
+python3 scripts/home_source.py --plan
+python3 scripts/home_source.py
+# 独立全量审计
+python3 scripts/home_source.py --verify-all
+```
+
+## 部署
+
+私有 `~/.config/yao-app-source/home-source.env` 包含公开文件目录
+`HOME_SOURCE_ROOT` 和独立 ACME 根目录 `HOME_SOURCE_CERTIFICATES`。
 
 ```sh
 docker-compose --env-file "$HOME/.config/yao-app-source/home-source.env" \
   -f hosting/home-source/compose.yaml run --rm --no-deps source nginx -t
 docker-compose --env-file "$HOME/.config/yao-app-source/home-source.env" \
   -f hosting/home-source/compose.yaml up -d
-python3 scripts/home_source.py --plan
-python3 scripts/home_source.py
 ```
 
-## 发布与恢复
+## 证书自动续期
 
-`cloudflare/app-source/source.config.json` 启用 `homeMirror`。在存在上述私有配置
-的发布机上，`app_source.py sync` 和 `publish_signos.py` 完成 Cloudflare 发布后，
-自动同步本机源。可用 `APP_SOURCE_HOME_CONFIG` 指定另一私有配置路径。
-其他发布机没有私有配置时仍只发布 Cloudflare；之后必须在家中服务器恢复最新
-Cloudflare 清单及其引用文件，再运行本机同步，不能把远端发布视为家中入口已更新。
+使用 Let's Encrypt 的公开可信证书，无需在手机安装 CA。仅为软件源配置独立
+`${APP_SOURCE_DOMAIN}` 证书；原 glkvm/Certbot 目录和其他服务的证书保持原状。
 
-同步会拒绝未完成的 Cloudflare 发布、与公网不一致的清单、缺失/损坏的 IPA。
-所有本地 IPA 都核对大小和完整 SHA-256；新增资源先复制，再通过 HTTPS 完整下载
-核对摘要，未改动且已有校验凭证的文件做 HEAD 大小检查，最后原子替换清单并
-核对两个入口。使用 `--verify-all` 强制全量 HTTPS 摘要校验。
-任何资源验证失败都保留原入口；清单验证失败回滚原清单。Cloudflare 已成功而
-本机同步失败时，直接重试 `python3 scripts/home_source.py`，无需重签名或重新发版。
+私有文件均在 `~/.config/yao-app-source/`：
+
+- `renewal.json`：域名、ACME 账户邮箱、固定摘要的 lego 5 镜像、Docker 路径等。
+- `dns-renewal.env`：腾讯云 DNS API 凭据，权限 0600，不进仓库或命令行参数。
+- `acme/`：正式 ACME 账户、证书和私钥；`acme-staging/` 是隔离的测试环境。
+- `acme/backups/`：更新前证书记录，保留以便恢复。
+- `renewal-status.json`、`renewal-staging-status.json`、`renewal.log`：最近状态和日志。
+
+`local.yao-app-source.renew-tls` LaunchAgent 登录时运行、之后每 12 小时检查；
+失败按 launchd 策略约 1 小时后重试。剩余 30 天开始续期（ACME 服务也可通过 ARI
+建议续期时间）。DNS 验证记录由 lego 自动创建并清理，不需要开放 80/443。
+当前网络的本地 DNS 预检查存在缓存不一致，私有配置使用 lego 支持的 60 秒传播等待，
+随后由 Let's Encrypt 实际验证 TXT；不关闭 HTTPS 校验或 CA 域名验证。
+只有证书成功取得且 Nginx 配置检查通过才重载；随后真实 TLS 握手核对线上证书摘要。
+如果证书已更新但上次重载失败，下次检查仍会补做重载。
 
 ```sh
-python3 -m unittest discover -s Tests -p 'test_*.py'
+# 测试环境实际签发/强制续期，不改生产证书、不重载生产服务
+python3 scripts/renew_home_tls.py --staging-test
+# 正式签发或续期，并按需重载
+python3 scripts/renew_home_tls.py
+# 安装本机系统任务
+python3 scripts/install_home_renewal.py --plan
+python3 scripts/install_home_renewal.py
+launchctl print "gui/$(id -u)/local.yao-app-source.renew-tls"
+```
+
+首次正式签发时先用 `--issue-only`，再部署使用新证书目录的 Nginx。
+TLS 配置不会改变手机 Fully Local 安装使用的私有 CA，也不改变 SignOs OTA 签名身份。
+
+## 验证
+
+```sh
+python3 -B -m unittest discover -s Tests -p 'test_*.py'
 python3 scripts/home_source.py --verify-all
 ```
 
-## HTTPS 证书
+2026-10-11 初次家中部署：4 个应用、15 个资源（307,667,097 字节）完整 HTTPS
+SHA-256 校验通过，SignOs 为 `1.0.7 (8)`。HEAD、Range、If-Range、ETag、416
+和私有路径隔离均验证通过；用户确认蜂窝网络可打开清单。证据保存在
+`packages/home-source/acceptance-20261011.json`。未测量蜂窝下载速度或验收重启恢复。
 
-使用公开受信任的 Let's Encrypt `${APP_SOURCE_DOMAIN}` 证书，不要求用户安装 CA。
-当前复用现有 glkvm 项目的 Certbot 证书目录，完整目录只读挂载以支持证书符号链接；
-具体主机路径保存在私有 `home-source.env`，不复制私钥到仓库。
-
-2026-10-11 检查时证书到期时间为 **2026-12-05 09:36 UTC（北京时间 17:36）**。
-原有 Certbot 使用 manual DNS-01，**没有配置自动续期**。必须在到期前完成续期；
-更新同一证书目录后检查并 reload：
-
-```sh
-docker exec signos-home-source nginx -t
-docker exec signos-home-source nginx -s reload
-```
-
-公开域名证书只解决软件源下载 HTTPS，不改变手机上 Fully Local 安装使用的私有 CA，
-也不改变本机 SignOs OTA 渠道、签名身份或兼容基线。
-
-## 验收边界
-
-公网 DNS 必须持续对应路由器 WAN 地址；当前由路由器已有腾讯云 DDNS 脚本维护。
-通过公网 IP 从同一局域网请求可能经过 NAT 回环，并不等同于独立外网验收。
-外网可达性及下载速度应另用手机蜂窝网络核验。
-
-2026-10-11 部署验收：容器处于 running，内网和路由器公网 IP 的 HTTPS 返回 200，
-证书校验通过；4 个应用、15 个资源（307,667,097 字节）完整 HTTPS SHA-256
-校验通过。SignOs 为 `1.0.7 (8)`，与 Cloudflare 清单保持一致。HEAD、Range、
-If-Range、ETag、416 及非公开路径拒绝检查通过；本机发布自动镜像入口也已验证。
-本机证据保存在 `packages/home-source/acceptance-20261011.json`。
-用户随后确认手机切到蜂窝网络可以打开上述清单，独立外网入口可达。
-此次未测量蜂窝网络 IPA 下载速度，未验证设备安装和重启恢复。
+同日改为独立本机发布后再次全量验证，不再读取或上传 Cloudflare。
+停用与证书自动续期的本次验收以实际在线检查及私有 renewal 状态记录为准。

@@ -22,7 +22,7 @@
 - 服务与客户端都改时，两项均须完成。纯文档或规则变更检查通过后提交并 push，无须部署服务或发布 App。
 - push 后核对远端提交；部署后核对服务进程及真实 HTTPS 接口；发布后核对固定入口、manifest、包版本和 SHA-256。测试、push、部署或发布失败时，明确报告停在哪一步，不宣称交付完成。
 - 本机 OTA 与 Yao App Source 是不同渠道。按 README 使用现有私有配置；发布前先执行发布器的 `--plan`，保留 SignOs 自身的兼容基线和升级身份。OTA 成功后必须用 `scripts/publish_signos.py` 将同一签名包及其发布凭证同步到软件源；公网清单、版本、构建号和完整 IPA SHA-256 核验通过才算客户端发布完成，不能只完成一个渠道。
-- Yao App Source 另有家中 HTTPS 入口；本机发布器按私有配置在 Cloudflare 成功后同步它，两个软件源入口均需核验。家中镜像失败时单独重试 `scripts/home_source.py`，不重新签名；跨机器发布与证书续期见 `hosting/home-source/README.md`。
+- Yao App Source 仅使用家中 HTTPS 入口；发布器默认配置为 `hosting/home-source/source.config.json`，不依赖 Cloudflare。软件源失败时单独重试 `scripts/home_source.py`，不重新签名；跨机器发布、版本保留与证书自动续期见 `hosting/home-source/README.md`。原 Cloudflare 入口和 Cron 已停用，R2 私有历史文件保留。
 - 不把 GitHub Actions 的触发配置当作成功发布凭证；当前 CI 的 TLS 配置缺口见 README。
 
 ## 资料与产物边界
