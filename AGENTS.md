@@ -10,7 +10,7 @@
 ## 构建与验证
 
 - 使用 Xcode 26+，先初始化子模块，再按 README 配置私有 `TLS_DIR`，运行 `make iphoneos`；产物为 `packages/SignOs.ipa`。
-- 安装状态改动运行 README 中的 `OneViewPhaseRegression`；应用代码改动还须完成对应构建与必要的设备验收。
+- 安装状态改动运行 README 中的 `OneViewPhaseRegression`；应用代码改动还须完成对应构建与必要的运行验收。真机可用时使用真机；找不到真机时改用 iOS 模拟器，不强制等待连接。模拟器不能证明 Ad Hoc 覆盖安装与数据保留，交付时按实际验证范围说明。
 - Python 服务改动检查语法、受影响接口与 HTTPS 下载；文档改动检查路径、命令和 `git diff --check`。
 - 签名完成不代表安装完成；服务端 OTA 无法确认安装结果时必须保留重试入口。
 
