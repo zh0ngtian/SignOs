@@ -22,8 +22,11 @@ PNG SHA-256 为 `84960d13a202a74b211dd5a4ef7116cbf761b15d177bdfc10de7239ef5822f0
 
 2026-10-11 已核验两个公网清单入口与 PNG 完整 SHA-256，并在 iPhone 17 Pro
 模拟器（iOS 26.5，SignOs `1.0.2-debug (3)`）重新添加该源，确认新图标及四个应用
-正常显示。现有客户端的源卡片读取添加时保存的 `AltSource.iconURL`，刷新清单
-不会更新这个持久化字段；已有源需移除后重新添加才能显示新源图标。
+正常显示。1.0.5 及更早客户端的源卡片读取添加时保存的 `AltSource.iconURL`，
+刷新清单不会更新这个持久化字段，已有源需移除后重新添加才能显示新源图标。
+从 1.0.6 (7) 起，成功刷新清单会在主线程同步并保存源图标地址；首页和搜索中的
+已有源随之更新，重启后保留。沿用添加源时的图标回退规则（源图标缺省时使用
+首个应用图标）；获取失败时保留已保存的图标，无需移除或重新添加源。
 
 ## 部署
 
@@ -52,6 +55,10 @@ python3 scripts/app_source.py --config cloudflare/app-source/source.config.json 
 ```
 
 ## 后续发布
+
+开发者字段使用 GitHub 用户名：本人的署名为 `zh0ngtian`，不再使用 `Yao`。
+Codex Mobile 显示 `loock-ai / zh0ngtian`，博物女神显示 `zh0ngtian`；
+第三方应用保留其原开发者署名。软件源名称仍为 Yao App Source。
 
 仍使用 `scripts/app_source.py ... publish --ipa ... --sha256 ... --icon ...
 --developer ... --description ... --notes ...` 生成清单，然后执行 `sync`。
