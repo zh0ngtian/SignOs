@@ -1,4 +1,5 @@
 """Publishing regressions: migrate history and never expose an incomplete release."""
+import hashlib
 import contextlib
 import importlib.util
 import io
@@ -14,11 +15,34 @@ source = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(source)
 
 
+class FakeR2:
+    def __init__(self):
+        self.data = {}
+        self.inventory = {}
+
+    @contextlib.contextmanager
+    def lock(self):
+        yield
+
+    def get(self, key):
+        return self.data.get(key)
+
+    def put(self, key, data):
+        self.data[key] = data
+
+    def list(self):
+        return self.inventory
+
+
 class PublishingTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
+        self.remote = FakeR2()
+        self.mock_control = patch.object(source, 'R2Control', return_value=self.remote)
+        self.mock_control.start()
+        self.addCleanup(self.mock_control.stop)
         self.config = {'root': str(self.root / 'cloud'), 'baseUrl': 'https://source.example', 'bucket': 'test'}
 
     def prepare(self):
@@ -58,6 +82,43 @@ class PublishingTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'mismatch'):
                 source.sync(SimpleNamespace(transport='wrangler'), self.config)
             run.assert_not_called()
+
+    def test_budget_counts_orphans_and_blocks_before_upload(self):
+        self.prepare()
+        self.remote.inventory['files/retired.ipa'] = {'size': source.BUDGET_BYTES}
+        with patch.object(source.subprocess, 'run') as run:
+            with self.assertRaisesRegex(ValueError, 'budget exceeded'):
+                source.sync(SimpleNamespace(transport='wrangler'), self.config)
+            run.assert_not_called()
+            self.assertEqual(self.remote.data, {})
+
+    def test_stale_manifest_is_rejected_before_upload(self):
+        self.prepare()
+        self.remote.data['source.json'] = b'{"changed":true}'
+        with patch.object(source.subprocess, 'run') as run:
+            with self.assertRaisesRegex(ValueError, 'Cloud manifest changed'):
+                source.sync(SimpleNamespace(transport='wrangler'), self.config)
+            run.assert_not_called()
+
+    def test_keep_current_and_newest_nine(self):
+        versions = [{'downloadURL': str(i), 'date': f'2026-09-{i+1:02d}T00:00:00Z'} for i in range(12)]
+        manifest = {'apps': [{'downloadURL': '0', 'versions': versions}]}
+        source.trim_versions(manifest)
+        self.assertEqual([v['downloadURL'] for v in manifest['apps'][0]['versions']],
+                         ['0', '11', '10', '9', '8', '7', '6', '5', '4', '3'])
+
+    def test_failed_sync_can_retry_after_local_reformatting(self):
+        _, cloud = self.prepare()
+        original = (cloud / 'source.json').read_bytes()
+        self.remote.data['source.json'] = original
+        with patch.object(source, '_upload_locked', side_effect=ValueError('network failure')):
+            with self.assertRaisesRegex(ValueError, 'network failure'):
+                source.sync(SimpleNamespace(transport='wrangler'), self.config)
+        self.assertEqual((cloud / '.publish-base.sha256').read_text(), hashlib.sha256(original).hexdigest())
+        with patch.object(source, '_upload_locked') as upload:
+            source.sync(SimpleNamespace(transport='wrangler'), self.config)
+            upload.assert_called_once()
+        self.assertFalse((cloud / '.publish-base.sha256').exists())
 
 
 if __name__ == '__main__':

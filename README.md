@@ -221,6 +221,7 @@ rm /tmp/signos-phase-regression
 - 发布工具：`scripts/app_source.py`；配置：`cloudflare/app-source/source.config.json`；本机发布副本：`packages/app-source/public/`。
 - SignOs 专用发布入口：`scripts/publish_signos.py`，先 `--plan`，再使用相同参数正式发布。入口核对 OTA 凭证与 IPA 的身份、版本、构建号、大小和 SHA-256，然后生成软件源清单、上传并核验公网字节。完整命令见 [SignOs 标准发布步骤](cloudflare/app-source/README.md#signos-标准发布步骤)。
 - 先用 `publish` 生成新版本，再用 `sync` 上传资源、逐个校验公网 SHA-256，最后发布清单。超过 300 MiB 的 IPA 使用 S3 分片上传。
+- 软件源每个应用保留 10 个版本（必保留当前版本）；退役 IPA/图标至少 7 天后由云端每日北京时间 04:00 清理。发布前按全桶占用检查 8 GB 预算，超出便停止；跨机器发布与清理共用 R2 锁。所有发布机须更新脚本并配置 R2 S3 凭据。
 - 清单不缓存；IPA 流式下载，支持 HEAD、Range、If-Range 和 ETag。部署与发布命令见 [Cloudflare 软件源说明](cloudflare/app-source/README.md)。
 - 2026-10-10 已停用并删除 `local.yao.app-source` LaunchAgent、旧 `YaoAppSource` 服务目录及 Python `serve` 入口，8770 端口不再监听。
 - 同日真机通过新源添加、IPA 下载、签名与覆盖安装验证；Codex Mobile 正常启动，原 `mac_pc` 连接保留。此前 Wi-Fi 访问曾超时，用户调整网络后通过；大 IPA 与真机跨网络续传尚未实测。

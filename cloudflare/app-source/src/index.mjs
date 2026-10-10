@@ -1,4 +1,6 @@
-// Keep R2 private. Only published source files are exposed by this read-only Worker.
+import { cleanup } from './retention.mjs';
+
+// Keep R2 private. HTTP remains read-only; maintenance is invoked only by Cron.
 export function parseRange(value, size) {
   if (!value) return null;
   const match = /^bytes=(\d*)-(\d*)$/.exec(value);
@@ -20,6 +22,9 @@ export function parseRange(value, size) {
 }
 
 export default {
+  async scheduled(_controller, env) {
+    console.log(JSON.stringify(await cleanup(env.SOURCE)));
+  },
   async fetch(request, env) {
     const path = new URL(request.url).pathname;
     const key = path === '/source.json' || path === '/appstore'

@@ -2,6 +2,12 @@
   "name": "yao-app-source",
   "private": true,
   "type": "module",
-  "scripts": {"test": "node --test test/*.test.mjs", "deploy": "wrangler deploy"},
-  "devDependencies": {"wrangler": "4.92.0"}
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "miniflare": "4.20260515.0",
+    "wrangler": "4.92.0"
+  }
 }

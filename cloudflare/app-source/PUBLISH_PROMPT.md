@@ -55,12 +55,17 @@ CLOUDFLARE_ACCOUNT_ID、APP_SOURCE_WORKDIR。
 
 一、准备和恢复最新软件源
 
-1. 阅读 AGENTS.md、cloudflare/app-source/README.md 和 scripts/app_source.py。
+1. 使用已包含 10 版本保留策略的最新版仓库，阅读 AGENTS.md、
+   cloudflare/app-source/README.md 和 scripts/app_source.py。
    确认 Python 3.11+、rclone 可用。IPA 预计不超过 300 MB，仍统一使用 S3。
-   不修改服务代码，不重建 bucket，不删除历史资源，不重新签名 IPA。
-2. 确保本次发布期间只有一台发布机写入该源。本机 .publish.lock 只保护同一
-   工作目录中的单次 publish/sync，不提供跨机器锁，也不覆盖整个流程。
-   无法排除另一个发布者正在写入时，先协调发布窗口，不能靠反复覆盖解决。
+   不修改服务代码，不重建 bucket，不手工删除云端资源，不重新签名 IPA。
+   sync 会将每个应用裁剪为最多 10 个版本（始终保留当前版本），未引用资源由
+   云端在退出清单至少 7 天后删除。本地历史包、凭证仍须保留。
+2. 标准 sync 会自动获取 R2 云端锁，与其他发布机及每日清理互斥；不要绕过
+   发布器用 rclone 直接覆盖清单或删除文件。锁忙时稍后重试，不能强行删锁。
+   本机 publish 会保存 .publish-base.sha256；sync 在锁内检查线上基线，
+   若源已变化，保留本次输入并在新的工作目录恢复最新清单、重新执行 publish。
+   不修改或删除基线文件来绕过冲突。
 3. 下载 APP_SOURCE_URL 的最新清单，并通过 S3 读取目标 R2_BUCKET 的
    source.json，确认两者内容一致、sourceURL 与环境变量一致。
    S3 endpoint 为 https://${CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com；
@@ -148,7 +153,10 @@ python3 scripts/app_source.py \
 ```
 
 上传前再次核对线上清单仍与发布前基线一致；如变化，保留本次输入并基于最新
-清单重新恢复、合并，不能直接覆盖。保持独占发布窗口直至验收结束。
+清单重新恢复、合并，不能直接覆盖。sync 会在云端锁内再次核对基线。
+容量预算固定为 8,000,000,000 字节，计入全桶现有对象、待上传新资源和维护余量；
+包括处于七天宽限期的旧文件。超预算时停止发布并报告，不擅自缩短宽限期、
+减少保留版本或手工删除资源。此保护属于标准发布流程，不是 R2 账户硬配额。
 
 ```sh
 python3 scripts/app_source.py \
@@ -178,7 +186,8 @@ python3 scripts/publish_signos.py \
 五、验收与交付
 
 - 沿用脚本“资源先上传并逐个校验、清单最后上传”的顺序。
-- 核对公网 APP_SOURCE_URL 包含新版本，其他应用和历史版本未被意外移除。
+- 核对公网 APP_SOURCE_URL 包含新版本，其他应用未被意外移除；每个应用最多
+  10 个版本，当前版本必保留，其余按发布日期取最新的 9 个。
 - 核对在线版本、构建号、下载地址、大小和 SHA-256。
   完整下载公网 IPA，确认字节数和 SHA-256 与原文件一致；可复用本次 sync
   已成功完成的完整下载校验证据，无需无理由重复下载。

@@ -55,6 +55,7 @@ python3 scripts/app_source.py --config cloudflare/app-source/source.config.json 
 部署 Worker 后上传资源，逐个核对公网字节摘要，最后更新清单：
 
 ```sh
+source "$HOME/.config/yao-app-source/remote-publisher.env"
 WRANGLER_COMMAND="node cloudflare/app-source/node_modules/wrangler/bin/wrangler.js" \
 python3 scripts/app_source.py --config cloudflare/app-source/source.config.json sync
 ```
@@ -71,8 +72,10 @@ IPA 原样保存、不重签名；摘要计算和本机复制均采用分块 IO�
 
 超过 300 MiB 的文件使用 `sync --transport s3`；需安装 `rclone`，并将只授权目标
 bucket 的 R2 S3 凭据设为 `AWS_ACCESS_KEY_ID` 和 `AWS_SECRET_ACCESS_KEY` 环境变量。
-凭据不要写入仓库。此方式以 16 MiB 分片上传，64 MiB 以上自动切换 multipart。
-当前 Wrangler OAuth 登录不能替代 S3 凭据。
+凭据不要写入仓库。S3 对大于 8 MiB 的文件使用 8 MiB 分片，每个文件最多
+4 个分片并发；不同新增文件默认最多 4 个同时上传。
+当前 Wrangler OAuth 登录不能替代 S3 凭据。无论 IPA 使用 S3 还是 Wrangler
+上传，sync 的云端锁、容量检查及维护状态读写都必须有上述 S3 凭据。
 
 ### SignOs 标准发布步骤
 
@@ -96,14 +99,40 @@ python3 scripts/publish_signos.py \
 
 `--release-json` 接受 OTA 生成的 `latest-ios.json` 或其原样保存副本。
 `--plan` 只读核对包与凭证；不是在线权限或上传验收。正式命令默认使用 S3，
-从凭证沿用版本、构建号、日期和更新说明，保留其他应用及版本历史；先上传并
-逐个核验资源 SHA-256，再更新并核验公网 `source.json`。可通过
+从凭证沿用版本、构建号、日期和更新说明，保留其他应用及最近 10 个版本；先上传并
+校验新增或变更资源的完整 SHA-256、检查已校验历史资源，再更新并核验公网 `source.json`。可通过
 `--transport wrangler` 使用已登录的 Wrangler（命令配置同上）。
 发布凭证必须来自成功的 OTA 发布；该命令核对其对应字节，不替代 OTA 独立验签。
 
+### 增量校验与并行上传
+
+`sync` 和 `publish_signos.py` 默认使用 `--upload-workers 4`，允许 1–8；
+设为 1 可串行上传文件。此参数控制文件并发，S3 单文件分片并发固定为 4。
+已存在的远端对象不会重复上传。所有资源上传和必要校验完成后才切换清单，
+任一上传或校验失败均保留原公网清单。
+
+完整下载并通过 SHA-256 校验后，在发布目录保存 `.verified-files.json`。
+后续只有本地文件摘要/大小、R2 对象 ETag/大小和公网 HEAD 的 ETag、大小、
+Last-Modified 都与记录一致时，才跳过文件下载；每次仍核验最终公网清单。
+记录按服务器、bucket 和账户隔离，不将 ETag 当作 SHA-256。
+首次没有记录、记录损坏、对象发生变化或远端缺少可靠响应头时，仍完整下载校验。
+记录按文件及时保存，发布中途失败后可复用已成功校验的文件。
+
+添加 `--verify-all` 可忽略记录并强制完整下载全部引用资源，例如：
+
+```sh
+python3 scripts/app_source.py --config cloudflare/app-source/source.config.json \
+  sync --transport s3 --upload-workers 4 --verify-all
+```
+
+因此旧的 183 MB 安装包在首次建立校验记录后，正常发布只需一次 HEAD，
+不再每次完整下载。运行中的旧发布进程不会自动切换到新逻辑。
+
 只有两个渠道的在线版本、构建号、IPA 摘要一致才算发版完成。软件源失败时
 修复后重试同一命令；不要为重试软件源重新签名、递增版本或删除历史 OTA 包。
-单发布机串行执行，并在发布前确认本机清单是最新副本，避免覆盖别处发布的应用。
+发布前恢复最新清单及引用资源；publish 保存本机 .publish-base.sha256，
+sync 在云端锁内核对基线。若线上清单已变化，应在新工作目录恢复并重新准备，
+不要通过删基线强行覆盖。失败后可保留同一目录重试。
 
 发布入口回归检查：
 
@@ -111,9 +140,39 @@ python3 scripts/publish_signos.py \
 python3 -m unittest discover -s Tests -p 'test_*.py'
 ```
 
-发布是单个发布机上的串行操作；不要从多台机器并发覆盖 `source.json`。
-先验证文件、后更新清单；历史文件不会被 sync 删除。清理历史 IPA 时需同步删除
-清单中的对应版本，且不能删除仍被当前版本引用的文件。
+## 版本保留、容量预算与自动清理
+
+- 每个应用最多保留 **10 个版本**：当前版本必保留，其余按 `date` 取最新的 9 个。
+  发布时及每日清理时都会裁剪清单；回滚后的当前版本也不会被裁掉。
+- 无引用的 `files/*.ipa`、`files/*.png` 首次被标记后至少保留 **7 天**，再由云端删除。
+  时钟从退出清单/首次发现无引用开始，不使用原始上传日期；重新引用或重新上传会重置。
+  源图标、所有应用及保留版本的引用一起计算，共享文件不会误删。
+- Worker Cron 为 `0 20 * * *`（UTC），即每天**北京时间 04:00**，不依赖本机开机。
+  首次创建或修改 Cron 可能需要约 15 分钟传播。
+- 发布前计算全桶现有字节、新增资源、清单增长、清单备份和 1 MiB 维护余量；
+  超过 **8,000,000,000 字节（8 GB）**便停止上传。七天宽限期内的旧文件也占预算。
+  10 个 300 MB 包约 3 GB/应用，多个应用或短期密集发版仍可能触及预算。
+  此限制不是 R2 硬配额；其他桶、绕过脚本的写入及账户其他费用不在保护范围内。
+- 修改清单前保存私有备份 `_maintenance/manifests/`；GC 状态为 `_maintenance/gc.json`，
+  最近一次成功执行报告为 `_maintenance/last-run.json`。HTTP 不开放这些路径。
+- 发布与清理共享原子锁 `_maintenance/lock.json`。锁忙时清理跳过，发布失败并提示重试。
+  锁不自动过期，防止长时间上传期间被误删。若进程异常中断，先通过 S3 查看锁的
+  `owner`、`kind`、`startedAt`，确认持有者及上传子进程已停止，再由运维删除该锁；
+  不可仅因为锁存续较久就抢锁。正常成功或失败会在 finally 中释放锁。
+- 所有发布机都须更新仓库并遵循 [跨机器发布 Prompt](PUBLISH_PROMPT.md)。直接使用
+  S3/Wrangler 修改清单会绕过互斥和预算保护；源图标等维护也须在同一云端锁内进行，
+  先上传核验资源，再更新清单，并清除新引用资源的旧 GC 标记。
+- 只清理云端退役资源；本地历史签名包、OTA 包、发布凭证、兼容基线继续保留。
+
+回归检查：`node --test cloudflare/app-source/test/*.test.mjs`（需本机 Workers 运行时可启动）
+和 `python3 -m unittest discover -s Tests -p 'test_*.py'`。
+
+2026-10-11 验证：10 项 Worker/R2 回归与 11 项 Python 回归通过；远程预览使用
+生产 R2 执行 scheduled handler 成功，未删除文件，并标记 1 个未引用资源进入
+七天宽限期。发布持锁期间再次触发清理，返回 busy，验证两端互斥生效。
+
+Cron 与条件写入依据：[Cron Triggers](https://developers.cloudflare.com/workers/configuration/cron-triggers/)、
+[R2 Workers API](https://developers.cloudflare.com/r2/api/workers/workers-api-reference/)。
 
 ## 下载行为与验证
 

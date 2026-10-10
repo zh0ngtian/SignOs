@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Prepare and publish unchanged IPAs to the Cloudflare app source."""
 import argparse
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import fcntl
 import hashlib
+import hmac
 import json
 from pathlib import Path
 import plistlib
@@ -13,9 +15,113 @@ import shlex
 import shutil
 import subprocess
 import tempfile
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, quote
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
+import uuid
+import xml.etree.ElementTree as ET
 import zipfile
+
+
+KEEP_VERSIONS = 10
+BUDGET_BYTES = 8_000_000_000
+LOCK_KEY = '_maintenance/lock.json'
+STATE_KEY = '_maintenance/gc.json'
+
+
+class R2Control:
+    """Small SigV4 control requests; IPA bytes continue through rclone/Wrangler."""
+    def __init__(self, config):
+        self.access = os.environ.get('AWS_ACCESS_KEY_ID')
+        self.secret = os.environ.get('AWS_SECRET_ACCESS_KEY')
+        if not self.access or not self.secret:
+            raise ValueError('S3 credentials required for cloud locking and budget checks')
+        account, self.bucket = config['accountId'], config['bucket']
+        if not re.fullmatch(r'[a-fA-F0-9]{32}', account) or not re.fullmatch(r'[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]', self.bucket):
+            raise ValueError('Invalid R2 account or bucket')
+        self.host = account + '.r2.cloudflarestorage.com'
+
+    def request(self, method, key='', data=None, headers=None, query=None):
+        now = datetime.now(timezone.utc)
+        stamp, day = now.strftime('%Y%m%dT%H%M%SZ'), now.strftime('%Y%m%d')
+        path = '/' + self.bucket + '/' + quote(key, safe='/~')
+        query_string = '&'.join(quote(k, safe='~') + '=' + quote(str(v), safe='~')
+                                for k, v in sorted((query or {}).items()))
+        digest = hashlib.sha256(data or b'').hexdigest()
+        signed = {'host': self.host, 'x-amz-date': stamp, 'x-amz-content-sha256': digest,
+                  **{k.lower(): v for k, v in (headers or {}).items()}}
+        if os.environ.get('AWS_SESSION_TOKEN'):
+            signed['x-amz-security-token'] = os.environ['AWS_SESSION_TOKEN']
+        names = ';'.join(sorted(signed))
+        canonical = '\n'.join([method, path, query_string,
+                               ''.join(k + ':' + signed[k].strip() + '\n' for k in sorted(signed)), names, digest])
+        scope = day + '/auto/s3/aws4_request'
+        string = 'AWS4-HMAC-SHA256\n' + stamp + '\n' + scope + '\n' + hashlib.sha256(canonical.encode()).hexdigest()
+        signing_key = ('AWS4' + self.secret).encode()
+        for part in (day, 'auto', 's3', 'aws4_request'):
+            signing_key = hmac.new(signing_key, part.encode(), hashlib.sha256).digest()
+        signature = hmac.new(signing_key, string.encode(), hashlib.sha256).hexdigest()
+        signed['Authorization'] = f'AWS4-HMAC-SHA256 Credential={self.access}/{scope}, SignedHeaders={names}, Signature={signature}'
+        url = 'https://' + self.host + path + ('?' + query_string if query_string else '')
+        try:
+            with urlopen(Request(url, data=data, headers=signed, method=method), timeout=60) as response:
+                return response.read()
+        except HTTPError as error:
+            if error.code == 404 and method == 'GET':
+                return None
+            if error.code in (409, 412):
+                raise ValueError('Cloud lock busy or object changed; retry later') from None
+            raise ValueError(f'R2 control request failed: HTTP {error.code} ({method} {key})') from None
+
+    def get(self, key):
+        return self.request('GET', key)
+
+    def put(self, key, data, headers=None):
+        return self.request('PUT', key, data, headers)
+
+    def list(self):
+        objects, query = {}, {'list-type': '2', 'max-keys': '1000'}
+        ns = {'s': 'http://s3.amazonaws.com/doc/2006-03-01/'}
+        while True:
+            page = ET.fromstring(self.request('GET', query=query))
+            for item in page.findall('s:Contents', ns):
+                uploaded = datetime.fromisoformat(item.findtext('s:LastModified', namespaces=ns).replace('Z', '+00:00'))
+                objects[item.findtext('s:Key', namespaces=ns)] = {
+                    'size': int(item.findtext('s:Size', namespaces=ns)),
+                    'etag': item.findtext('s:ETag', namespaces=ns).strip('"'),
+                    'uploaded': uploaded.isoformat(timespec='milliseconds').replace('+00:00', 'Z'),
+                }
+            if page.findtext('s:IsTruncated', namespaces=ns) != 'true':
+                return objects
+            cursor = page.findtext('s:NextContinuationToken', namespaces=ns)
+            if not cursor or cursor == query.get('continuation-token'):
+                raise ValueError('Incomplete R2 listing')
+            query['continuation-token'] = cursor
+
+    @contextmanager
+    def lock(self):
+        owner = str(uuid.uuid4())
+        self.put(LOCK_KEY, json.dumps({'owner': owner, 'kind': 'publish',
+                 'startedAt': int(datetime.now(timezone.utc).timestamp() * 1000)}).encode(), {'If-None-Match': '*'})
+        try:
+            yield
+        finally:
+            current = self.get(LOCK_KEY)
+            if current and json.loads(current).get('owner') == owner:
+                self.request('DELETE', LOCK_KEY)
+
+
+def trim_versions(source):
+    if not isinstance(source.get('apps'), list) or not source['apps']:
+        raise ValueError('Missing apps')
+    for app in source['apps']:
+        versions = app.get('versions', [])
+        current = next((v for v in versions if v.get('downloadURL') == app.get('downloadURL')), None)
+        if current is None or not app.get('downloadURL'):
+            raise ValueError('Current release absent from history')
+        others = [v for v in versions if v is not current]
+        others.sort(key=lambda v: datetime.fromisoformat(v['date'].replace('Z', '+00:00')), reverse=True)
+        app['versions'] = [current, *others][:KEEP_VERSIONS]
 
 
 def atomic_write(path, data):
@@ -78,6 +184,9 @@ def publish(args, config):
         icon_name = hashlib.sha256(icon).hexdigest()[:20] + '.png'
         atomic_write(files / icon_name, icon)
         path = root / 'source.json'
+        baseline = root / '.publish-base.sha256'
+        if path.exists() and not baseline.exists():
+            atomic_write(baseline, hashlib.sha256(path.read_bytes()).hexdigest().encode())
         source = json.loads(path.read_text()) if path.exists() else {
             'name': config['name'], 'identifier': config['identifier'],
             'subtitle': 'Yao 的应用软件源',
@@ -151,9 +260,11 @@ def _sync_locked(args, config):
     base = config['baseUrl'].rstrip('/')
     bucket = config['bucket']
     manifest = root / 'source.json'
-    source = json.loads(manifest.read_text())
+    local_before = manifest.read_bytes()
+    source = json.loads(local_before)
     if source['sourceURL'] != base + '/source.json':
         raise ValueError('Manifest sourceURL does not match cloud configuration')
+    trim_versions(source)
     referenced = set()
     def collect(value):
         if isinstance(value, dict):
@@ -179,6 +290,51 @@ def _sync_locked(args, config):
                 raise ValueError('Release size or SHA-256 mismatch: ' + str(path))
     if args.transport == 'wrangler' and any((root / k).stat().st_size > 300 * 1024 * 1024 for k in referenced):
         raise ValueError('Use --transport s3 for files larger than 300 MiB (multipart upload)')
+    remote = R2Control(config)
+    with remote.lock():
+        previous = remote.get('source.json')
+        baseline = root / '.publish-base.sha256'
+        expected = baseline.read_text().strip() if baseline.exists() else hashlib.sha256(local_before).hexdigest()
+        if previous is not None and hashlib.sha256(previous).hexdigest() != expected and previous != local_before:
+            raise ValueError('Cloud manifest changed; refresh and re-stage on the latest source before syncing')
+        objects = remote.list()
+        encoded = (json.dumps(source, ensure_ascii=False, indent=2) + '\n').encode()
+        # Include orphaned/grace-period files. Pruning history does not free bytes immediately.
+        new_bytes = sum((root / key).stat().st_size for key in referenced if key not in objects)
+        source_growth = max(0, len(encoded) - objects.get('source.json', {}).get('size', 0))
+        projected = sum(obj['size'] for obj in objects.values()) + new_bytes + source_growth + len(previous or b'') + 1024 * 1024
+        if projected > BUDGET_BYTES:
+            raise ValueError(f'R2 storage budget exceeded: projected {projected} bytes > {BUDGET_BYTES}; publication stopped')
+        print(f'R2 budget: projected {projected}/{BUDGET_BYTES} bytes (includes 1 MiB maintenance reserve)')
+        state_bytes = remote.get(STATE_KEY)
+        state = json.loads(state_bytes) if state_bytes else {'version': 1, 'pending': {}}
+        if state.get('version') != 1 or not isinstance(state.get('pending'), dict):
+            raise ValueError('Invalid GC state; publication stopped')
+        for key in referenced:
+            state['pending'].pop(key, None)
+        # Clear previous retirement clocks before making a reintroduced file visible.
+        remote.put(STATE_KEY, json.dumps(state).encode())
+        if previous:
+            remote.put('_maintenance/manifests/' + hashlib.sha256(previous).hexdigest() + '.json', previous)
+        if not baseline.exists():
+            atomic_write(baseline, expected.encode())
+        atomic_write(manifest, encoded)
+        _upload_locked(args, config, referenced, objects)
+        now = int(datetime.now(timezone.utc).timestamp() * 1000)
+        for key, obj in objects.items():
+            if re.fullmatch(r'files/[A-Za-z0-9._-]+\.(ipa|png)', key) and key not in referenced:
+                entry = state['pending'].get(key)
+                if not entry or entry.get('etag') != obj['etag'] or entry.get('uploaded') != obj['uploaded']:
+                    state['pending'][key] = {'since': now, 'etag': obj['etag'], 'uploaded': obj['uploaded']}
+        remote.put(STATE_KEY, json.dumps(state).encode())
+        baseline.unlink(missing_ok=True)
+    print('Published and verified:', base + '/source.json')
+
+
+def _upload_locked(args, config, referenced, objects):
+    root = Path(config['root']).expanduser().resolve(strict=True)
+    base, bucket = config['baseUrl'].rstrip('/'), config['bucket']
+    manifest = root / 'source.json'
     def upload(path, key):
         if args.transport == 's3':
             if not os.environ.get('AWS_ACCESS_KEY_ID') or not os.environ.get('AWS_SECRET_ACCESS_KEY'):
@@ -202,13 +358,13 @@ def _sync_locked(args, config):
             raise ValueError('Cloud verification failed: ' + key)
     original_manifest = manifest.read_bytes()
     for key in sorted(referenced):
-        upload(root / key, key)
+        if key not in objects:
+            upload(root / key, key)
         verify(root / key, key)
     upload(manifest, 'source.json')
     with urlopen(Request(base + '/source.json', headers={'User-Agent': 'YaoAppSourcePublisher/1.0'}), timeout=30) as response:
         if response.read() != original_manifest:
             raise ValueError('Cloud manifest verification failed')
-    print('Published and verified:', base + '/source.json')
 
 
 def main():
