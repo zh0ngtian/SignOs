@@ -95,6 +95,27 @@ That produces packages/SignOs.ipa. You need Xcode 26 or newer on macOS.
 Initialize both Git submodules with `git submodule update --init --recursive` first.
 Project workflow and post-test delivery requirements are in [AGENTS.md](AGENTS.md).
 
+After pulling a change to `.gitmodules`, run `git submodule sync --recursive`
+before updating submodules. Zsign is pinned to the project-maintained fork for
+the certificate-import crash fix in 1.0.4 (5). The OCSP response decoder now
+allocates its output safely and returns unknown for malformed, truncated or
+unsuccessful responses. Certificate imports insert into Core Data on the main
+actor. The previous decoder could crash both after import and on the next launch;
+the six-hour self-heal throttle only hid later attempts, rather than fixing it.
+
+The decoder regression covers good/revoked/unknown responses, repeated decoding,
+all truncated lengths, trailing bytes and server errors. On a Mac with Homebrew
+OpenSSL 3, run it with memory and undefined-behavior checks:
+
+```sh
+clang++ -std=c++17 -fsanitize=address,undefined -g \
+  -I Zsign/src -I /opt/homebrew/opt/openssl@3/include \
+  Zsign/Tests/OCSPResponseRegression.cpp \
+  -L /opt/homebrew/opt/openssl@3/lib -lcrypto -o /tmp/signos-ocsp-regression
+/tmp/signos-ocsp-regression
+rm /tmp/signos-ocsp-regression
+```
+
 Fully Local installation needs a TLS certificate trusted by the target device.
 `make` reads `server.crt` (certificate), `server.pem` (leaf private key), and
 `commonName.txt` (concrete hostname) from `TLS_DIR`. Its local default is

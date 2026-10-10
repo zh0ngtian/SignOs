@@ -1,7 +1,7 @@
 [submodule "Zsign"]
 	path = Zsign
-	url = https://github.com/khcrysalis/Zsign-Package
-	branch = package
+	url = https://github.com/zh0ngtian/zsign
+	branch = codex/fix-ocsp-crash
 [submodule "IDeviceKitten"]
 	path = IDeviceKitten
 	url = https://github.com/khcrysalis/IDeviceKit
