@@ -18,6 +18,10 @@ PNG SHA-256 为 `d41381792aa4661052a7548cec6b440bca7030b8e8bfa6e8eeecee121750cf7
 最后仅更新上述两个顶层字段并核验 `/source.json` 和 `/appstore`。
 此操作无需重新部署 Worker 或发布客户端。
 
+2026-10-11 已核验 Y 图标的完整 SHA-256、两个公网清单入口及应用条目保持不变；
+在 iPhone 17 Pro / iOS 26.5 模拟器启动 SignOs `1.0.6-debug (7)` 后，
+已有 Yao App Source 直接显示新 Y 图标，无需重新添加。
+
 历史素材 [`assets/app-store-ios27.png`](assets/app-store-ios27.png) 保留备查，来自
 [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:App_Store_Logo_(iOS_27).webp)，
 页面署名 Apple Inc.、标注 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)，
