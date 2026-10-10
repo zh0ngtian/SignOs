@@ -171,6 +171,13 @@ python3 -m unittest discover -s Tests -p 'test_*.py'
 生产 R2 执行 scheduled handler 成功，未删除文件，并标记 1 个未引用资源进入
 七天宽限期。发布持锁期间再次触发清理，返回 busy，验证两端互斥生效。
 
+同日完成正式部署，Worker 版本 `82739c61-3abb-4573-b665-109eef588632`，
+已配置每日 Cron。合并增量校验规则后 20 项 Python 回归通过。公网清单、
+`/appstore`、HEAD、206/416、304、私有路径 404 和写入 405 均通过；
+8 个保留 IPA 的 HEAD 大小一致，博物女神 `1.1.2 (8)` 完整下载 SHA-256 一致。
+桶占用约 278 MB，当前无版本超出保留上限；额外的历史包全量下载已停止，
+发布锁正常释放，本次没有发布新 IPA。
+
 Cron 与条件写入依据：[Cron Triggers](https://developers.cloudflare.com/workers/configuration/cron-triggers/)、
 [R2 Workers API](https://developers.cloudflare.com/r2/api/workers/workers-api-reference/)。
 
