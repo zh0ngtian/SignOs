@@ -180,8 +180,31 @@ def publish(args, config, *, locked=False, quiet=False):
     if urlsplit(base).scheme != 'https':
         raise ValueError('An HTTPS base URL is required')
     with nullcontext() if locked else source_lock(config):
+        path = root / 'source.json'
+        source = json.loads(path.read_text()) if path.exists() else {
+            'name': config['name'], 'identifier': config['identifier'],
+            'subtitle': 'Yao 的应用软件源',
+            'description': '个人应用软件源，提供 HTTPS 下载。',
+            'apps': [], 'news': [],
+        }
+        old = next((a for a in source['apps'] if a['bundleIdentifier'] == bundle), {})
         files = root / 'files'
         files.mkdir(exist_ok=True)
+        if args.icon is None:
+            icon_url = old.get('iconURL', '')
+            key = icon_url.removeprefix(base + '/')
+            if not icon_url.startswith(base + '/') or not re.fullmatch(r'files/[A-Za-z0-9._-]+\.png', key):
+                raise ValueError('Existing app icon must be a local source PNG')
+            icon_path = (root / key).resolve(strict=True)
+            if not icon_path.is_relative_to(root) or not icon_path.read_bytes().startswith(b'\x89PNG\r\n\x1a\n'):
+                raise ValueError('Invalid existing app icon')
+        else:
+            icon = Path(args.icon).expanduser().read_bytes()
+            if not icon.startswith(b'\x89PNG\r\n\x1a\n'):
+                raise ValueError('App icon must be PNG')
+            icon_name = hashlib.sha256(icon).hexdigest()[:20] + '.png'
+            atomic_write(files / icon_name, icon)
+            icon_url = base + '/files/' + icon_name
         filename = re.sub(r'[^A-Za-z0-9._-]', '_', f'{bundle}-{version}-{build}-{digest[:16]}.ipa')
         target = files / filename
         if target.exists():
@@ -189,32 +212,19 @@ def publish(args, config, *, locked=False, quiet=False):
                 raise ValueError('Existing release content mismatch')
         else:
             atomic_copy(ipa, target)
-        icon = Path(args.icon).expanduser().read_bytes()
-        if not icon.startswith(b'\x89PNG\r\n\x1a\n'):
-            raise ValueError('App icon must be PNG')
-        icon_name = hashlib.sha256(icon).hexdigest()[:20] + '.png'
-        atomic_write(files / icon_name, icon)
-        path = root / 'source.json'
         baseline = root / '.publish-base.sha256'
         if path.exists() and not baseline.exists():
             atomic_write(baseline, hashlib.sha256(path.read_bytes()).hexdigest().encode())
-        source = json.loads(path.read_text()) if path.exists() else {
-            'name': config['name'], 'identifier': config['identifier'],
-            'subtitle': 'Yao 的应用软件源',
-            'description': '个人应用软件源，提供 HTTPS 下载。',
-            'apps': [], 'news': [],
-        }
         date = args.date or datetime.now(timezone.utc).isoformat(timespec='seconds')
         release = {'version': version, 'buildVersion': build, 'date': date,
                    'localizedDescription': args.notes, 'downloadURL': base + '/files/' + filename,
                    'size': ipa.stat().st_size, 'sha256': digest,
                    'minOSVersion': info.get('MinimumOSVersion', '15.0')}
-        old = next((a for a in source['apps'] if a['bundleIdentifier'] == bundle), {})
         versions = [v for v in old.get('versions', [])
                     if (v['version'], v.get('buildVersion')) != (version, build)]
         app = {**old, 'name': info.get('CFBundleDisplayName') or info.get('CFBundleName') or bundle,
                'bundleIdentifier': bundle, 'developerName': args.developer,
-               'localizedDescription': args.description, 'iconURL': base + '/files/' + icon_name,
+               'localizedDescription': args.description, 'iconURL': icon_url,
                'versions': [release, *versions], 'version': version, 'buildVersion': build,
                'versionDate': date, 'versionDescription': args.notes, 'size': release['size'],
                'downloadURL': release['downloadURL'], 'sha256': digest,

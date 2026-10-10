@@ -119,11 +119,16 @@ class UploadService:
                     return 200, {'sourceURL': config['baseUrl'] + '/source.json', 'duplicate': True,
                                  'bundleIdentifier': bundle, **release}
             occupied = sum(p.stat().st_size for p in public.rglob('*') if p.is_file())
-            if occupied + ipa.stat().st_size + len(icon or self.fallback_icon) > app_source.BUDGET_BYTES:
+            # Compiled assets and optimized PNGs must not erase an existing icon.
+            preserve_icon = icon is None and bool(old.get('iconURL'))
+            icon_bytes = icon if icon is not None else (None if preserve_icon else self.fallback_icon)
+            if occupied + ipa.stat().st_size + len(icon_bytes or b'') > app_source.BUDGET_BYTES:
                 raise UploadError(507, 'Home source exceeds the 8 GB publication budget')
             icon_path = ipa.with_suffix('.png')
-            icon_path.write_bytes(icon or self.fallback_icon)
-            args = SimpleNamespace(ipa=str(ipa), sha256=checksum, icon=str(icon_path), date=None,
+            if icon_bytes is not None:
+                icon_path.write_bytes(icon_bytes)
+            args = SimpleNamespace(ipa=str(ipa), sha256=checksum,
+                                   icon=str(icon_path) if icon_bytes is not None else None, date=None,
                                    developer=metadata.get('developer', old.get('developerName', 'Community')),
                                    description=metadata.get('description', old.get('localizedDescription', '')),
                                    notes=metadata.get('notes', ''), verify_all=False)

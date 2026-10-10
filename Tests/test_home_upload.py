@@ -56,13 +56,17 @@ class HomeUploadTests(unittest.TestCase):
         if full:
             self.assertEqual(home_source.digest(path), entry['sha256'])
 
-    def ipa(self, bundle='example.first', version='1.0', build='1', extra=b''):
+    def ipa(self, bundle='example.first', version='1.0', build='1', extra=b'', icon=None, compiled=False):
         data = io.BytesIO()
         with zipfile.ZipFile(data, 'w') as archive:
             archive.writestr('Payload/Test.app/Info.plist', plistlib.dumps(dict(
                 CFBundleIdentifier=bundle, CFBundleShortVersionString=version,
                 CFBundleVersion=build, CFBundleDisplayName='测试应用')))
             archive.writestr('Payload/Test.app/Test', b'unchanged app bytes' + extra)
+            if icon is not None:
+                archive.writestr('Payload/Test.app/AppIcon.png', icon)
+            if compiled:
+                archive.writestr('Payload/Test.app/Assets.car', b'compiled icon asset')
         return data.getvalue()
 
     def request(self, body, token=None, headers=None, path='/api/upload'):
@@ -123,6 +127,54 @@ class HomeUploadTests(unittest.TestCase):
         status, _ = self.request(self.ipa(extra=b'changed'))
         self.assertEqual(status, 409)
         self.assertEqual(len(self.apps()[0]['versions']), 1)
+
+    def test_compiled_or_optimized_icons_preserve_existing_icon(self):
+        icon = self.service.fallback_icon + b'original app icon'
+        self.assertEqual(self.request(self.ipa(icon=icon))[0], 201)
+        original_url = self.apps()[0]['iconURL']
+        for version, optimized in [('2', None), ('3', home_upload.PNG + b'\x00\x00\x00\x04CgBIoptimized')]:
+            status, _ = self.request(self.ipa(version=version, build=version, icon=optimized, compiled=True))
+            self.assertEqual(status, 201)
+            self.assertEqual(self.apps()[0]['iconURL'], original_url)
+            self.assertEqual((self.public / original_url.split('.example/')[1]).read_bytes(), icon)
+        self.assertEqual(len(self.apps()[0]['versions']), 3)
+
+    def test_readable_new_icon_replaces_existing_icon(self):
+        old_icon = self.service.fallback_icon + b'old'
+        new_icon = self.service.fallback_icon + b'new'
+        self.assertEqual(self.request(self.ipa(icon=old_icon))[0], 201)
+        old_url = self.apps()[0]['iconURL']
+        self.assertEqual(self.request(self.ipa(version='2', build='2', icon=new_icon))[0], 201)
+        new_url = self.apps()[0]['iconURL']
+        self.assertNotEqual(new_url, old_url)
+        self.assertEqual((self.public / new_url.split('.example/')[1]).read_bytes(), new_icon)
+
+    def test_new_app_without_readable_icon_uses_fallback(self):
+        self.assertEqual(self.request(self.ipa(compiled=True))[0], 201)
+        icon_url = self.apps()[0]['iconURL']
+        self.assertEqual((self.public / icon_url.split('.example/')[1]).read_bytes(), self.service.fallback_icon)
+
+    def test_preserved_icon_keeps_legacy_filename(self):
+        icon = self.service.fallback_icon + b'legacy'
+        self.assertEqual(self.request(self.ipa(icon=icon))[0], 201)
+        key = 'files/' + hashlib.sha256(icon).hexdigest() + '.png'
+        for folder in (self.staging, self.public):
+            (folder / key).write_bytes(icon)
+            manifest = json.loads((folder / 'source.json').read_text())
+            manifest['apps'][0]['iconURL'] = 'https://source.example/' + key
+            (folder / 'source.json').write_text(json.dumps(manifest))
+        self.assertEqual(self.request(self.ipa(version='2', build='2', compiled=True))[0], 201)
+        self.assertEqual(self.apps()[0]['iconURL'], 'https://source.example/' + key)
+
+    def test_unavailable_existing_icon_fails_without_replacing_manifest(self):
+        self.assertEqual(self.request(self.ipa(icon=self.service.fallback_icon + b'app'))[0], 201)
+        key = self.apps()[0]['iconURL'].split('.example/')[1]
+        (self.staging / key).unlink()
+        before = (self.public / 'source.json').read_bytes()
+        self.assertEqual(self.request(self.ipa(version='2', build='2', compiled=True))[0], 502)
+        self.assertEqual((self.public / 'source.json').read_bytes(), before)
+        self.assertEqual((self.staging / 'source.json').read_bytes(), before)
+        self.assertFalse((self.staging / '.publish-base.sha256').exists())
 
     def test_invalid_archive_and_checksum_never_publish(self):
         for body, headers, status in [(b'not an IPA', {}, 400), (self.ipa(), {'X-IPA-SHA256': '0' * 64}, 422)]:
