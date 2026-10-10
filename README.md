@@ -151,15 +151,18 @@ xcrun swiftc Feather/Utilities/OneViewPhase.swift Tests/OneViewPhaseRegression.s
 rm /tmp/signos-phase-regression
 ```
 
-### Yao App Source（本机软件源）
+### Yao App Source（Cloudflare 软件源）
 
-- 固定源地址：`https://192.168.123.79:8770/source.json`；`/appstore` 为同一清单的兼容入口。
+- 固定源地址：`https://yao-app-source.305301890.workers.dev/source.json`；`/appstore` 为同一清单的兼容入口。
+- Worker `yao-app-source` 通过绑定读取私有 R2 bucket `yao-app-source`；不依赖本机开机或局域网。
 - 使用 SignOs / AltStore 格式，IPA 原样保存为版本、构建号和摘要组成的独立文件；不重新签名。
 - 首个应用为 Codex Mobile `0.2.140 (2140)`，来自对话 `01a12463-0613-7803-93db-066e26ed467d`。
-- 运行脚本：`scripts/app_source.py`；后台服务：`local.yao.app-source`。
-- 私有配置：`~/Library/Application Support/YaoAppSource/server.local.json`；公开清单和 IPA 位于同目录的 `public/`。
-- 复用本机现有局域网 TLS 证书。手机须在同一局域网，并已信任该 CA；Mac 需保持运行。
-- 后续收录使用 `app_source.py --config <配置> publish --ipa <IPA> --sha256 <完整摘要> --icon <PNG> --developer <开发者> --description <介绍> --notes <更新说明>`。清单原子更新并保留其他应用及历史版本；目前不自动跟踪上游更新。
+- 发布工具：`scripts/app_source.py`；配置：`cloudflare/app-source/source.config.json`；本机发布副本：`packages/app-source/public/`。
+- 先用 `publish` 生成新版本，再用 `sync` 上传资源、逐个校验公网 SHA-256，最后发布清单。超过 300 MiB 的 IPA 使用 S3 分片上传。
+- 清单不缓存；IPA 流式下载，支持 HEAD、Range、If-Range 和 ETag。部署与发布命令见 [Cloudflare 软件源说明](cloudflare/app-source/README.md)。
+- 2026-10-10 已停用并删除 `local.yao.app-source` LaunchAgent、旧 `YaoAppSource` 服务目录及 Python `serve` 入口，8770 端口不再监听。
+- 同日真机通过新源添加、IPA 下载、签名与覆盖安装验证；Codex Mobile 正常启动，原 `mac_pc` 连接保留。此前 Wi-Fi 访问曾超时，用户调整网络后通过；大 IPA 与真机跨网络续传尚未实测。
+- SignOs 自身 OTA 服务、共用 TLS 和签名材料不受本次迁移影响。软件源目前不自动跟踪上游更新。
 
 ## Contact
 

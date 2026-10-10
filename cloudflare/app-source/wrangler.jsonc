@@ -1,0 +1,10 @@
+{
+  "name": "yao-app-source",
+  "main": "src/index.mjs",
+  "compatibility_date": "2026-10-10",
+  "account_id": "36f197f2dcd122670857a6f4c59d39e4",
+  "workers_dev": true,
+  "preview_urls": false,
+  "r2_buckets": [{"binding": "SOURCE", "bucket_name": "yao-app-source"}],
+  "observability": {"enabled": true}
+}
