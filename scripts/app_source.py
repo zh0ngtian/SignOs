@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Prepare and publish unchanged IPAs to the Cloudflare app source."""
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import fcntl
@@ -331,10 +332,57 @@ def _sync_locked(args, config):
     print('Published and verified:', base + '/source.json')
 
 
+def upload_workers(value):
+    count = int(value)
+    if not 1 <= count <= 8:
+        raise argparse.ArgumentTypeError('upload workers must be between 1 and 8')
+    return count
+
+
 def _upload_locked(args, config, referenced, objects):
     root = Path(config['root']).expanduser().resolve(strict=True)
     base, bucket = config['baseUrl'].rstrip('/'), config['bucket']
     manifest = root / 'source.json'
+    cache_path = root / '.verified-files.json'
+    scope = {key: config.get(key) for key in ('baseUrl', 'bucket', 'accountId')}
+    try:
+        cache = json.loads(cache_path.read_text())
+        if (cache.get('version') != 1 or cache.get('scope') != scope
+                or not isinstance(cache.get('files'), dict)):
+            cache = {}
+    except (OSError, ValueError, AttributeError):
+        cache = {}
+    receipts = cache.get('files', {})
+    workers = upload_workers(getattr(args, 'upload_workers', 4))
+
+    def save_receipts():
+        atomic_write(cache_path, json.dumps({'version': 1, 'scope': scope,
+                     'files': {key: value for key, value in receipts.items() if key in referenced}}).encode())
+
+    def response_identity(response):
+        headers = getattr(response, 'headers', {})
+        etag = headers.get('ETag', '')
+        modified = headers.get('Last-Modified', '')
+        if not etag.startswith('"') or not etag.endswith('"') or not modified:
+            return None
+        try:
+            size = int(headers.get('Content-Length', ''))
+        except (TypeError, ValueError):
+            return None
+        return {'etag': etag.strip('"'), 'lastModified': modified, 'size': size}
+
+    def unchanged(key, expected):
+        receipt, obj = receipts.get(key), objects.get(key)
+        if (getattr(args, 'verify_all', False) or not isinstance(receipt, dict) or not obj
+                or receipt.get('sha256') != expected or receipt.get('size') != (root / key).stat().st_size
+                or obj.get('etag') != receipt.get('etag') or obj.get('size') != receipt.get('size')):
+            return False
+        request = Request(base + '/' + key, method='HEAD',
+                          headers={'User-Agent': 'YaoAppSourcePublisher/1.0', 'Accept-Encoding': 'identity'})
+        with urlopen(request, timeout=30) as response:
+            identity = response_identity(response)
+        return identity is not None and all(receipt.get(k) == v for k, v in identity.items())
+
     def upload(path, key):
         if args.transport == 's3':
             if not os.environ.get('AWS_ACCESS_KEY_ID') or not os.environ.get('AWS_SECRET_ACCESS_KEY'):
@@ -342,25 +390,45 @@ def _upload_locked(args, config, referenced, objects):
             command = ['rclone', 'copyto', str(path), ':s3:' + bucket + '/' + key,
                        '--s3-provider', 'Cloudflare', '--s3-env-auth',
                        '--s3-endpoint', config['accountId'] + '.r2.cloudflarestorage.com',
-                       '--s3-no-check-bucket', '--s3-chunk-size', '16Mi', '--s3-upload-cutoff', '64Mi']
+                       '--s3-no-check-bucket', '--s3-chunk-size', '8Mi', '--s3-upload-cutoff', '8Mi',
+                       '--s3-upload-concurrency', '4']
         else:
             command = shlex.split(os.environ.get('WRANGLER_COMMAND', 'npx wrangler')) + [
                 'r2', 'object', 'put', bucket + '/' + key, '--remote', '--file', str(path)]
         subprocess.run(command, check=True)
-    def verify(path, key):
+    def verify(path, key, expected):
+        # A failed recheck must not leave a formerly trusted receipt reusable.
+        receipts.pop(key, None)
+        save_receipts()
         digest = hashlib.sha256()
         count = 0
-        with urlopen(Request(base + '/' + key, headers={'User-Agent': 'YaoAppSourcePublisher/1.0'}), timeout=120) as response:
+        with urlopen(Request(base + '/' + key, headers={'User-Agent': 'YaoAppSourcePublisher/1.0',
+                                                     'Accept-Encoding': 'identity'}), timeout=120) as response:
+            identity = response_identity(response)
             while chunk := response.read(1024 * 1024):
                 digest.update(chunk)
                 count += len(chunk)
-        if count != path.stat().st_size or digest.hexdigest() != file_digest(path):
+        if count != path.stat().st_size or digest.hexdigest() != expected:
             raise ValueError('Cloud verification failed: ' + key)
+        # Only a full successful digest check can establish a reusable receipt.
+        if identity is not None and identity['size'] == count:
+            receipts[key] = {**identity, 'sha256': expected}
+        else:
+            receipts.pop(key, None)
+        save_receipts()
     original_manifest = manifest.read_bytes()
+    missing = sorted(key for key in referenced if key not in objects)
+    print(f'Uploading {len(missing)} new resources with up to {workers} workers', flush=True)
+    # Drain all in-flight uploads on failure; never publish the manifest early.
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        list(executor.map(lambda key: upload(root / key, key), missing))
     for key in sorted(referenced):
-        if key not in objects:
-            upload(root / key, key)
-        verify(root / key, key)
+        expected = file_digest(root / key)
+        if unchanged(key, expected):
+            print('Verified unchanged (HEAD):', key, flush=True)
+            continue
+        print('Verifying full SHA-256:', key, flush=True)
+        verify(root / key, key, expected)
     upload(manifest, 'source.json')
     with urlopen(Request(base + '/source.json', headers={'User-Agent': 'YaoAppSourcePublisher/1.0'}), timeout=30) as response:
         if response.read() != original_manifest:
@@ -375,6 +443,8 @@ def main():
     migration.add_argument('--from-root', required=True)
     upload_cloud = commands.add_parser('sync')
     upload_cloud.add_argument('--transport', choices=['wrangler', 's3'], default='wrangler')
+    upload_cloud.add_argument('--upload-workers', type=upload_workers, default=4)
+    upload_cloud.add_argument('--verify-all', action='store_true', help='Ignore receipts and download every resource for verification')
     upload = commands.add_parser('publish')
     for name in ('ipa', 'sha256', 'icon', 'developer', 'description', 'notes'):
         upload.add_argument('--' + name, required=True)

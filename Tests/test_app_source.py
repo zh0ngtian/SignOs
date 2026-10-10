@@ -72,8 +72,9 @@ class PublishingTests(unittest.TestCase):
         with patch.object(source.subprocess, 'run') as run, patch.object(source, 'urlopen', return_value=io.BytesIO(b'wrong')):
             with self.assertRaisesRegex(ValueError, 'verification failed'):
                 source.sync(SimpleNamespace(transport='wrangler'), self.config)
-            self.assertEqual(run.call_count, 1)
-            self.assertIn('test/files/app.ipa', run.call_args.args[0])
+            commands = [call.args[0] for call in run.call_args_list]
+            self.assertTrue(any('test/files/app.ipa' in command for command in commands))
+            self.assertFalse(any('test/source.json' in command for command in commands))
 
     def test_corrupt_local_archive_is_rejected_before_upload(self):
         _, cloud = self.prepare()

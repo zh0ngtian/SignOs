@@ -47,6 +47,8 @@ def main():
     parser.add_argument('--release-json', required=True, help='Matching OTA latest-ios.json / saved release receipt')
     parser.add_argument('--config', default=str(REPO / 'cloudflare/app-source/source.config.json'))
     parser.add_argument('--transport', choices=['s3', 'wrangler'], default='s3')
+    parser.add_argument('--upload-workers', type=app_source.upload_workers, default=4)
+    parser.add_argument('--verify-all', action='store_true', help='Ignore receipts and download every resource for verification')
     parser.add_argument('--plan', action='store_true', help='Validate inputs without staging or uploading')
     args = parser.parse_args()
     config = json.loads(Path(args.config).expanduser().read_text())
