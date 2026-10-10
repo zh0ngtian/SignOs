@@ -81,4 +81,5 @@ docker exec signos-home-source nginx -s reload
 校验通过。SignOs 为 `1.0.7 (8)`，与 Cloudflare 清单保持一致。HEAD、Range、
 If-Range、ETag、416 及非公开路径拒绝检查通过；本机发布自动镜像入口也已验证。
 本机证据保存在 `packages/home-source/acceptance-20261011.json`。
-此次未独立验证蜂窝网络可达性、速度、设备安装和重启恢复。
+用户随后确认手机切到蜂窝网络可以打开上述清单，独立外网入口可达。
+此次未测量蜂窝网络 IPA 下载速度，未验证设备安装和重启恢复。
