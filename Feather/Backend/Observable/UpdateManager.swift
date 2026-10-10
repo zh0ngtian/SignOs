@@ -174,6 +174,7 @@ final class UpdateManager: ObservableObject {
 			let sourceAppIdentifier: String
 			let sourceAppVersion: String?
 			let storedSourceURL: URL
+			let storedRepositoryIdentifier: String?
 			if let directMetadata = metadataByUUID[localUUID] {
 				guard
 					let metadataSourceAppIdentifier = directMetadata.sourceAppIdentifier,
@@ -185,6 +186,7 @@ final class UpdateManager: ObservableObject {
 				sourceAppIdentifier = metadataSourceAppIdentifier
 				sourceAppVersion = directMetadata.sourceAppVersion
 				storedSourceURL = metadataSourceURL
+				storedRepositoryIdentifier = directMetadata.sourceRepositoryIdentifier
 			} else if let fallback = _fallbackMetadataCandidate(
 				for: localApp,
 				localUUID: localUUID,
@@ -200,6 +202,7 @@ final class UpdateManager: ObservableObject {
 				sourceAppIdentifier = metadataSourceAppIdentifier
 				sourceAppVersion = fallback.metadata.sourceAppVersion
 				storedSourceURL = metadataSourceURL
+				storedRepositoryIdentifier = fallback.metadata.sourceRepositoryIdentifier
 				Storage.shared.copySourceMetadata(
 					from: fallback.appUUID,
 					to: localUUID,
@@ -212,6 +215,7 @@ final class UpdateManager: ObservableObject {
 				sourceAppIdentifier = localIdentifier
 				sourceAppVersion = localApp.version
 				storedSourceURL = localSourceURL
+				storedRepositoryIdentifier = nil
 			} else {
 				continue
 			}
@@ -221,7 +225,12 @@ final class UpdateManager: ObservableObject {
 					continue
 				}
 				
-				guard _matchesStoredRepository(storedSourceURL: storedSourceURL, sourceURL: sourceURL) else {
+				guard SourceRepositoryIdentity.matches(
+					storedURL: storedSourceURL,
+					storedIdentifier: storedRepositoryIdentifier,
+					currentURL: sourceURL,
+					currentIdentifier: repository.id
+				) else {
 					continue
 				}
 				
@@ -272,20 +281,10 @@ final class UpdateManager: ObservableObject {
 		storedSourceURL: URL,
 		sourceURL: URL
 	) -> Bool {
-		_normalizedSourceURL(storedSourceURL) == _normalizedSourceURL(sourceURL)
-	}
-	
-	private func _normalizedSourceURL(_ url: URL) -> String {
-		var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-		let scheme = components?.scheme?.lowercased()
-		let host = components?.host?.lowercased()
-		components?.scheme = scheme
-		components?.host = host
-		components?.fragment = nil
-		
-		let normalized = components?.url ?? url
-		let absoluteString = normalized.absoluteString
-		return absoluteString.hasSuffix("/") ? String(absoluteString.dropLast()) : absoluteString
+		SourceRepositoryIdentity.matches(
+			storedURL: storedSourceURL, storedIdentifier: nil,
+			currentURL: sourceURL, currentIdentifier: nil
+		)
 	}
 	
 	private func _fallbackMetadataCandidate(

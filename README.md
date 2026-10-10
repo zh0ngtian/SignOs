@@ -25,6 +25,9 @@ contributors for their work, this wouldn't exist without them.
 ## Features
 
 ### Automatic Updates
+- Repository URL migrations keep existing app update links when the fetched source
+  retains the same nonempty repository identifier. Legacy records without an
+  identifier continue to require the original URL.
 - Background update checks on a schedule you pick (hourly to daily)
 - Updates download, sign and install themselves with zero interaction
 - Auto-fire install prompts and Tap-to-install notifications
@@ -210,6 +213,15 @@ retry action available. The state regression checks can be run on macOS with:
 xcrun swiftc Feather/Utilities/OneViewPhase.swift Tests/OneViewPhaseRegression.swift -o /tmp/signos-phase-regression
 /tmp/signos-phase-regression
 rm /tmp/signos-phase-regression
+```
+
+The source identity regression covers URL migrations, unrelated sources and
+legacy URL-only metadata:
+
+```sh
+xcrun swiftc Feather/Utilities/SourceRepositoryIdentity.swift Tests/SourceRepositoryIdentityRegression.swift -o /tmp/signos-source-regression
+/tmp/signos-source-regression
+rm /tmp/signos-source-regression
 ```
 
 ### Yao App Source（家中软件源）
