@@ -10,6 +10,7 @@ import threading
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
+from urllib.error import HTTPError
 
 spec = importlib.util.spec_from_file_location('transfer_source', Path(__file__).parents[1] / 'scripts/app_source.py')
 source = importlib.util.module_from_spec(spec)
@@ -38,18 +39,27 @@ class TransferTests(unittest.TestCase):
         self.barrier = None
         self.fail_upload = None
         self.bad_download = None
+        self.missing_head = None
         for key, data in self.data.items():
             (self.root / key).write_bytes(data)
             etag = hashlib.md5(data).hexdigest()
             self.objects[key] = dict(size=len(data), etag=etag)
             self.headers[key] = {'ETag': '"' + etag + '"', 'Content-Length': str(len(data)),
                                  'Last-Modified': 'Sun, 11 Oct 2026 00:00:00 GMT'}
+        self.document = {'iconURL': self.config['baseUrl'] + '/files/b.png', 'apps': [{
+            'downloadURL': self.config['baseUrl'] + '/files/a.ipa',
+            'sha256': source.file_digest(self.root / 'files/a.ipa'),
+            'size': len(self.data['files/a.ipa']),
+        }]}
+        (self.root / 'source.json').write_text(json.dumps(self.document))
 
     def open(self, request, timeout):
         key = request.full_url.removeprefix(self.config['baseUrl'] + '/')
         self.requests.append((request.get_method(), key))
         if key == 'source.json':
             return Response((self.root / key).read_bytes(), {})
+        if key == self.missing_head and request.get_method() == 'HEAD':
+            raise HTTPError(request.full_url, 404, 'Not Found', {}, None)
         data = b'bad bytes' if key == self.bad_download else self.data[key]
         return Response(data if request.get_method() == 'GET' else b'', self.headers[key])
 
@@ -64,7 +74,7 @@ class TransferTests(unittest.TestCase):
         if key == self.fail_upload:
             raise RuntimeError('upload failed')
 
-    def sync(self, objects=None, **options):
+    def sync(self, objects=None, previous=None, **options):
         args = SimpleNamespace(transport='s3', upload_workers=2, verify_all=False)
         for key, value in options.items():
             setattr(args, key, value)
@@ -72,7 +82,44 @@ class TransferTests(unittest.TestCase):
              patch.object(source.subprocess, 'run', side_effect=self.run_upload), \
              patch.dict(source.os.environ, AWS_ACCESS_KEY_ID='test', AWS_SECRET_ACCESS_KEY='test'), \
              contextlib.redirect_stdout(io.StringIO()):
-            source._upload_locked(args, self.config, set(self.data), self.objects if objects is None else objects)
+            source._upload_locked(args, self.config, set(self.data), self.objects if objects is None else objects, previous)
+
+    def test_published_history_uses_head_without_verification_receipts(self):
+        self.bad_download = 'files/a.ipa'
+        self.sync(previous=self.document)
+        self.assertEqual(self.requests, [('HEAD', 'files/a.ipa'), ('HEAD', 'files/b.png'), ('GET', 'source.json')])
+        self.assertFalse((self.root / '.verified-files.json').exists())
+
+    def test_existing_remote_object_not_in_published_manifest_is_new(self):
+        self.sync(previous={'iconURL': self.document['iconURL'], 'apps': []})
+        self.assertIn(('GET', 'files/a.ipa'), self.requests)
+        self.assertIn(('HEAD', 'files/b.png'), self.requests)
+
+    def test_changed_manifest_digest_requires_full_download(self):
+        previous = json.loads(json.dumps(self.document))
+        previous['apps'][0]['sha256'] = '0' * 64
+        self.sync(previous=previous)
+        self.assertIn(('GET', 'files/a.ipa'), self.requests)
+
+    def test_missing_history_or_wrong_size_blocks_manifest_publication(self):
+        self.missing_head = 'files/a.ipa'
+        with self.assertRaises(HTTPError):
+            self.sync(previous=self.document)
+        self.assertEqual(self.uploads, [])
+        self.missing_head = None
+        self.headers['files/a.ipa']['Content-Length'] = '1'
+        with self.assertRaisesRegex(ValueError, 'size mismatch'):
+            self.sync(previous=self.document)
+        self.assertEqual(self.uploads, [])
+
+    def test_history_force_all_or_repaired_missing_object_downloads_fully(self):
+        self.sync(previous=self.document, verify_all=True)
+        self.assertIn(('GET', 'files/a.ipa'), self.requests)
+        self.requests.clear()
+        del self.objects['files/a.ipa']
+        self.sync(previous=self.document)
+        self.assertIn(('GET', 'files/a.ipa'), self.requests)
+        self.assertIn('files/a.ipa', [key for key, _ in self.uploads])
 
     def warm(self):
         self.sync()

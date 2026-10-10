@@ -320,7 +320,7 @@ def _sync_locked(args, config):
         if not baseline.exists():
             atomic_write(baseline, expected.encode())
         atomic_write(manifest, encoded)
-        _upload_locked(args, config, referenced, objects)
+        _upload_locked(args, config, referenced, objects, json.loads(previous) if previous else None)
         now = int(datetime.now(timezone.utc).timestamp() * 1000)
         for key, obj in objects.items():
             if re.fullmatch(r'files/[A-Za-z0-9._-]+\.(ipa|png)', key) and key not in referenced:
@@ -339,10 +339,37 @@ def upload_workers(value):
     return count
 
 
-def _upload_locked(args, config, referenced, objects):
+def resource_versions(document, base):
+    """Identify published resources by URL and the IPA digests declared in the manifest."""
+    versions = {}
+    prefix = base.rstrip('/') + '/files/'
+
+    def collect(value):
+        if isinstance(value, dict):
+            url = value.get('downloadURL', '')
+            if isinstance(url, str) and url.startswith(prefix):
+                key = url[len(base.rstrip('/')) + 1:]
+                versions.setdefault(key, set()).add((value.get('sha256'), value.get('size')))
+            for item in value.values():
+                collect(item)
+        elif isinstance(value, list):
+            for item in value:
+                collect(item)
+        elif isinstance(value, str) and value.startswith(prefix):
+            versions.setdefault(value[len(base.rstrip('/')) + 1:], set())
+
+    collect(document)
+    return versions
+
+
+def _upload_locked(args, config, referenced, objects, previous=None):
     root = Path(config['root']).expanduser().resolve(strict=True)
     base, bucket = config['baseUrl'].rstrip('/'), config['bucket']
     manifest = root / 'source.json'
+    current_versions = resource_versions(json.loads(manifest.read_bytes()), base)
+    previous_versions = resource_versions(previous, base)
+    historical = {key for key in referenced if key in previous_versions
+                  and previous_versions[key] == current_versions.get(key)}
     cache_path = root / '.verified-files.json'
     scope = {key: config.get(key) for key in ('baseUrl', 'bucket', 'accountId')}
     try:
@@ -382,6 +409,14 @@ def _upload_locked(args, config, referenced, objects):
         with urlopen(request, timeout=30) as response:
             identity = response_identity(response)
         return identity is not None and all(receipt.get(k) == v for k, v in identity.items())
+
+    def check_exists(key):
+        request = Request(base + '/' + key, method='HEAD',
+                          headers={'User-Agent': 'YaoAppSourcePublisher/1.0', 'Accept-Encoding': 'identity'})
+        with urlopen(request, timeout=30) as response:
+            size = response.headers.get('Content-Length')
+        if size != str((root / key).stat().st_size):
+            raise ValueError('Historical resource size mismatch: ' + key)
 
     def upload(path, key):
         if args.transport == 's3':
@@ -423,6 +458,10 @@ def _upload_locked(args, config, referenced, objects):
     with ThreadPoolExecutor(max_workers=workers) as executor:
         list(executor.map(lambda key: upload(root / key, key), missing))
     for key in sorted(referenced):
+        if key in historical and key in objects and not getattr(args, 'verify_all', False):
+            check_exists(key)
+            print('Historical resource exists (HEAD):', key, flush=True)
+            continue
         expected = file_digest(root / key)
         if unchanged(key, expected):
             print('Verified unchanged (HEAD):', key, flush=True)

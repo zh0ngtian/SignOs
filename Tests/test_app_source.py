@@ -119,6 +119,7 @@ class PublishingTests(unittest.TestCase):
         with patch.object(source, '_upload_locked') as upload:
             source.sync(SimpleNamespace(transport='wrangler'), self.config)
             upload.assert_called_once()
+            self.assertEqual(upload.call_args.args[-1], json.loads(original))
         self.assertFalse((cloud / '.publish-base.sha256').exists())
 
 
