@@ -22,13 +22,9 @@ export function parseRange(value, size) {
 export default {
   async fetch(request, env) {
     const path = new URL(request.url).pathname;
-    const certificateType = {
-      '/certificates/signos-ca.mobileconfig': 'application/x-apple-aspen-config',
-      '/certificates/signos-ca.cer': 'application/pkix-cert',
-    }[path];
     const key = path === '/source.json' || path === '/appstore'
       ? 'source.json'
-      : certificateType || /^\/files\/[A-Za-z0-9._-]+\.(ipa|png)$/.test(path) ? path.slice(1) : null;
+      : /^\/files\/[A-Za-z0-9._-]+\.(ipa|png)$/.test(path) ? path.slice(1) : null;
     if (!key) return new Response('Not found', { status: 404 });
     if (!['GET', 'HEAD'].includes(request.method)) {
       return new Response('Method not allowed', { status: 405, headers: { Allow: 'GET, HEAD' } });
@@ -36,9 +32,9 @@ export default {
     const metadata = await env.SOURCE.head(key);
     if (!metadata) return new Response('Not found', { status: 404 });
     const headers = new Headers({
-      'Content-Type': certificateType || (key === 'source.json' ? 'application/json; charset=utf-8'
-        : key.endsWith('.png') ? 'image/png' : 'application/octet-stream'),
-      'Cache-Control': key === 'source.json' || certificateType ? 'no-store' : 'public, max-age=31536000, immutable',
+      'Content-Type': key === 'source.json' ? 'application/json; charset=utf-8'
+        : key.endsWith('.png') ? 'image/png' : 'application/octet-stream',
+      'Cache-Control': key === 'source.json' ? 'no-store' : 'public, max-age=31536000, immutable',
       'X-Content-Type-Options': 'nosniff',
       'Accept-Ranges': 'bytes',
       'ETag': metadata.httpEtag,

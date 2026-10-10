@@ -112,12 +112,6 @@ precedence over a newly installed package. The Settings **Update SSL Certificate
 button still targets the legacy `https://backloop.dev/pack.json` endpoint and is not
 the provisioning path for this local CA setup.
 
-The existing public CA profile is available from
-[Cloudflare](https://yao-app-source.305301890.workers.dev/certificates/signos-ca.mobileconfig),
-including over cellular. Install it in Safari, then enable **Codex Mobile LAN CA**
-under Settings → General → About → Certificate Trust Settings. See the
-[CA maintenance instructions](cloudflare/app-source/README.md#signos-本地安装证书).
-
 ### Local Ad Hoc OTA release
 
 `make iphoneos` produces a device build with a temporary ad-hoc code signature;
