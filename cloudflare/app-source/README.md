@@ -41,6 +41,41 @@ bucket 的 R2 S3 凭据设为 `AWS_ACCESS_KEY_ID` 和 `AWS_SECRET_ACCESS_KEY` �
 凭据不要写入仓库。此方式以 16 MiB 分片上传，64 MiB 以上自动切换 multipart。
 当前 Wrangler OAuth 登录不能替代 S3 凭据。
 
+### SignOs 标准发布步骤
+
+每次 SignOs 客户端发版都必须完成本机 OTA 和本软件源两个渠道；软件源使用
+OTA 已成功发布的同一签名 IPA，不再签名，也不使用 `packages/SignOs.ipa`
+临时构建包。先完成构建、检查、提交与 push 和 OTA 发布，再执行下面两步。
+以下为 `1.0.1 (2)` 示例，后续替换为本次正式 IPA 和对应 OTA 发布凭证：
+
+```sh
+python3 scripts/publish_signos.py \
+  --ipa packages/SignOs-1.0.1-AdHoc.ipa \
+  --release-json packages/SignOs-1.0.1-release.json --plan
+
+source "$HOME/.config/yao-app-source/remote-publisher.env"
+python3 scripts/publish_signos.py \
+  --ipa packages/SignOs-1.0.1-AdHoc.ipa \
+  --release-json packages/SignOs-1.0.1-release.json
+```
+
+`--release-json` 接受 OTA 生成的 `latest-ios.json` 或其原样保存副本。
+`--plan` 只读核对包与凭证；不是在线权限或上传验收。正式命令默认使用 S3，
+从凭证沿用版本、构建号、日期和更新说明，保留其他应用及版本历史；先上传并
+逐个核验资源 SHA-256，再更新并核验公网 `source.json`。可通过
+`--transport wrangler` 使用已登录的 Wrangler（命令配置同上）。
+发布凭证必须来自成功的 OTA 发布；该命令核对其对应字节，不替代 OTA 独立验签。
+
+只有两个渠道的在线版本、构建号、IPA 摘要一致才算发版完成。软件源失败时
+修复后重试同一命令；不要为重试软件源重新签名、递增版本或删除历史 OTA 包。
+单发布机串行执行，并在发布前确认本机清单是最新副本，避免覆盖别处发布的应用。
+
+发布入口回归检查：
+
+```sh
+python3 -m unittest discover -s Tests -p 'test_*.py'
+```
+
 发布是单个发布机上的串行操作；不要从多台机器并发覆盖 `source.json`。
 先验证文件、后更新清单；历史文件不会被 sync 删除。清理历史 IPA 时需同步删除
 清单中的对应版本，且不能删除仍被当前版本引用的文件。

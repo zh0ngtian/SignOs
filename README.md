@@ -129,6 +129,14 @@ and its actual version/build number; run `--plan` before publishing. The publish
 verifies signing, stages versioned resources, checks HTTPS downloads, and then
 switches the fixed `current` entry.
 
+SignOs 客户端的标准发布流程为：递增构建号、构建并测试、提交与 push、
+执行 OTA 发布器 `--plan` 并完成 OTA 发布，再将**同一正式签名 IPA**发布到
+Yao App Source。使用 OTA 生成的 `latest-ios.json` 或其原样保存的发布凭证，
+执行下文的 `scripts/publish_signos.py --plan` 和正式发布命令。
+两个渠道均核验通过才算完成；软件源失败时保留已成功的 OTA 版本，修复后重试
+软件源步骤，不重新签名或覆盖历史 OTA 目录。不要将 `packages/SignOs.ipa`
+这一临时签名构建产物直接上架。
+
 The fixed release metadata endpoint is
 `https://192.168.123.79:8769/channels/signos/current/latest-ios.json`; its sibling
 `manifest.plist` identifies the active IPA. On 2026-10-10, both launch agents were
@@ -158,6 +166,7 @@ rm /tmp/signos-phase-regression
 - 使用 SignOs / AltStore 格式，IPA 原样保存为版本、构建号和摘要组成的独立文件；不重新签名。
 - 首个应用为 Codex Mobile `0.2.140 (2140)`，来自对话 `01a12463-0613-7803-93db-066e26ed467d`。
 - 发布工具：`scripts/app_source.py`；配置：`cloudflare/app-source/source.config.json`；本机发布副本：`packages/app-source/public/`。
+- SignOs 专用发布入口：`scripts/publish_signos.py`，先 `--plan`，再使用相同参数正式发布。入口核对 OTA 凭证与 IPA 的身份、版本、构建号、大小和 SHA-256，然后生成软件源清单、上传并核验公网字节。完整命令见 [SignOs 标准发布步骤](cloudflare/app-source/README.md#signos-标准发布步骤)。
 - 先用 `publish` 生成新版本，再用 `sync` 上传资源、逐个校验公网 SHA-256，最后发布清单。超过 300 MiB 的 IPA 使用 S3 分片上传。
 - 清单不缓存；IPA 流式下载，支持 HEAD、Range、If-Range 和 ETag。部署与发布命令见 [Cloudflare 软件源说明](cloudflare/app-source/README.md)。
 - 2026-10-10 已停用并删除 `local.yao.app-source` LaunchAgent、旧 `YaoAppSource` 服务目录及 Python `serve` 入口，8770 端口不再监听。
