@@ -52,7 +52,7 @@ struct AboutView: View {
 
 			Section {
 				Button {
-					UIPasteboard.general.string = "@ihateios"
+					UIPasteboard.general.string = "@ihateios / @zh0ngtian"
 					UIImpactFeedbackGenerator(style: .light).impactOccurred()
 					_handleCopied = true
 					DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
@@ -66,10 +66,10 @@ struct AboutView: View {
 							.frame(width: 45)
 
 						NBTitleWithSubtitleView(
-							title: "@ihateios",
+							title: "@ihateios / @zh0ngtian",
 							subtitle: _handleCopied
 								? .localized("Copied to Clipboard")
-								: .localized("Made By @ihateios — tap to copy")
+								: "Made By @ihateios / @zh0ngtian — tap to copy"
 						)
 
 						Spacer()

@@ -8,7 +8,7 @@
 
 Automatic updates. Background signing. App Cloner. Zero effort.
 
-Made By [@ihateios](https://t.me/ihateios)
+Made By [@ihateios](https://github.com/ihateios) / [@zh0ngtian](https://github.com/zh0ngtian)
 
 [Download latest](../../releases/latest) · [Telegram](https://t.me/ihateios)
 
@@ -232,7 +232,8 @@ Questions, feature ideas, anything else: **[@ihateios on Telegram](https://t.me/
 
 ## Thanks
 
-SignOs is owned and developed by me, @ihateios. It's built over the open source
+This fork is maintained by [@zh0ngtian](https://github.com/zh0ngtian), based on
+SignOs by [@ihateios](https://github.com/ihateios). It's built over the open source
 [Feather](https://github.com/claration/Feather) project, so special thanks to
 [claration](https://github.com/claration), [Nyasami](https://github.com/Nyasami) and
 [llsc12](https://github.com/llsc12) for the foundation they built.

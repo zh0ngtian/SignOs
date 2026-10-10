@@ -67,7 +67,7 @@ extension SettingsView {
 					VStack(alignment: .leading, spacing: 3) {
 						Text("SignOs")
 							.font(.title2.weight(.bold))
-						Text(verbatim: "Made By @ihateios")
+						Text(verbatim: "Made By @ihateios / @zh0ngtian")
 							.font(.subheadline)
 							.foregroundStyle(.secondary)
 					}
@@ -382,7 +382,7 @@ extension SettingsView {
 	@ViewBuilder
 	private func _footer() -> some View {
 		Section {
-			Text(verbatim: "SignOs \(Bundle.main.version) • Made By @ihateios")
+			Text(verbatim: "SignOs \(Bundle.main.version) • Made By @ihateios / @zh0ngtian")
 				.font(.footnote)
 				.foregroundStyle(.tertiary)
 				.frame(maxWidth: .infinity, alignment: .center)
