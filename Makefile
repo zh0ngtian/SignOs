@@ -3,7 +3,7 @@ SCHEME := Feather
 PLATFORMS := iphoneos maccatalyst
 
 TMP := $(TMPDIR)/$(NAME)
-CERT_JSON_URL := https://backloop.dev/pack.json
+TLS_DIR ?= $(HOME)/Library/Application Support/IOSAdHocOTA/signos/local-install-tls
 
 .PHONY: all clean deps $(PLATFORMS)
 
@@ -15,15 +15,14 @@ clean:
 	rm -rf Payload
 
 deps:
-	rm -rf deps || true
-	mkdir -p deps
-
-	-curl -fsSL "$(CERT_JSON_URL)" -o cert.json
-	@if [ -f cert.json ]; then \
-		jq -r '.cert' cert.json > deps/server.crt; \
-		jq -r '.key1, .key2' cert.json > deps/server.pem; \
-		jq -r '.info.domains.commonName' cert.json > deps/commonName.txt; \
-	fi
+	@test -s "$(TLS_DIR)/server.crt" -a -s "$(TLS_DIR)/server.pem" -a -s "$(TLS_DIR)/commonName.txt" || \
+		{ echo 'Configure TLS_DIR with server.crt, server.pem and commonName.txt (see README).'; exit 1; }
+	@! grep -q '[*]' "$(TLS_DIR)/commonName.txt" || \
+		{ echo 'commonName.txt must contain a concrete hostname, not a wildcard certificate name.'; exit 1; }
+	@openssl x509 -in "$(TLS_DIR)/server.crt" -noout -checkend 0
+	@mkdir -p deps
+	@cp "$(TLS_DIR)/server.crt" "$(TLS_DIR)/server.pem" "$(TLS_DIR)/commonName.txt" deps/
+	@chmod 600 deps/server.crt deps/server.pem deps/commonName.txt
 
 
 $(PLATFORMS): deps

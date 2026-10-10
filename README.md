@@ -90,6 +90,25 @@ make iphoneos
 
 That produces packages/SignOs.ipa. You need Xcode 26 or newer on macOS.
 
+Fully Local installation needs a TLS certificate trusted by the target device.
+`make` reads `server.crt` (certificate), `server.pem` (leaf private key), and
+`commonName.txt` (concrete hostname) from `TLS_DIR`. Its local default is
+`~/Library/Application Support/IOSAdHocOTA/signos/local-install-tls`; override it
+with `make iphoneos TLS_DIR="/private/path/to/tls"` on another machine. Keep the
+CA private key outside the app and repository. SignOs also supports these three
+files in its Documents directory, which takes precedence over bundled files.
+
+On 2026-10-10, an iPhone 17 Pro running iOS 27.0 (24A437) reproduced a manifest
+timeout because the old build used `*.backloop.dev` as a literal hostname.
+The upstream public certificate service has also [been discontinued](https://backloop.dev/).
+This machine now uses `signos.backloop.dev` (public DNS resolves to loopback)
+with a leaf certificate issued by the existing device-trusted local CA. The
+device rejected a literal `127.0.0.1` manifest URL as non-external, so a concrete
+hostname is required for this tested configuration. System installation logs
+confirmed a successful Codex Mobile 0.2.140 (2140) OTA upgrade through SignOs
+1.0.1; launching it retained the existing `mac_pc` connection. These TLS overrides
+are already in the connected phone's SignOs Documents directory.
+
 ### Local Ad Hoc OTA release
 
 `make iphoneos` produces a device build with a temporary ad-hoc code signature;
