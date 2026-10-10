@@ -6,26 +6,26 @@ Worker 只开放清单和 `files/*.ipa` / `files/*.png` 的 GET、HEAD。
 
 ## 软件源图标
 
-源图标使用用户提供的蓝色渐变玻璃质感 Y 图标，仓库副本为
-[`assets/yao-source-y.png`](assets/yao-source-y.png)（1254 × 1254）。
-PNG 按用户原图字节保存，未裁剪、缩放或重新编码。
+源图标恢复为 iOS 27 App Store 图标，仓库副本为
+[`assets/app-store-ios27.png`](assets/app-store-ios27.png)（512 × 512）。
+素材来自 [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:App_Store_Logo_(iOS_27).webp)，
+页面署名 Apple Inc.、标注 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)，
+仅将原始 WebP 转为 PNG。
 
 清单顶层 `iconURL` 和 `sourceicon` 均指向
-`https://yao-app-source.305301890.workers.dev/files/d41381792aa4661052a7.png`，
-PNG SHA-256 为 `d41381792aa4661052a7548cec6b440bca7030b8e8bfa6e8eeecee121750cf7e`。
+`https://yao-app-source.305301890.workers.dev/files/84960d13a202a74b211d.png`，
+PNG SHA-256 为 `84960d13a202a74b211dd5a4ef7116cbf761b15d177bdfc10de7239ef5822f01`。
 应用条目各自的图标保持独立，后续 `publish` 会保留源图标。
 替换源图标时，先核对本机与公网清单一致，再上传并核验新摘要命名的 PNG，
 最后仅更新上述两个顶层字段并核验 `/source.json` 和 `/appstore`。
 此操作无需重新部署 Worker 或发布客户端。
 
-2026-10-11 已核验 Y 图标的完整 SHA-256、两个公网清单入口及应用条目保持不变；
+此前于 2026-10-11 已核验 Y 图标的完整 SHA-256、两个公网清单入口及应用条目保持不变；
 在 iPhone 17 Pro / iOS 26.5 模拟器启动 SignOs `1.0.6-debug (7)` 后，
 已有 Yao App Source 直接显示新 Y 图标，无需重新添加。
 
-历史素材 [`assets/app-store-ios27.png`](assets/app-store-ios27.png) 保留备查，来自
-[Wikimedia Commons](https://commons.wikimedia.org/wiki/File:App_Store_Logo_(iOS_27).webp)，
-页面署名 Apple Inc.、标注 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)，
-仅由原始 WebP 转为 PNG。
+用户提供的 [`assets/yao-source-y.png`](assets/yao-source-y.png)（1254 × 1254）
+保留为历史素材，原图字节未改动；已按用户要求恢复 App Store 图标。
 
 此前的 iOS 27 App Store 图标于 2026-10-11 核验两个公网清单入口与 PNG
 完整 SHA-256，并在 iPhone 17 Pro
@@ -40,6 +40,10 @@ PNG SHA-256 为 `d41381792aa4661052a7548cec6b440bca7030b8e8bfa6e8eeecee121750cf7
 已有测试源拉取新清单后从旧图标切换为 App Store 图标，数据库记录保持同一条；
 停止测试源服务并重启客户端后，显示刷新失败但保留新图标。自动化下拉手势未能
 触发，本次通过启动时共用的 `fetchSources` 路径验收；未在真机安装验证。
+
+从 1.0.7 (8) 起，软件源应用列表不再叠加源图标角标，应用详情页移除源图标
+背景及对应的大幅页头空间。保留应用自身图标、来源名称和首页源卡片图标。
+已在 iPhone 17 Pro / iOS 26.5 模拟器验证列表和详情页布局。
 
 ## 部署
 

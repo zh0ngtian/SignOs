@@ -29,10 +29,6 @@ struct SourceAppsDetailView: View {
 	
 	var body: some View {
 		ScrollView {
-			if #available(iOS 18, *) {
-				_header().flexibleHeaderContent()
-			}
-			
 			VStack(alignment: .leading, spacing: 10) {
 				HStack(spacing: 10) {
 					if let iconURL = app.iconURL {
@@ -183,16 +179,8 @@ struct SourceAppsDetailView: View {
 				}
 			}
 			.padding([.horizontal, .bottom])
-			.padding(.top, {
-				if #available(iOS 18, *) {
-					8
-				} else {
-					0
-				}
-			}())
+			.padding(.top, 8)
 		}
-		.flexibleHeaderScrollView()
-		.shouldSetInset()
 		.toolbar {
 			NBToolbarButton(
 				systemImage: "square.and.arrow.up",
@@ -221,51 +209,10 @@ struct SourceAppsDetailView: View {
 		Image("App_Unknown").appIconStyle(size: 111, isCircle: false)
 	}
 	
-	var standardHeader: some View {
-		Image("App_Unknown")
-			.resizable()
-			.aspectRatio(contentMode: .fill)
-			.frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
-			.clipped()
-	}
 }
 
 // MARK: - SourceAppsDetailView (Extension): Builders
 extension SourceAppsDetailView {
-	@available(iOS 18.0, *)
-	@ViewBuilder
-	private func _header() -> some View {
-		ZStack {
-			if let iconURL = source.currentIconURL {
-				LazyImage(url: iconURL) { state in
-					if let image = state.image {
-						image.resizable()
-							.aspectRatio(contentMode: .fill)
-							.frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
-							.clipped()
-					} else {
-						standardHeader
-					}
-				}
-			} else {
-				standardHeader
-			}
-			
-			NBVariableBlurView()
-				.rotationEffect(.degrees(-180))
-				.overlay(
-					LinearGradient(
-						gradient: Gradient(colors: [
-							Color.black.opacity(0.8),
-							Color.black.opacity(0)
-						]),
-						startPoint: .top,
-						endPoint: .bottom
-					)
-				)
-		}
-	}
-	
 	@ViewBuilder
 	private func _infoPills(app: ASRepository.App) -> some View {
 		let pillItems = _buildPills(from: app)
