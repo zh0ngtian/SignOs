@@ -75,3 +75,10 @@ docker exec signos-home-source nginx -s reload
 公网 DNS 必须持续对应路由器 WAN 地址；当前由路由器已有腾讯云 DDNS 脚本维护。
 通过公网 IP 从同一局域网请求可能经过 NAT 回环，并不等同于独立外网验收。
 外网可达性及下载速度应另用手机蜂窝网络核验。
+
+2026-10-11 部署验收：容器处于 running，内网和路由器公网 IP 的 HTTPS 返回 200，
+证书校验通过；4 个应用、15 个资源（307,667,097 字节）完整 HTTPS SHA-256
+校验通过。SignOs 为 `1.0.7 (8)`，与 Cloudflare 清单保持一致。HEAD、Range、
+If-Range、ETag、416 及非公开路径拒绝检查通过；本机发布自动镜像入口也已验证。
+本机证据保存在 `packages/home-source/acceptance-20261011.json`。
+此次未独立验证蜂窝网络可达性、速度、设备安装和重启恢复。

@@ -12,6 +12,7 @@ from urllib.request import Request, urlopen
 
 
 DEFAULT_CONFIG = Path.home() / '.config/yao-app-source/home-source.json'
+HEADERS = {'User-Agent': 'YaoAppSourcePublisher/1.0', 'Accept-Encoding': 'identity'}
 
 
 def digest(path):
@@ -79,7 +80,7 @@ def prepare(config):
 
 
 def verify_file(url, entry, full):
-    with urlopen(Request(url, method='GET' if full else 'HEAD'), timeout=60) as response:
+    with urlopen(Request(url, method='GET' if full else 'HEAD', headers=HEADERS), timeout=60) as response:
         if int(response.headers.get('Content-Length', -1)) != entry['size']:
             raise ValueError('HTTPS size mismatch: ' + url)
         if full:
@@ -104,7 +105,7 @@ def mirror(config, plan=False, verify_all=False):
     with (root.parent / '.home-publish.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         raw, encoded, files = prepare(config)
-        with urlopen(config['sourceBaseUrl'].rstrip('/') + '/source.json', timeout=30) as response:
+        with urlopen(Request(config['sourceBaseUrl'].rstrip('/') + '/source.json', headers=HEADERS), timeout=30) as response:
             if response.read() != raw:
                 raise ValueError('Local source differs from the live cloud manifest')
         receipt_path = root.parent / 'verified-files.json'
@@ -143,7 +144,7 @@ def mirror(config, plan=False, verify_all=False):
         atomic_write(path, encoded)
         try:
             for endpoint in ('/source.json', '/appstore'):
-                with urlopen(base + endpoint, timeout=30) as response:
+                with urlopen(Request(base + endpoint, headers=HEADERS), timeout=30) as response:
                     if response.read() != encoded:
                         raise ValueError('Published home manifest mismatch')
         except Exception:
