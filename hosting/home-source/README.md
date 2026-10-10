@@ -202,3 +202,10 @@ LaunchAgent 首次运行退出码为 0，线上证书指纹与正式 ACME 文件
 时间为 **2027-01-09 01:08:54（北京时间）**。停用后 15 个资源再次完整下载并核对
 SHA-256。证据保存在 `packages/home-source/retirement-20261011.json` 和私有 renewal
 状态文件中；这些是当日快照，不能替代下次发布或续期的在线检查。
+
+同日部署单 token IPA 上传接口：52 项 Python 回归通过，新应用发布、并发上传、
+版本冲突、非法 IPA 和失败回滚在隔离目录验收。真实 HTTPS 验收包括缺失/错误 token
+返回 401、非法包返回 400、摘要不匹配返回 422、SignOs 身份返回 403，以及现有
+博物女神 IPA 的成功重复上传；生产清单和版本保持不变。博物女神、SignOs 的完整
+下载 SHA-256 与 Range 下载通过，上传临时文件已清理，token 权限为 0600。
+证据保存在 `packages/home-source/upload-acceptance-20261011.json`。

@@ -136,6 +136,14 @@ class HomeUploadTests(unittest.TestCase):
         self.assertEqual(self.request(body)[0], 400)
         self.assertEqual(self.apps(), [])
 
+    def test_malformed_or_non_dictionary_plist_is_client_error(self):
+        for info in (b'<?xml version="1.0"?><plist><dict>', plistlib.dumps(['invalid'])):
+            body = io.BytesIO()
+            with zipfile.ZipFile(body, 'w') as archive:
+                archive.writestr('Payload/Bad.app/Info.plist', info)
+            self.assertEqual(self.request(body.getvalue())[0], 400)
+        self.assertEqual(self.apps(), [])
+
     def test_reserved_signos_identity_requires_ota_receipt(self):
         self.assertEqual(self.request(self.ipa(bundle='com.signos.app'))[0], 403)
         self.assertEqual(self.apps(), [])

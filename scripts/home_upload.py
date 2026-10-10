@@ -14,6 +14,7 @@ import tempfile
 import threading
 from types import SimpleNamespace
 from urllib.parse import parse_qs, urlsplit
+from xml.parsers.expat import ExpatError
 import zipfile
 
 import app_source
@@ -44,6 +45,8 @@ def inspect_ipa(path):
             if len(matches) != 1 or matches[0].file_size > 1024 * 1024:
                 raise ValueError('Expected exactly one bounded main app Info.plist')
             info = plistlib.loads(archive.read(matches[0]))
+            if not isinstance(info, dict):
+                raise ValueError('Main app Info.plist must be a dictionary')
             for key in ('CFBundleIdentifier', 'CFBundleShortVersionString', 'CFBundleVersion'):
                 value = info.get(key)
                 if not isinstance(value, str) or not value or len(value) > 255 or any(ord(c) < 32 for c in value):
@@ -64,7 +67,7 @@ def inspect_ipa(path):
                     return info, icon
             return info, None
     except (ValueError, KeyError, TypeError, zipfile.BadZipFile, RuntimeError, EOFError,
-            plistlib.InvalidFileException, NotImplementedError) as error:
+            plistlib.InvalidFileException, NotImplementedError, ExpatError) as error:
         raise UploadError(400, 'Invalid IPA: ' + str(error)) from None
 
 
