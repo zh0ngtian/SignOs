@@ -72,8 +72,17 @@ final class SourcesViewModel: ObservableObject {
 			}
 			
 			await MainActor.run {
+				var didUpdateIcon = false
 				for (source, repo) in batchResults {
+					guard !source.isDeleted, source.managedObjectContext != nil else { continue }
+					if source.iconURL != repo.currentIconURL {
+						source.iconURL = repo.currentIconURL
+						didUpdateIcon = true
+					}
 					self.sources[source] = repo
+				}
+				if didUpdateIcon {
+					Storage.shared.saveContext()
 				}
 			}
 		}
