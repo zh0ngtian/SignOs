@@ -8,3 +8,6 @@ cert.json
 _build
 node_modules/
 .wrangler/
+__pycache__/
+.env
+*.env.local

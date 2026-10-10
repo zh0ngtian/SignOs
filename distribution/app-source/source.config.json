@@ -1,7 +1,7 @@
 {
   "name": "Yao App Source",
   "identifier": "tech.zh0ngtian.yao-app-source",
-  "baseUrl": "https://yao-app-source.305301890.workers.dev",
+  "baseUrlEnv": "LEGACY_APP_SOURCE_BASE_URL",
   "root": "packages/app-source/public",
   "bucket": "yao-app-source",
   "disabled": true,

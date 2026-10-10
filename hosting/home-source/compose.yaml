@@ -5,8 +5,11 @@ services:
     restart: unless-stopped
     ports:
       - "15006:15006"
+    environment:
+      APP_SOURCE_DOMAIN: ${APP_SOURCE_DOMAIN:?set APP_SOURCE_DOMAIN in the private env file}
+      NGINX_ENVSUBST_FILTER: APP_SOURCE_DOMAIN
     volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
       - ${HOME_SOURCE_ROOT:?set HOME_SOURCE_ROOT}:/srv/source:ro
       - ${HOME_SOURCE_CERTIFICATES:?set HOME_SOURCE_CERTIFICATES}:/certificates:ro
     logging:

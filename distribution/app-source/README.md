@@ -1,6 +1,6 @@
 # Yao App Source：跨机器上传 IPA
 
-当前软件源为 [家中 HTTPS 软件源](https://${APP_SOURCE_DOMAIN}:15006/source.json)。
+当前软件源入口为 `${APP_SOURCE_BASE_URL}/source.json`，实际地址由私有环境变量提供。
 普通应用可以直接上传 IPA，不必 SSH 到家中服务器，也无需 Cloudflare/R2 凭据。
 这个目录保留跨机器上传器和旧 Cloudflare 工程；Cloudflare 入口、预览及 Cron 继续停用，
 `source.config.json` 的 `disabled: true` 不应移除，旧 R2 私有历史文件保留。
@@ -8,16 +8,20 @@
 ## 使用上传器
 
 需要 Python 3.11+ 和管理员提供的单个共享 token；将 token 保存到私有文本文件，
-不要写入仓库。先检查本地文件，再上传：
+不要写入仓库。将管理员提供的地址配置为 `APP_SOURCE_BASE_URL`，可在自己的私有
+环境文件中设置。这里不提供真实域名或默认地址。先加载私有环境，再检查文件并上传：
 
 ```sh
-python3 cloudflare/app-source/upload_ipa.py --ipa /path/app.ipa --plan
-python3 cloudflare/app-source/upload_ipa.py \
+set -a
+. /private/path/app-source.env
+set +a
+python3 distribution/app-source/upload_ipa.py --ipa /path/app.ipa --plan
+python3 distribution/app-source/upload_ipa.py \
   --ipa /path/app.ipa --token-file /private/path/upload-token \
   --developer 'Your name' --description '应用说明' --notes '更新说明'
 ```
 
-也可设置 `APP_SOURCE_UPLOAD_TOKEN` 环境变量。`--plan` 不读 token、不发送请求。
+也可使用 `--url` 指定完整 HTTPS 上传地址，或设置 `APP_SOURCE_UPLOAD_TOKEN` 环境变量代替 token 文件。`--plan` 不读 token、不发送请求。
 上传器检查 HTTPS 证书，按块传输原始 IPA，发送大小和完整 SHA-256，核对响应中
 相同的大小、摘要。成功后应用自动出现在 `/source.json` 和兼容入口 `/appstore`。
 单包上限 2 GiB；包内名称、bundle ID、版本、构建号由服务器读取，无需手写清单。
@@ -29,7 +33,7 @@ python3 cloudflare/app-source/upload_ipa.py \
 
 ## HTTP 协议
 
-- 地址：`POST https://${APP_SOURCE_DOMAIN}:15006/api/upload`
+- 地址：`POST ${APP_SOURCE_BASE_URL}/api/upload`
 - 认证：`Authorization: Bearer <token>`；token 不接受放在 URL 中。
 - 类型：`Content-Type: application/octet-stream`
 - 请求体：完整 IPA 原始字节，**不是 multipart**，必须发送 `Content-Length`。
@@ -44,7 +48,7 @@ curl --fail-with-body \
   -H "Authorization: Bearer $upload_token" \
   -H 'Content-Type: application/octet-stream' \
   --data-binary @/path/app.ipa \
-  'https://${APP_SOURCE_DOMAIN}:15006/api/upload?developer=Your%20name'
+  "${APP_SOURCE_BASE_URL}/api/upload?developer=Your%20name"
 unset upload_token
 ```
 

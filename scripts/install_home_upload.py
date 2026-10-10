@@ -9,6 +9,8 @@ import secrets
 import subprocess
 import sys
 
+from source_config import load_config
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -40,10 +42,10 @@ def main():
     token.chmod(0o600)
     # Validate configuration before replacing the running launchd job.
     from home_upload import UploadService, REPO
-    config = json.loads((REPO / 'hosting/home-source/source.config.json').read_text())
+    config = load_config(REPO / 'hosting/home-source/source.config.json')
     for key in ('root', 'publicRoot'):
         config[key] = str(REPO / config[key])
-    UploadService(config, token.read_text().strip(), REPO / 'cloudflare/app-source/assets/app-store-ios27.png')
+    UploadService(config, token.read_text().strip(), REPO / 'distribution/app-source/assets/app-store-ios27.png')
     service = 'gui/' + str(os.getuid())
     subprocess.run(['launchctl', 'bootout', service + '/' + label], capture_output=True)
     target.parent.mkdir(parents=True, exist_ok=True)

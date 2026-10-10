@@ -1,6 +1,6 @@
 # 家中软件源
 
-唯一公开入口：`https://${APP_SOURCE_DOMAIN}:15006/source.json`，`/appstore` 返回相同清单。
+唯一公开入口：`${APP_SOURCE_BASE_URL}/source.json`，`/appstore` 返回相同清单。
 软件源保持 `tech.zh0ngtian.yao-app-source` 身份，IPA 原样保存，不重新签名。
 Cloudflare Worker 的 workers.dev、preview URL 和 Cron 已停用；R2 私有历史文件保留。
 
@@ -20,6 +20,21 @@ Cloudflare Worker 的 workers.dev、preview URL 和 Cron 已停用；R2 私有�
 - 旧 `packages/app-source/public/`、OTA 包、签名材料和发布凭证保留。
 - 公网 DNS 由路由器已有腾讯云 DDNS 更新。DNS-01 自动续期只管理验证 TXT，
   不修改 `home` 的 A 记录，也不更改路由器 DDNS。
+
+## 私有环境配置
+
+真实域名和入口不放在 Git。服务器私有
+`~/.config/yao-app-source/home-source.env`（0600）设置 `APP_SOURCE_DOMAIN` 与
+`APP_SOURCE_BASE_URL`；占位示例见 `home-source.env.example`。域名变量只填主机名，
+URL 变量填写完整 HTTPS origin（含端口，不含路径）。两个值应指向同一服务。
+
+本机 Python 发布器与上传后端会加载这个私有文件，显式进程环境变量优先。
+`source.config.json` 只保存 `baseUrlEnv` 变量名；缺少有效地址时直接报错。
+外部上传客户端使用自己环境中的 `APP_SOURCE_BASE_URL`，或通过 `--url` 指定入口。
+
+Nginx 使用 `nginx.conf.template`，容器启动时只替换 `APP_SOURCE_DOMAIN`，
+保留 `$uri` 等 Nginx 变量。修改模板或私有域名后需要重新创建 source 容器；
+证书正常续期仍只需重载 Nginx。真实证书文件名由域名变量构造。
 
 ## 标准发布
 
@@ -45,11 +60,11 @@ python3 scripts/app_source.py --config hosting/home-source/source.config.json sy
 其他机器发布普通应用时使用下述 HTTPS 上传接口；SignOs 的正式包和 OTA 凭证
 仍交给家中服务器的 `publish_signos.py`。
 不要覆盖服务器现有清单或已有版本目录。配置的相对路径按仓库根目录解释。
-原 `cloudflare/app-source/source.config.json` 已标记 disabled，发布器拒绝向它发布。
+原 `distribution/app-source/source.config.json` 已标记 disabled，发布器拒绝向它发布。
 
 ## IPA 上传接口
 
-`POST https://${APP_SOURCE_DOMAIN}:15006/api/upload`，单个共享 token 通过
+`POST ${APP_SOURCE_BASE_URL}/api/upload`，单个共享 token 通过
 `Authorization: Bearer <token>` 校验。请求体是 IPA 原始字节，**不是 multipart**；
 必须有 `Content-Length`，类型为 `application/octet-stream`，单包上限 2 GiB。
 可选 `X-IPA-SHA256` 校验上传内容；可选查询参数 `developer`、`description`、
@@ -66,8 +81,11 @@ bundle ID、名称、版本、构建号和最低系统版本；保留包的原�
 自己的私有文件。可直接使用跨机器上传器：
 
 ```sh
-python3 cloudflare/app-source/upload_ipa.py --ipa /path/app.ipa --plan
-python3 cloudflare/app-source/upload_ipa.py \
+set -a
+. /private/path/app-source.env
+set +a
+python3 distribution/app-source/upload_ipa.py --ipa /path/app.ipa --plan
+python3 distribution/app-source/upload_ipa.py \
   --ipa /path/app.ipa --token-file /private/path/upload-token \
   --developer 'Your name' --description '应用说明' --notes '更新说明'
 ```
@@ -75,7 +93,7 @@ python3 cloudflare/app-source/upload_ipa.py \
 也可使用 `APP_SOURCE_UPLOAD_TOKEN` 环境变量代替 `--token-file`。
 上传器用分块读取控制内存，校验 HTTPS 证书，自动发送本地大小和完整 SHA-256，
 核对返回的发布凭证。协议和 curl 示例见
-[上传指南](../../cloudflare/app-source/README.md)。
+[上传指南](../../distribution/app-source/README.md)。
 
 新版本返回 **201**，内容包括 `sourceURL`、`bundleIdentifier`、`version`、
 `buildVersion`、`downloadURL`、`size`、`sha256` 和 `duplicate: false`。
@@ -133,7 +151,8 @@ python3 scripts/home_source.py --verify-all
 ## 部署
 
 私有 `~/.config/yao-app-source/home-source.env` 包含公开文件目录
-`HOME_SOURCE_ROOT` 和独立 ACME 根目录 `HOME_SOURCE_CERTIFICATES`。
+`HOME_SOURCE_ROOT`、独立 ACME 根目录 `HOME_SOURCE_CERTIFICATES`，以及私有
+`APP_SOURCE_DOMAIN`、`APP_SOURCE_BASE_URL`。环境文件及真实部署地址不提交到 Git。
 
 ```sh
 # 先安装/启动上传后端，再检查和部署 Nginx
@@ -141,9 +160,7 @@ python3 scripts/install_home_upload.py
 docker-compose --env-file "$HOME/.config/yao-app-source/home-source.env" \
   -f hosting/home-source/compose.yaml run --rm --no-deps source nginx -t
 docker-compose --env-file "$HOME/.config/yao-app-source/home-source.env" \
-  -f hosting/home-source/compose.yaml up -d
-docker-compose --env-file "$HOME/.config/yao-app-source/home-source.env" \
-  -f hosting/home-source/compose.yaml exec source nginx -s reload
+  -f hosting/home-source/compose.yaml up -d --force-recreate source
 ```
 
 ## 证书自动续期

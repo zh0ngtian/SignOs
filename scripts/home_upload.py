@@ -19,6 +19,7 @@ import zipfile
 
 import app_source
 import home_source
+from source_config import load_config
 
 REPO = Path(__file__).resolve().parents[1]
 MAX_UPLOAD = 2 * 1024**3
@@ -271,12 +272,12 @@ def main():
     parser.add_argument('--config', default=str(REPO / 'hosting/home-source/source.config.json'))
     parser.add_argument('--token-file', default=str(Path.home() / '.config/yao-app-source/upload-token'))
     args = parser.parse_args()
-    config = json.loads(Path(args.config).expanduser().read_text())
+    config = load_config(args.config)
     for key in ('root', 'publicRoot'):
         path = Path(config[key]).expanduser()
         config[key] = str(path if path.is_absolute() else REPO / path)
     token = Path(args.token_file).expanduser().read_text().strip()
-    service = UploadService(config, token, REPO / 'cloudflare/app-source/assets/app-store-ios27.png')
+    service = UploadService(config, token, REPO / 'distribution/app-source/assets/app-store-ios27.png')
     with make_server(service) as server:
         print('IPA upload backend listening on 127.0.0.1:15007', flush=True)
         server.serve_forever()

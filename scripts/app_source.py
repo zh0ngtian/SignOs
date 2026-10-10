@@ -532,6 +532,7 @@ def _upload_locked(args, config, referenced, objects, previous=None):
 
 
 def main():
+    from source_config import load_config
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--config', required=True)
     commands = parser.add_subparsers(dest='command', required=True)
@@ -546,7 +547,7 @@ def main():
         upload.add_argument('--' + name, required=True)
     upload.add_argument('--date')
     args = parser.parse_args()
-    config = json.loads(Path(args.config).expanduser().read_text())
+    config = load_config(args.config)
     if args.command == 'publish':
         publish(args, config)
     elif args.command == 'migrate':

@@ -9,6 +9,7 @@ from types import SimpleNamespace
 import zipfile
 
 import app_source
+from source_config import load_config
 
 
 REPO = Path(__file__).resolve().parents[1]
@@ -51,7 +52,7 @@ def main():
     parser.add_argument('--verify-all', action='store_true', help='Ignore receipts and download every resource for verification')
     parser.add_argument('--plan', action='store_true', help='Validate inputs without staging or uploading')
     args = parser.parse_args()
-    config = json.loads(Path(args.config).expanduser().read_text())
+    config = load_config(args.config)
     # The source configuration's relative root is repository-relative, as in the documented CLI.
     root = Path(config['root']).expanduser()
     config['root'] = str(root if root.is_absolute() else REPO / root)

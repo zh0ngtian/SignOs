@@ -214,14 +214,15 @@ rm /tmp/signos-phase-regression
 
 ### Yao App Source（家中软件源）
 
-- 唯一公开入口：`https://${APP_SOURCE_DOMAIN}:15006/source.json`；`/appstore` 为兼容入口。
+- 域名与 URL 从仓库外私有环境文件读取，变量为 `APP_SOURCE_DOMAIN`、`APP_SOURCE_BASE_URL`，不在仓库保存实际地址。
+- 唯一公开入口：`${APP_SOURCE_BASE_URL}/source.json`；`/appstore` 为兼容入口。
 - 家中 Mac mini 通过路由器 TCP 15006 提供 HTTPS 下载，使用公开受信任的证书，无需安装 CA。
 - `scripts/publish_signos.py` 默认发布到本机，配置为 `hosting/home-source/source.config.json`；不再依赖 Cloudflare。仍需先完成独立的本机 OTA 发布，再使用同一正式签名 IPA 及凭证发布软件源。
 - 首次运行先 `--plan`。IPA 原样保存，先校验资源，最后切换清单；版本、构建号、大小和 SHA-256 必须与 OTA 凭证一致。
 - 证书由本机 launchd 每 12 小时检查，通过腾讯云 DNS-01 自动续期，成功后校验并重载 Nginx。配置、凭据和证书均在仓库外。
-- 普通应用可通过 `POST /api/upload` 和共享 Bearer token 上传，自动进入同一软件源；SignOs 仍要求 OTA 凭证。跨机器客户端为 `cloudflare/app-source/upload_ipa.py`。
+- 普通应用可通过 `POST /api/upload` 和共享 Bearer token 上传，自动进入同一软件源；SignOs 仍要求 OTA 凭证。跨机器客户端为 `distribution/app-source/upload_ipa.py`。
 - 完整发布、部署、重试、续期与验收步骤见 [家中软件源说明](hosting/home-source/README.md)。
-- 原 `yao-app-source.305301890.workers.dev` 入口与 Cron 已停用；原 R2 私有文件和发布凭证保留为历史备份。旧配置标记为 disabled，发布器拒绝向它发布；[跨机器上传指南](cloudflare/app-source/README.md)提供新的单 token IPA 上传方法，旧 Cloudflare 配置仅保留追溯。
+- 旧 workers.dev 入口与 Cron 已停用；原 R2 私有文件和发布凭证保留为历史备份。旧配置标记为 disabled，发布器拒绝向它发布；[跨机器上传指南](distribution/app-source/README.md)提供新的单 token IPA 上传方法，旧 Cloudflare 配置仅保留追溯。
 
 ## Contact
 

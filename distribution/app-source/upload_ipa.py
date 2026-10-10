@@ -9,19 +9,20 @@ from pathlib import Path
 import ssl
 from urllib.parse import urlencode, urlsplit
 
-DEFAULT_URL = 'https://${APP_SOURCE_DOMAIN}:15006/api/upload'
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--ipa', required=True)
-    parser.add_argument('--url', default=DEFAULT_URL)
+    parser.add_argument('--url', help='HTTPS upload endpoint; otherwise use APP_SOURCE_BASE_URL + /api/upload')
     parser.add_argument('--token-file', help='UTF-8 file containing the shared token')
     parser.add_argument('--developer')
     parser.add_argument('--description')
     parser.add_argument('--notes')
     parser.add_argument('--plan', action='store_true', help='Calculate size/SHA-256 without reading a token or uploading')
     args = parser.parse_args()
+    args.url = args.url or (os.environ['APP_SOURCE_BASE_URL'].rstrip('/') + '/api/upload'
+                            if os.environ.get('APP_SOURCE_BASE_URL') else None)
+    if not args.url:
+        raise SystemExit('Set APP_SOURCE_BASE_URL in your private environment or provide --url')
     path = Path(args.ipa).expanduser().resolve(strict=True)
     size = path.stat().st_size
     if not 0 < size <= 2 * 1024**3:

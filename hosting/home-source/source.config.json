@@ -2,7 +2,7 @@
   "name": "Yao App Source",
   "identifier": "tech.zh0ngtian.yao-app-source",
   "backend": "home",
-  "baseUrl": "https://${APP_SOURCE_DOMAIN}:15006",
+  "baseUrlEnv": "APP_SOURCE_BASE_URL",
   "root": "packages/home-source/staging",
   "publicRoot": "packages/home-source/public"
 }

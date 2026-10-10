@@ -34,7 +34,7 @@ class HomeUploadTests(unittest.TestCase):
             (folder / 'source.json').write_bytes(self.original)
         self.token = 'a' * 43
         self.service = home_upload.UploadService(self.config, self.token,
-                         home_upload.REPO / 'cloudflare/app-source/assets/app-store-ios27.png')
+                         home_upload.REPO / 'distribution/app-source/assets/app-store-ios27.png')
         self.server = home_upload.make_server(self.service, ('127.0.0.1', 0))
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
