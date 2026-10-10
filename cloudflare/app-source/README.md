@@ -43,6 +43,8 @@ bucket 的 R2 S3 凭据设为 `AWS_ACCESS_KEY_ID` 和 `AWS_SECRET_ACCESS_KEY` �
 
 ### SignOs 标准发布步骤
 
+SignOs 的软件源开发者署名统一为 `Yao / ihateios / Feather contributors`，由专用发布脚本维护。
+
 每次 SignOs 客户端发版都必须完成本机 OTA 和本软件源两个渠道；软件源使用
 OTA 已成功发布的同一签名 IPA，不再签名，也不使用 `packages/SignOs.ipa`
 临时构建包。先完成构建、检查、提交与 push 和 OTA 发布，再执行下面两步。

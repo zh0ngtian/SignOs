@@ -35,7 +35,7 @@ def prepare(args):
     return SimpleNamespace(
         ipa=str(ipa), sha256=receipt['sha256'],
         icon=str(REPO / 'Feather/Resources/Assets.xcassets/AppIcon.appiconset/feather.png'),
-        developer='ihateios / Feather contributors',
+        developer='Yao / ihateios / Feather contributors',
         description='基于 Feather 的 iOS 应用签名、安装与更新工具，支持软件源、后台签名及自动更新。',
         notes=receipt['notes'], date=receipt['publishedAt'],
     ), receipt
