@@ -1,0 +1,16 @@
+services:
+  source:
+    image: nginx:alpine
+    container_name: signos-home-source
+    restart: unless-stopped
+    ports:
+      - "15006:15006"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${HOME_SOURCE_ROOT:?set HOME_SOURCE_ROOT}:/srv/source:ro
+      - ${HOME_SOURCE_CERTIFICATES:?set HOME_SOURCE_CERTIFICATES}:/certificates:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"

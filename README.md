@@ -212,6 +212,14 @@ xcrun swiftc Feather/Utilities/OneViewPhase.swift Tests/OneViewPhaseRegression.s
 rm /tmp/signos-phase-regression
 ```
 
+### Yao App Source（家中下载入口）
+
+- 新入口：`https://${APP_SOURCE_DOMAIN}:15006/source.json`；`/appstore` 为兼容入口。
+- 家中 Mac mini 通过路由器 TCP 15006 提供 HTTPS 下载，使用公开受信任的证书，无需安装 CA。
+- 原 Cloudflare 源保留；本机发布完成 Cloudflare 同步后自动同步家中入口，IPA 原样保存。
+- 部署、重试、跨机器发布限制和证书续期要求见 [家中软件源说明](hosting/home-source/README.md)。
+  当前复用的证书于 2026-12-05 到期，原证书配置为手动 DNS 验证，尚无自动续期。
+
 ### Yao App Source（Cloudflare 软件源）
 
 - 固定源地址：`https://yao-app-source.305301890.workers.dev/source.json`；`/appstore` 为同一清单的兼容入口。

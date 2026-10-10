@@ -253,6 +253,11 @@ def sync(args, config):
     with (root / '.publish.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         _sync_locked(args, config)
+        # This publishing host can also serve the same bytes from its home network.
+        # A mirror failure is reported after cloud success and can be retried alone.
+        if config.get('homeMirror'):
+            import home_source
+            home_source.sync_if_configured(config)
 
 
 def _sync_locked(args, config):

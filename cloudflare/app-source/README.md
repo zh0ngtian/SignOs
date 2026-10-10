@@ -4,6 +4,11 @@
 `/appstore` 是同一 JSON 的兼容入口。R2 bucket 为 `yao-app-source`，保持私有；
 Worker 只开放清单和 `files/*.ipa` / `files/*.png` 的 GET、HEAD。
 
+另有家中入口 `https://${APP_SOURCE_DOMAIN}:15006/source.json`，用于直接从家中服务器
+下载同一 IPA。当前本机发布器在 Cloudflare 成功后自动校验并同步该入口；失败时
+只需重试 `python3 scripts/home_source.py`。其他发布机、证书续期及部署方式见
+[家中软件源说明](../../hosting/home-source/README.md)。Cloudflare 入口保持可用。
+
 ## 软件源图标
 
 源图标恢复为 iOS 27 App Store 图标，仓库副本为

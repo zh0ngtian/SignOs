@@ -4,5 +4,6 @@
   "baseUrl": "https://yao-app-source.305301890.workers.dev",
   "root": "packages/app-source/public",
   "bucket": "yao-app-source",
+  "homeMirror": true,
   "accountId": "36f197f2dcd122670857a6f4c59d39e4"
 }
