@@ -20,6 +20,11 @@ PNG SHA-256 为 `84960d13a202a74b211dd5a4ef7116cbf761b15d177bdfc10de7239ef5822f0
 最后仅更新上述两个顶层字段并核验 `/source.json` 和 `/appstore`。
 此操作无需重新部署 Worker 或发布客户端。
 
+2026-10-11 已核验两个公网清单入口与 PNG 完整 SHA-256，并在 iPhone 17 Pro
+模拟器（iOS 26.5，SignOs `1.0.2-debug (3)`）重新添加该源，确认新图标及四个应用
+正常显示。现有客户端的源卡片读取添加时保存的 `AltSource.iconURL`，刷新清单
+不会更新这个持久化字段；已有源需移除后重新添加才能显示新源图标。
+
 ## 部署
 
 前提：Cloudflare 账户已开通 R2，并完成 `wrangler login`。
@@ -59,7 +64,7 @@ bucket 的 R2 S3 凭据设为 `AWS_ACCESS_KEY_ID` 和 `AWS_SECRET_ACCESS_KEY` �
 
 ### SignOs 标准发布步骤
 
-SignOs 的软件源开发者署名统一为 `Yao / ihateios / Feather contributors`，由专用发布脚本维护。
+SignOs 的软件源开发者署名使用 GitHub 用户名 `zh0ngtian / ihateios`，当前维护者在前，由专用发布脚本维护。App 设置页及“关于”页保留原作者在前，显示 `@ihateios / @zh0ngtian`；Feather 团队继续在“关于”页单独致谢。
 
 每次 SignOs 客户端发版都必须完成本机 OTA 和本软件源两个渠道；软件源使用
 OTA 已成功发布的同一签名 IPA，不再签名，也不使用 `packages/SignOs.ipa`
