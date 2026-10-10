@@ -17,6 +17,16 @@ However, due to the changes with iOS 18 with entitlements we will need to provid
 - Instead of a locally hosting our `PLIST_URL`, we use [plistserver](https://github.com/nekohaxx/plistserver) to host a server online specifically for retrieving it. This still requires a valid HTTPS connection.
 - Now, to even initiate the install (due to lack of entitlements from the former) we need to trick iOS into opening the `itms-services://` URL, we can do this by summoning a Safari webview to a locally hosted HTML page with a script to forcefully redirect us to that itms-services URL.
 
+The current Semi Local implementation uses `https://api.palera.in/genPlist`, passing
+the bundle identifier, name, version and local IPA URL as query parameters. It does
+not upload the IPA. With **Only use localhost address** enabled, iOS fetches the
+signed IPA from `http://127.0.0.1:<port>/…ipa` on the same phone. The remote service
+only returns an HTTPS manifest and therefore does not need access to that loopback
+address. This path was verified on iOS 27.0 with 2.7 MB and 183 MB source packages;
+see [device verification and limitations](README.md#install-without-a-private-ca).
+The remote manifest service must remain reachable, and system confirmation is
+still required; automatic signing and prompting do not mean silent installation.
+
 Opening `itms-services` requests an installation; it does not confirm success. Streaming progress only measures IPA delivery. OneView therefore keeps the signed archive actionable as Install until installation is confirmed, and server-based OTA retains the retry action.
 
 #### Install (Pairing)

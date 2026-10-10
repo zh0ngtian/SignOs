@@ -112,6 +112,32 @@ precedence over a newly installed package. The Settings **Update SSL Certificate
 button still targets the legacy `https://backloop.dev/pack.json` endpoint and is not
 the provisioning path for this local CA setup.
 
+### Install without a private CA
+
+For the tested device, select **Settings → Installation → Server → Semi Local**
+and enable **Only use localhost address**. SignOs serves the signed IPA over HTTP
+on the phone's `127.0.0.1`; `https://api.palera.in/genPlist` supplies only the HTTPS
+manifest. Signing stays on the phone, and the signed IPA is not uploaded to that
+service. Safari and iOS still require installation confirmation.
+
+On 2026-10-10, SignOs 1.0.2 (3) on iPhone 17 Pro / iOS 27.0 completed manual
+MuseumMuse installation and the Get → download → automatic signing → installation
+prompt flow for a 183 MB Bilibili IPA without the local CA. Both apps opened after
+covering their existing installations; their preference files were byte-identical
+before and after installation, checked before the first new launch. System logs
+confirmed both IPA downloads used `http://127.0.0.1:<port>/…ipa`.
+The 183 MB source download took about 15 seconds; local delivery and installation
+took about 15 seconds after confirmation, excluding signing and confirmation delays.
+The automatic flow's Safari page remained blank after success and was closed manually.
+Evidence is retained locally in `packages/SignOs-1.0.2-semilocal-device-check.txt`.
+This does not verify background/locked-screen installation, interruption recovery,
+all app data or keychain persistence, or all IPA sizes.
+
+Fully Local still requires its trusted CA. A missing CA caused the observed
+`MissingIntermediate` / TLS `-1200` failure and a stalled Ready screen. The public
+CA downloads temporarily placed on Cloudflare were removed at the user's request;
+the software source and private local CA materials remain intact.
+
 ### Local Ad Hoc OTA release
 
 `make iphoneos` produces a device build with a temporary ad-hoc code signature;
