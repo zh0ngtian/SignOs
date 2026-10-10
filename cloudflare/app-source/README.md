@@ -6,21 +6,25 @@ Worker 只开放清单和 `files/*.ipa` / `files/*.png` 的 GET、HEAD。
 
 ## 软件源图标
 
-源图标使用 iOS 27 App Store 图标，仓库副本为
-[`assets/app-store-ios27.png`](assets/app-store-ios27.png)（512 × 512）。
-素材来自 [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:App_Store_Logo_(iOS_27).webp)，
-页面署名 Apple Inc.、标注 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)；
-仅将原始 WebP 转为 PNG。
+源图标使用用户提供的蓝色渐变玻璃质感 Y 图标，仓库副本为
+[`assets/yao-source-y.png`](assets/yao-source-y.png)（1254 × 1254）。
+PNG 按用户原图字节保存，未裁剪、缩放或重新编码。
 
 清单顶层 `iconURL` 和 `sourceicon` 均指向
-`https://yao-app-source.305301890.workers.dev/files/84960d13a202a74b211d.png`，
-PNG SHA-256 为 `84960d13a202a74b211dd5a4ef7116cbf761b15d177bdfc10de7239ef5822f01`。
+`https://yao-app-source.305301890.workers.dev/files/d41381792aa4661052a7.png`，
+PNG SHA-256 为 `d41381792aa4661052a7548cec6b440bca7030b8e8bfa6e8eeecee121750cf7e`。
 应用条目各自的图标保持独立，后续 `publish` 会保留源图标。
 替换源图标时，先核对本机与公网清单一致，再上传并核验新摘要命名的 PNG，
 最后仅更新上述两个顶层字段并核验 `/source.json` 和 `/appstore`。
 此操作无需重新部署 Worker 或发布客户端。
 
-2026-10-11 已核验两个公网清单入口与 PNG 完整 SHA-256，并在 iPhone 17 Pro
+历史素材 [`assets/app-store-ios27.png`](assets/app-store-ios27.png) 保留备查，来自
+[Wikimedia Commons](https://commons.wikimedia.org/wiki/File:App_Store_Logo_(iOS_27).webp)，
+页面署名 Apple Inc.、标注 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)，
+仅由原始 WebP 转为 PNG。
+
+此前的 iOS 27 App Store 图标于 2026-10-11 核验两个公网清单入口与 PNG
+完整 SHA-256，并在 iPhone 17 Pro
 模拟器（iOS 26.5，SignOs `1.0.2-debug (3)`）重新添加该源，确认新图标及四个应用
 正常显示。1.0.5 及更早客户端的源卡片读取添加时保存的 `AltSource.iconURL`，
 刷新清单不会更新这个持久化字段，已有源需移除后重新添加才能显示新源图标。
