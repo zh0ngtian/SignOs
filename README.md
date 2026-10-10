@@ -54,11 +54,11 @@ contributors for their work, this wouldn't exist without them.
 - Existing dylibs and frameworks management
 
 ### The Store Experience
-- Discover tab with featured apps and source cards
+- Discover tab with source cards and an all-apps entry
 - Search across every source with recent searches
 - Library with filters and quick actions
 - Updates tab in App Store style
-- OneView install — Get, download progress with speed, signing and Open on one screen
+- OneView install — Get (or Update for a detected source update), download progress with speed, signing and Open on one screen
 - Rich app pages with screenshots, What's New, version history and permissions
 - App Store-style Settings with icon tiles
 

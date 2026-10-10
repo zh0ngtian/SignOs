@@ -17822,6 +17822,12 @@
             "value": "Update"
           }
         },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",

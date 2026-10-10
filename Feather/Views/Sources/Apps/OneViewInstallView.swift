@@ -66,6 +66,7 @@ struct WSOneViewGetButton: View {
 		self.app = app
 	}
 
+	@ObservedObject private var updateManager = UpdateManager.shared
 	@ObservedObject private var downloadManager = DownloadManager.shared
 	@ObservedObject private var autoSignManager = AutoSignManager.shared
 	@State private var _tappedGet = false
@@ -114,7 +115,7 @@ struct WSOneViewGetButton: View {
 						)
 					}
 				} label: {
-					Text(.localized("Get"))
+					Text(.localized(updateManager.hasUpdate(for: app, sourceURL: sourceURL) ? "Update" : "Get"))
 						.lineLimit(0)
 						.font(.headline.bold())
 						.foregroundStyle(Color.accentColor)
@@ -277,6 +278,7 @@ struct OneViewInstallView: View {
 	let source: ASRepository?
 	let app: ASRepository.App
 
+	@ObservedObject private var updateManager = UpdateManager.shared
 	@ObservedObject private var downloadManager = DownloadManager.shared
 	@ObservedObject private var autoSignManager = AutoSignManager.shared
 	@FetchRequest(
@@ -440,7 +442,8 @@ extension OneViewInstallView {
 					}
 				} label: {
 					_prominentButton(
-						title: phase == .needsSign ? "Sign & Install" : "Get",
+						title: phase == .needsSign ? "Sign & Install" :
+							(updateManager.hasUpdate(for: app, sourceURL: sourceURL) ? "Update" : "Get"),
 						systemImage: "arrow.down.circle.fill",
 						color: .accentColor
 					)
@@ -534,7 +537,7 @@ extension OneViewInstallView {
 	private func _prominentButton(title: String, systemImage: String, color: Color) -> some View {
 		HStack(spacing: 8) {
 			Image(systemName: systemImage)
-			Text(title)
+			Text(.localized(title))
 				.font(.headline)
 		}
 		.foregroundStyle(.white)

@@ -14,6 +14,7 @@ struct DownloadButtonView: View {
 	let sourceURL: URL?
 	let source: ASRepository?
 	let app: ASRepository.App
+	@ObservedObject private var updateManager = UpdateManager.shared
 	@ObservedObject private var downloadManager = DownloadManager.shared
 
 	@State private var downloadProgress: Double = 0
@@ -50,7 +51,7 @@ struct DownloadButtonView: View {
 						)
 					}
 				} label: {
-					Text(.localized("Get"))
+					Text(.localized(updateManager.hasUpdate(for: app, sourceURL: sourceURL) ? "Update" : "Get"))
 						.lineLimit(0)
 						.font(.headline.bold())
 						.foregroundStyle(Color.accentColor)

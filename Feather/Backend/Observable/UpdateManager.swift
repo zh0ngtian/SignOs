@@ -42,6 +42,17 @@ final class UpdateManager: ObservableObject {
 		return updates[uuid]
 	}
 	
+	func hasUpdate(for app: ASRepository.App, sourceURL: URL?) -> Bool {
+		guard let sourceURL, let identifier = app.id, let version = app.currentVersion else {
+			return false
+		}
+		return updates.values.contains {
+			$0.bundleIdentifier == identifier &&
+			$0.remoteVersion == version &&
+			_matchesStoredRepository(storedSourceURL: $0.sourceURL, sourceURL: sourceURL)
+		}
+	}
+
 	func checkForUpdates(
 		sources: [AltSource],
 		localApps: [AppInfoPresentable]

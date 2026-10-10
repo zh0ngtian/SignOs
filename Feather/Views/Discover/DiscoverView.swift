@@ -24,19 +24,6 @@ struct DiscoverView: View {
 		animation: .snappy
 	) private var _sources: FetchedResults<AltSource>
 
-	private var _featured: [(source: AltSource, repository: ASRepository, app: ASRepository.App)] {
-		var result: [(AltSource, ASRepository, ASRepository.App)] = []
-		for source in _sources {
-			guard let repository = viewModel.sources[source] else { continue }
-			for app in repository.apps.prefix(3) {
-				guard result.count < 8 else { break }
-				result.append((source, repository, app))
-			}
-			if result.count >= 8 { break }
-		}
-		return result
-	}
-
 	// MARK: Body
 	var body: some View {
 		NavigationStack {
@@ -46,10 +33,6 @@ struct DiscoverView: View {
 						eyebrow: Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day()),
 						title: "Discover"
 					)
-
-					if !_featured.isEmpty {
-						_featuredSection()
-					}
 
 					_sourcesSection()
 
@@ -83,65 +66,6 @@ struct DiscoverView: View {
 
 // MARK: - Sections
 extension DiscoverView {
-	@ViewBuilder
-	private func _featuredSection() -> some View {
-		VStack(alignment: .leading, spacing: 12) {
-			WSSectionTitle(title: "Featured")
-
-			ScrollView(.horizontal, showsIndicators: false) {
-				HStack(alignment: .top, spacing: 14) {
-					ForEach(_featured, id: \.app.currentUniqueId) { item in
-						NavigationLink {
-							SourceAppsDetailView(
-								sourceURL: item.source.sourceURL,
-								source: item.repository,
-								app: item.app
-							)
-						} label: {
-							_featuredCard(item)
-						}
-						.buttonStyle(.borderless)
-					}
-				}
-			}
-		}
-	}
-
-	private func _featuredCard(
-		_ item: (source: AltSource, repository: ASRepository, app: ASRepository.App)
-	) -> some View {
-		VStack(alignment: .leading, spacing: 10) {
-			WSAppIcon(url: item.app.iconURL, size: 60)
-
-			Text(item.app.currentName)
-				.font(.headline)
-				.lineLimit(2)
-				.multilineTextAlignment(.leading)
-				.foregroundStyle(.primary)
-
-			Text(verbatim: [
-				item.app.currentVersion,
-				item.source.name
-			].compactMap { $0 }.joined(separator: " • "))
-				.font(.caption)
-				.foregroundStyle(.secondary)
-				.lineLimit(1)
-
-			WSOneViewGetButton(
-				sourceURL: item.source.sourceURL,
-				source: item.repository,
-				app: item.app
-			)
-		}
-		.frame(width: 168, alignment: .leading)
-		.padding(14)
-		.background(
-			RoundedRectangle(cornerRadius: 20, style: .continuous)
-				.fill(Color(uiColor: .secondarySystemGroupedBackground))
-		)
-		.foregroundStyle(.primary)
-	}
-
 	@ViewBuilder
 	private func _sourcesSection() -> some View {
 		VStack(alignment: .leading, spacing: 12) {
