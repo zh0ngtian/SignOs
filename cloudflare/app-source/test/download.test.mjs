@@ -58,3 +58,21 @@ test('source alias stays fresh; private paths and writes are denied', async () =
   }
   assert.equal((await fetch({}, 'PUT')).status, 405);
 });
+
+test('only the two public CA files are downloadable with iOS content types', async () => {
+  for (const [path, type] of [
+    ['/certificates/signos-ca.mobileconfig', 'application/x-apple-aspen-config'],
+    ['/certificates/signos-ca.cer', 'application/pkix-cert'],
+  ]) {
+    const response = await fetch({}, 'GET', path);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('Content-Type'), type);
+    assert.equal(response.headers.get('Cache-Control'), 'no-store');
+    assert.equal(await response.text(), '0123456789');
+    assert.equal((await fetch({}, 'HEAD', path)).headers.get('Content-Length'), '10');
+    assert.equal((await fetch({}, 'PUT', path)).status, 405);
+  }
+  for (const path of ['/certificates/ca.key', '/certificates/server.pem', '/certificates/other.mobileconfig']) {
+    assert.equal((await fetch({}, 'GET', path)).status, 404);
+  }
+});

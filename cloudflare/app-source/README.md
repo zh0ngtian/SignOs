@@ -2,7 +2,31 @@
 
 已部署：`https://yao-app-source.305301890.workers.dev/source.json`。
 `/appstore` 是同一 JSON 的兼容入口。R2 bucket 为 `yao-app-source`，保持私有；
-Worker 只开放清单和 `files/*.ipa` / `files/*.png` 的 GET、HEAD。
+Worker 只开放清单、`files/*.ipa` / `files/*.png` 和下列两个公开 CA 文件的 GET、HEAD。
+
+## SignOs 本地安装证书
+
+在 iPhone Safari 打开 [CA 安装描述文件](https://yao-app-source.305301890.workers.dev/certificates/signos-ca.mobileconfig)，
+安装后到“设置 → 通用 → 关于本机 → 证书信任设置”开启 **Codex Mobile LAN CA** 完全信任。
+公网下载不要求与 Mac 处于同一 Wi-Fi；此 CA 用于 SignOs 在手机上提供的本地 HTTPS 安装服务。
+描述文件只含现有公开根证书，不含私钥；原 CA、签名材料和 TLS 私钥继续保存在仓库外。
+原始 [DER 根证书](https://yao-app-source.305301890.workers.dev/certificates/signos-ca.cer) 同时提供下载。
+两个固定入口均 `no-store`，不会由普通 App 发布覆盖。
+
+根证书 SHA-256 指纹：`7C:75:A2:F6:A9:C9:EE:86:98:D5:ED:F9:4C:A1:40:D3:4A:22:67:32:4E:09:37:04:39:B1:1A:CC:98:AE:55:52`。
+维护时复用现有 CA，不生成替代 CA；先核对描述文件只包含 `com.apple.security.root`
+负载，以及根证书能验证 SignOs 的 `server.crt`。在本目录上传经过核对的公开文件：
+
+```sh
+npx wrangler r2 object put yao-app-source/certificates/signos-ca.mobileconfig \
+  --file /private/path/signos-ca.mobileconfig --content-type application/x-apple-aspen-config --remote
+npx wrangler r2 object put yao-app-source/certificates/signos-ca.cer \
+  --file /private/path/signos-ca.cer --content-type application/pkix-cert --remote
+```
+
+部署后检查两个 HTTPS URL 的 GET、HEAD、Content-Type 和完整 SHA-256。
+系统日志中的 `MissingIntermediate` / TLS `-1200` 且信任列表缺少此 CA 时，先恢复
+描述文件与完全信任，再验证安装；重新签名 IPA 不会修复系统 CA 信任。
 
 ## 部署
 
