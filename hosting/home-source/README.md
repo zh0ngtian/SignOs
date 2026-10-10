@@ -126,4 +126,11 @@ SHA-256 校验通过，SignOs 为 `1.0.7 (8)`。HEAD、Range、If-Range、ETag�
 `packages/home-source/acceptance-20261011.json`。未测量蜂窝下载速度或验收重启恢复。
 
 同日改为独立本机发布后再次全量验证，不再读取或上传 Cloudflare。
-停用与证书自动续期的本次验收以实际在线检查及私有 renewal 状态记录为准。
+停用后远端 API 确认 workers.dev 和 preview URL 均为 false、Cron 列表为空；
+旧清单、兼容入口和 IPA 地址返回 404，R2 的 r2.dev 关闭且无自定义域名。
+
+正式 DNS-01 签发、隔离测试环境的强制续期、新证书部署与 Nginx 重载均通过。
+LaunchAgent 首次运行退出码为 0，线上证书指纹与正式 ACME 文件一致，新证书到期
+时间为 **2027-01-09 01:08:54（北京时间）**。停用后 15 个资源再次完整下载并核对
+SHA-256。证据保存在 `packages/home-source/retirement-20261011.json` 和私有 renewal
+状态文件中；这些是当日快照，不能替代下次发布或续期的在线检查。
