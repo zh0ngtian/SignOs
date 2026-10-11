@@ -9,6 +9,14 @@ enum SourceRepositoryIdentity {
 		currentIdentifier: String?
 	) -> Bool {
 		if normalizedURL(storedURL) == normalizedURL(currentURL) { return true }
+		// v2 migrated the source but left URL-only imported/signed records behind.
+		// Only recognize the documented official move, never infer a source from an app ID.
+		if storedIdentifier == nil,
+			currentIdentifier == "tech.zh0ngtian.yao-app-source",
+			normalizedURL(storedURL) == "https://yao-app-source.305301890.workers.dev/source.json",
+			normalizedURL(currentURL) == "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json" {
+			return true
+		}
 		guard
 			let storedIdentifier, !storedIdentifier.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
 			let currentIdentifier, !currentIdentifier.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty

@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-11",
+  "app": "博物女神 / MuseumMuse",
+  "bundleIdentifier": "tech.zh0ngtian.MuseumMuse",
+  "deviceDiagnosis": {
+    "platform": "iPhone 17 Pro, iOS 27",
+    "localVersion": "1.1.2",
+    "storedSourceURL": "https://yao-app-source.305301890.workers.dev/source.json",
+    "sourceMetadataExists": false,
+    "matchingImportedCopies": 0,
+    "migrationV2AlreadyCompleted": true,
+    "currentSourceURL": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json",
+    "repositoryIdentifier": "tech.zh0ngtian.yao-app-source",
+    "cause": "Source list migration left legacy URL-only app records unlinked; update comparison skipped before version comparison.",
+    "deviceDataChanged": false
+  },
+  "fix": {
+    "identity": "Accept only the known official URL move with the official published repository ID for URL-only records.",
+    "backfill": "Persist repository and subscription identity after unambiguous matching, retaining the local version.",
+    "fetch": "Reload source JSON, require HTTP 200, report fetch/decode and association failures.",
+    "ui": "Incomplete checks cannot show or notify All Apps Up to Date."
+  },
+  "validation": {
+    "identityRegressionCases": 17,
+    "productionUpdateManagerRegression": "Passed using production UpdateManager, SourceAppProvenance writer and compiled Core Data model in an isolated simulator app.",
+    "fullClientDebugBuild": "Passed, Xcode 27, iOS Simulator.",
+    "runtimeUI": "Full isolated SignOs client with legacy MuseumMuse 1.1.2 record and v2=true fetched the real HTTPS source; Updates displayed MuseumMuse 1.1.2 → 1.1.3 after restart and Check.",
+    "backfilledLocalVersion": "1.1.2",
+    "formalDeviceClientInstalled": false
+  }
+}

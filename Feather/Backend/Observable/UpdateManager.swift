@@ -8,7 +8,6 @@
 import AltSourceKit
 import CoreData
 import Foundation
-import NimbleJSON
 
 struct AppUpdate: Identifiable, Equatable {
 	let id: String
@@ -27,15 +26,15 @@ struct AppUpdate: Identifiable, Equatable {
 final class UpdateManager: ObservableObject {
 	static let shared = UpdateManager()
 	
-	typealias RepositoryDataHandler = Result<ASRepository, Error>
-	
 	@Published private(set) var updates: [String: AppUpdate] = [:]
 	@Published private(set) var isChecking = false
 	@Published private(set) var lastCheckedDate: Date?
 	
-	private let _dataService = NBFetchService()
+	@Published private(set) var checkIssues: [String] = []
 	
-	private init() {}
+	private let session: URLSession
+
+	init(session: URLSession = .shared) { self.session = session }
 	
 	func update(for app: AppInfoPresentable) -> AppUpdate? {
 		guard let uuid = app.uuid else { return nil }
@@ -61,6 +60,7 @@ final class UpdateManager: ObservableObject {
 		guard !isChecking else { return }
 		
 		isChecking = true
+		checkIssues = []
 		defer {
 			isChecking = false
 			lastCheckedDate = Date()
@@ -123,30 +123,24 @@ final class UpdateManager: ObservableObject {
 		
 		for source in sources {
 			guard let url = source.sourceURL else {
+				checkIssues.append("\(source.name ?? "Repository"): source URL is missing.")
 				continue
 			}
 			
-			guard let repository = await _fetchRepository(from: url) else {
-				continue
-			}
-			
-			repositories.append((source, repository))
-		}
-		
-		return repositories
-	}
-	
-	private func _fetchRepository(from url: URL) async -> ASRepository? {
-		await withCheckedContinuation { continuation in
-			_dataService.fetch(from: url) { (result: RepositoryDataHandler) in
-				switch result {
-				case .success(let repository):
-					continuation.resume(returning: repository)
-				case .failure:
-					continuation.resume(returning: nil)
+			do {
+				var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 30)
+				request.setValue("SignOs-App/1", forHTTPHeaderField: "User-Agent")
+				let (data, response) = try await session.data(for: request)
+				guard let response = response as? HTTPURLResponse, response.statusCode == 200 else {
+					throw URLError(.badServerResponse)
 				}
+				let repository = try JSONDecoder().decode(ASRepository.self, from: data)
+				repositories.append((source, repository))
+			} catch {
+				checkIssues.append("\(source.name ?? url.host ?? url.absoluteString): \(error.localizedDescription)")
 			}
 		}
+		return repositories
 	}
 	
 	private func _findUpdates(
@@ -181,6 +175,7 @@ final class UpdateManager: ObservableObject {
 					let metadataSourceAppIdentifier = directMetadata.sourceAppIdentifier,
 					let metadataSourceURL = directMetadata.sourceRepositoryURL
 				else {
+					checkIssues.append("\(localApp.name ?? localUUID): incomplete source metadata.")
 					continue
 				}
 				
@@ -197,6 +192,7 @@ final class UpdateManager: ObservableObject {
 					let metadataSourceAppIdentifier = fallback.metadata.sourceAppIdentifier,
 					let metadataSourceURL = fallback.metadata.sourceRepositoryURL
 				else {
+					checkIssues.append("\(localApp.name ?? localUUID): incomplete source metadata.")
 					continue
 				}
 				
@@ -221,6 +217,7 @@ final class UpdateManager: ObservableObject {
 				continue
 			}
 			
+			var matchedRepository = false
 			for (source, repository) in repositories {
 				guard let sourceURL = source.sourceURL else {
 					continue
@@ -235,16 +232,34 @@ final class UpdateManager: ObservableObject {
 					continue
 				}
 				
+				matchedRepository = true
 				guard let remoteIndex = SourceSubscriptionIdentity.matchIndex(
 					storedKey: sourceAppIdentifier,
 					candidates: repository.apps.map { ($0.id ?? "", $0.sourceEntryIdentifier) },
 					legacyPreferredIndex: repository.apps.firstIndex { $0.id == sourceAppIdentifier && $0.legacyDefault == true }
 				) else {
+					checkIssues.append("\(localApp.name ?? localUUID): source subscription is missing or ambiguous.")
 					continue
 				}
 				let remoteApp = repository.apps[remoteIndex]
+				// Persist the installed version, not the latest version from the repository.
+				// This also repairs records on devices that already completed the v2 migration.
+				if metadataByUUID[localUUID] == nil, storedRepositoryIdentifier == nil,
+					let identifier = remoteApp.id {
+					Storage.shared.addSourceMetadata(
+						for: localUUID, kind: localApp.isSigned ? .signed : .imported,
+						provenance: SourceAppProvenance(
+							sourceRepositoryURL: sourceURL, sourceRepositoryIdentifier: repository.id,
+							sourceRepositoryName: repository.name,
+							sourceAppIdentifier: SourceSubscriptionIdentity.key(bundleIdentifier: identifier, subscriptionID: remoteApp.sourceEntryIdentifier),
+							sourceAppName: localApp.name, sourceAppVersion: sourceAppVersion,
+							sourceAppVersionDate: nil, sourceAppDownloadURL: nil
+						)
+					)
+				}
 				
 				guard let remoteVersion = remoteApp.currentVersion, !remoteVersion.isEmpty else {
+					checkIssues.append("\(localApp.name ?? localUUID): source version is missing.")
 					continue
 				}
 				
@@ -253,6 +268,7 @@ final class UpdateManager: ObservableObject {
 				}
 				
 				guard let downloadURL = remoteApp.currentDownloadUrl else {
+					checkIssues.append("\(localApp.name ?? localUUID): update download URL is missing.")
 					continue
 				}
 				
@@ -278,8 +294,11 @@ final class UpdateManager: ObservableObject {
 				)
 				break
 			}
+			if !matchedRepository {
+				checkIssues.append("\(localApp.name ?? localUUID): linked repository is unavailable. Refresh or restore its source in Discover.")
+			}
 		}
-		
+		checkIssues = Array(Set(checkIssues)).sorted()
 		return foundUpdates
 	}
 	

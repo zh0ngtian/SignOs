@@ -168,11 +168,14 @@ final class AutoUpdateManager: ObservableObject {
 		let updates = UpdateManager.shared.updates.values
 			.sorted { $0.appName.localizedCaseInsensitiveCompare($1.appName) == .orderedAscending }
 
-		ActivityLog.shared.log(.checked, app: "SignOs", detail: updates.isEmpty ? "all apps up to date" : "\(updates.count) found")
+		let checkIncomplete = !UpdateManager.shared.checkIssues.isEmpty
+		ActivityLog.shared.log(.checked, app: "SignOs", detail: checkIncomplete
+			? "\(updates.count) found; update check incomplete"
+			: (updates.isEmpty ? "all apps up to date" : "\(updates.count) found"))
 
 		if updates.isEmpty {
 			_updateBadge(0)
-			if notifyWhenClean && !silent {
+			if notifyWhenClean && !silent && !checkIncomplete {
 				notify(
 					title: "All Apps Up to Date",
 					body: "Every app matches the latest version in its repository.",

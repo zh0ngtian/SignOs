@@ -1,0 +1,146 @@
+// Compile the actual UpdateManager and metadata writer; only app storage setup is replaced.
+import Foundation
+import CoreData
+import Combine
+
+protocol AppInfoPresentable {
+    var uuid: String? { get }
+    var name: String? { get }
+    var identifier: String? { get }
+    var version: String? { get }
+    var source: URL? { get }
+    var isSigned: Bool { get }
+}
+struct LocalApp: AppInfoPresentable {
+    var uuid: String? = "museum"
+    var name: String? = "博物女神"
+    var identifier: String? = "tech.zh0ngtian.MuseumMuse"
+    var version: String? = "1.1.2"
+    var source: URL? = URL(string: "https://yao-app-source.305301890.workers.dev/source.json")!
+    var isSigned = true
+}
+struct AltSource { let sourceURL: URL?; var name: String? = "Official" }
+
+@objc(AppSourceMetadata)
+final class AppSourceMetadata: NSManagedObject {
+    @NSManaged var appUUID: String
+    @NSManaged var appKind: String
+    @NSManaged var createdAt: Date?
+    @NSManaged var updatedAt: Date?
+    @NSManaged var sourceRepositoryURL: URL?
+    @NSManaged var sourceRepositoryIdentifier: String?
+    @NSManaged var sourceRepositoryName: String?
+    @NSManaged var sourceAppIdentifier: String?
+    @NSManaged var sourceAppName: String?
+    @NSManaged var sourceAppVersion: String?
+    @NSManaged var sourceAppVersionDate: Date?
+    @NSManaged var sourceAppDownloadURL: URL?
+    @NSManaged var sourceVersionID: String?
+    static func fetchRequest() -> NSFetchRequest<AppSourceMetadata> { NSFetchRequest(entityName: "AppSourceMetadata") }
+}
+final class Storage {
+    static let shared = Storage()
+    let context = NSManagedObjectContext(concurrencyType: .mainQueueConcurrencyType)
+    init() {
+        let model = NSManagedObjectModel(contentsOf: Bundle.main.url(forResource: "Feather", withExtension: "momd")!)!
+        let coordinator = NSPersistentStoreCoordinator(managedObjectModel: model)
+        try! coordinator.addPersistentStore(ofType: NSInMemoryStoreType, configurationName: nil, at: nil)
+        context.persistentStoreCoordinator = coordinator
+    }
+    func saveContext() { try! context.save() }
+    func reset() { getSourceMetadata().forEach(context.delete); saveContext() }
+}
+
+final class FixtureProtocol: URLProtocol {
+    static var data = Data()
+    static var status = 200
+    static var requests: [URLRequest] = []
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func startLoading() {
+        Self.requests.append(request)
+        client!.urlProtocol(self, didReceive: HTTPURLResponse(url: request.url!, statusCode: Self.status,
+                    httpVersion: "HTTP/1.1", headerFields: ["Content-Type": "application/json"])!, cacheStoragePolicy: .notAllowed)
+        client!.urlProtocol(self, didLoad: Self.data)
+        client!.urlProtocolDidFinishLoading(self)
+    }
+    override func stopLoading() {}
+}
+
+@main
+struct UpdateManagerRegression {
+    @MainActor
+    static func main() async throws {
+        let canonical = URL(string: "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json")!
+        let officialID = "tech.zh0ngtian.yao-app-source"
+        let bundle = "tech.zh0ngtian.MuseumMuse"
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [FixtureProtocol.self]
+        let manager = UpdateManager(session: URLSession(configuration: configuration))
+        let source = AltSource(sourceURL: canonical)
+        let local = LocalApp()
+        func fixture(_ apps: [[String: Any]], id: String = officialID) throws {
+            FixtureProtocol.status = 200
+            FixtureProtocol.data = try JSONSerialization.data(withJSONObject: ["identifier": id, "name": "Official", "apps": apps])
+        }
+        func app(version: String = "1.1.3", entry: String = "museum-primary", legacy: Bool = true) -> [String: Any] {
+            ["bundleIdentifier": bundle, "name": "MuseumMuse", "iconURL": "https://example.com/icon.png", "appID": entry, "legacyDefault": legacy,
+             "versions": [["version": version, "downloadURL": "https://example.com/museum.ipa", "size": 2603060]]]
+        }
+        UserDefaults.standard.removeObject(forKey: "SignOs.heldApps")
+        UserDefaults.standard.removeObject(forKey: "SignOs.skippedVersions")
+        UserDefaults.standard.set(true, forKey: "SignOs.cloudSourceMigration.v2")
+        defer {
+            UserDefaults.standard.removeObject(forKey: "SignOs.heldApps")
+            UserDefaults.standard.removeObject(forKey: "SignOs.skippedVersions")
+            UserDefaults.standard.removeObject(forKey: "SignOs.cloudSourceMigration.v2")
+        }
+        try fixture([app(), app(version: "9.0", entry: "museum-variant", legacy: false)])
+        await manager.checkForUpdates(sources: [source], localApps: [local])
+        precondition(manager.updates["museum"]?.remoteVersion == "1.1.3", "Updates: \(manager.updates), issues: \(manager.checkIssues)")
+        precondition(manager.updates["museum"]?.localVersion == "1.1.2")
+        precondition(manager.checkIssues.isEmpty)
+        let repaired = Storage.shared.sourceMetadata(for: "museum")!
+        precondition(repaired.sourceRepositoryURL == canonical && repaired.sourceRepositoryIdentifier == officialID)
+        precondition(repaired.sourceAppVersion == "1.1.2", "Repair must not record the remote version as installed")
+        precondition(repaired.sourceAppIdentifier == SourceSubscriptionIdentity.key(bundleIdentifier: bundle, subscriptionID: "museum-primary"))
+        precondition(FixtureProtocol.requests.last!.cachePolicy == .reloadIgnoringLocalCacheData)
+        await manager.checkForUpdates(sources: [source], localApps: [local])
+        precondition(manager.updates["museum"]?.remoteVersion == "1.1.3", "Repeat checks must retain the update after repair")
+
+        manager.setHeld(true, for: bundle)
+        await manager.checkForUpdates(sources: [source], localApps: [local])
+        precondition(manager.updates.isEmpty && manager.checkIssues.isEmpty)
+        manager.setHeld(false, for: bundle)
+        manager.skip(version: "1.1.3", for: bundle)
+        await manager.checkForUpdates(sources: [source], localApps: [local])
+        precondition(manager.updates.isEmpty && manager.checkIssues.isEmpty)
+        try fixture([app(version: "1.1.4")])
+        await manager.checkForUpdates(sources: [source], localApps: [local])
+        precondition(manager.updates["museum"]?.remoteVersion == "1.1.4")
+        manager.clearSkip(for: bundle)
+
+        Storage.shared.reset()
+        try fixture([app(legacy: false), app(entry: "other", legacy: false)])
+        await manager.checkForUpdates(sources: [source], localApps: [local])
+        precondition(manager.updates.isEmpty && !manager.checkIssues.isEmpty)
+        precondition(Storage.shared.sourceMetadata(for: "museum") == nil, "Ambiguous variants must not be backfilled")
+        try fixture([app()], id: "unrelated.source")
+        await manager.checkForUpdates(sources: [source], localApps: [local])
+        precondition(manager.updates.isEmpty && !manager.checkIssues.isEmpty)
+        precondition(Storage.shared.sourceMetadata(for: "museum") == nil)
+        try fixture([app()])
+        FixtureProtocol.status = 503
+        await manager.checkForUpdates(sources: [source], localApps: [local])
+        precondition(manager.updates.isEmpty && !manager.checkIssues.isEmpty, "HTTP failures cannot claim a clean check")
+        FixtureProtocol.status = 200
+        FixtureProtocol.data = Data("{broken json".utf8)
+        await manager.checkForUpdates(sources: [source], localApps: [local])
+        precondition(manager.updates.isEmpty && !manager.checkIssues.isEmpty)
+        try fixture([app(version: "1.1.2")])
+        await manager.checkForUpdates(sources: [source], localApps: [local])
+        precondition(manager.updates.isEmpty && manager.checkIssues.isEmpty, "Successful retry must clear failures")
+        precondition(Storage.shared.sourceMetadata(for: "museum")?.sourceAppVersion == "1.1.2")
+        print("UpdateManagerRegression passed: migrated legacy record, durable local version, variants, holds/skips, HTTP/JSON failures and retry")
+    }
+}

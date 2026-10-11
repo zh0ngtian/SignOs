@@ -293,7 +293,25 @@ rm /tmp/signos-phase-regression
 ```
 
 The source identity regression covers URL migrations, unrelated sources and
-legacy URL-only metadata:
+legacy URL-only metadata, including the official Yao source move. During update
+checks, URL-only records are linked to the source's stable ID and subscription ID
+while retaining their **local** version. This repair also runs for devices whose
+`cloudSourceMigration.v2` flag is already set. Only the known official old/new
+URLs and official repository ID are accepted without stored identity.
+
+Updates reports source fetch, missing association and ambiguous subscription
+failures as an incomplete check; it does not show or notify “All Apps Up to Date”
+for an incomplete check. Checks reload source JSON and require HTTP 200.
+
+The production update manager and Core Data metadata writer regression covers
+the museum 1.1.2 → 1.1.3 case, repeated checks, subscription variants, holds/skips,
+HTTP/JSON failures and successful retry:
+
+```sh
+python3 scripts/test_update_manager.py <SIMULATOR_UDID>
+```
+
+The pure repository identity regression runs with:
 
 ```sh
 xcrun swiftc Feather/Utilities/SourceRepositoryIdentity.swift Tests/SourceRepositoryIdentityRegression.swift -o /tmp/signos-source-regression

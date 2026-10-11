@@ -57,6 +57,19 @@ struct UpdatesView: View {
 						_availableUpdates()
 					}
 
+					if !updateManager.checkIssues.isEmpty {
+						VStack(alignment: .leading, spacing: WSSpacing.sm) {
+							WSSectionHeader(title: "Update Check Incomplete")
+							WSCard {
+								VStack(alignment: .leading, spacing: WSSpacing.sm) {
+									ForEach(updateManager.checkIssues, id: \.self) { issue in
+										Text(verbatim: issue).font(.footnote).foregroundStyle(.secondary)
+									}
+								}
+							}
+						}
+					}
+
 					_heldSection()
 
 					if _hasActivity {
@@ -92,7 +105,7 @@ struct UpdatesView: View {
 	}
 
 	private var _showEmpty: Bool {
-		_sortedUpdates.isEmpty && downloadManager.downloads.isEmpty && autoSignManager.currentJob == nil && !_isChecking
+		updateManager.checkIssues.isEmpty && updateManager.lastCheckedDate != nil && _sortedUpdates.isEmpty && downloadManager.downloads.isEmpty && autoSignManager.currentJob == nil && !_isChecking
 	}
 
 	// MARK: Automation
