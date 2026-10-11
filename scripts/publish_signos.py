@@ -65,7 +65,7 @@ def main():
     print(json.dumps({
         'plan': args.plan, 'version': receipt['version'], 'buildNumber': receipt['buildNumber'],
         'sha256': receipt['sha256'], 'size': receipt['size'],
-        'sourceURL': config['baseUrl'].rstrip('/') + '/source.json', 'transport': args.transport,
+        'sourceURL': config['baseUrl'].rstrip('/') + '/source.json', 'transport': 'github' if config.get('backend') == 'cloudflare' else args.transport,
     }, ensure_ascii=False, indent=2))
     if not args.plan:
         if config.get('backend') == 'cloudflare':

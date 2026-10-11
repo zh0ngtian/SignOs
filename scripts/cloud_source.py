@@ -79,12 +79,12 @@ def gh(*args, json_result=False):
     return json.loads(result.stdout) if json_result else result.stdout.strip()
 
 
-def archive_asset(ipa, tag, name, digest, repository=ARCHIVE):
+def archive_asset(ipa, tag, name, digest, repository=ARCHIVE, notes=None):
     """Upload immutable IPA bytes and require GitHub's full-file digest proof."""
     try:
         release = gh('api', f'repos/{repository}/releases/tags/{quote(tag, safe="")}', json_result=True)
     except subprocess.CalledProcessError:
-        gh('release', 'create', tag, '--repo', repository, '--title', tag, '--notes', 'Archived build; original IPA bytes preserved.')
+        gh('release', 'create', tag, '--repo', repository, '--title', tag, '--notes', notes or 'Archived build; original IPA bytes preserved.')
         release = gh('api', f'repos/{repository}/releases/tags/{quote(tag, safe="")}', json_result=True)
     asset = next((x for x in release['assets'] if x['name'] == name), None)
     if asset is None:
@@ -123,7 +123,7 @@ def publish_signos(args, receipt, config):
     client = Client(credentials(config.get('credentialsFile', DEFAULT_CREDENTIALS)))
     repository = config.get('archiveRepository', ARCHIVE)
     tag = f"signos/v{receipt['version']}-{receipt['buildNumber']}"
-    download = archive_asset(args.ipa, tag, 'SignOs.ipa', receipt['sha256'], repository)
+    download = archive_asset(args.ipa, tag, 'SignOs.ipa', receipt['sha256'], repository, receipt['notes'])
     subscription = {'kind': 'github', 'repository': repository, 'tagPrefix': 'signos/', 'assetPattern': 'SignOs.ipa', 'includePrereleases': False}
     existing = next((e for e in client.state()['entries'] if all(e['config'].get(k) == v for k, v in subscription.items())), None)
     entry_id = existing['id'] if existing else client.create(subscription)

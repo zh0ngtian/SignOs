@@ -80,13 +80,12 @@ contributors for their work, this wouldn't exist without them.
 
 ## Install
 
-Download `SignOs.ipa` from [Releases](../../releases/latest) and sign it with SideStore,
-Sideloadly, AltStore, TrollStore or SignOs itself. The GitHub workflow is configured to
-build on pushes to `main` and publish releases for version tags, but currently does not
-provision the private TLS files required by `make iphoneos`. A configured workflow is
-not proof of a successful build or release; use the local OTA procedure below for this
-checkout. `app-repo.json` still describes the upstream public 1.0.0 channel, separately
-from this machine's private OTA releases.
+Download an existing `SignOs.ipa` from [Releases](../../releases/latest) and sign
+it with SideStore, Sideloadly, AltStore, TrollStore or SignOs itself. New commits
+are verified by [iOS Build Check](../../actions/workflows/ios-build.yml).
+Its IPA artifacts require separate distribution signing before installation.
+`app-repo.json` describes the upstream public 1.0.0 channel and is not updated
+by this build-check workflow.
 
 ## Building
 
@@ -97,6 +96,29 @@ make iphoneos
 That produces packages/SignOs.ipa. You need Xcode 26 or newer on macOS.
 Initialize both Git submodules with `git submodule update --init --recursive` first.
 Project workflow and post-test delivery requirements are in [AGENTS.md](AGENTS.md).
+
+### GitHub Actions 构建检查
+
+[工作流](.github/workflows/ios-build.yml) 在 `main` push、面向 `main` 的 PR 和
+手动触发时运行。使用 `macos-26` 与 Xcode 26+，递归检出子模块，运行
+`OneViewPhase`、`SourceRepositoryIdentity` 和 `SourceSubscriptionIdentity` 回归，
+再构建 iOS Release 设备包并检查 IPA 完整性、Bundle ID、版本和 SHA-256。
+
+流水线不依赖私有 `TLS_DIR` 或分发签名材料。产物 `SignOs-ci-<commit>` 包含
+`SignOs.ipa` 与 `build-metadata.json`，保留 14 天；构建日志与 Xcode result bundle
+保留 7 天，构建失败时也会尝试上传。IPA 是构建检查产物，安装前需另行签名。
+
+本地复现流水线构建步骤：
+
+```sh
+git submodule sync --recursive
+git submodule update --init --recursive
+bash scripts/check_ios_build.sh "$(mktemp -d /tmp/signos-ios-build.XXXXXX)"
+```
+
+常规交付流程为：完成本地必要检查、提交与 push、核对远端提交，并等待
+**该提交**的 `iOS Build Check / iOS Release build` 成功。只触发工作流不算完成。
+流水线不改版本或构建号，也不创建 GitHub Release；本机 OTA 仅在明确要求发包时执行。
 
 After pulling a change to `.gitmodules`, run `git submodule sync --recursive`
 before updating submodules. Zsign is pinned to the project-maintained fork for
@@ -166,9 +188,9 @@ all app data or keychain persistence, or all IPA sizes.
 Fully Local still requires its trusted CA. A missing CA caused the observed
 `MissingIntermediate` / TLS `-1200` failure and a stalled Ready screen. The public
 CA downloads temporarily placed on Cloudflare were removed at the user's request;
-the software source and private local CA materials remain intact.
+the private local CA materials remain intact.
 
-### Local Ad Hoc OTA release
+### Local Ad Hoc OTA release (on request)
 
 `make iphoneos` produces a device build with a temporary ad-hoc code signature;
 it still needs distribution signing before OTA installation. The local release
@@ -185,13 +207,8 @@ and its actual version/build number; run `--plan` before publishing. The publish
 verifies signing, stages versioned resources, checks HTTPS downloads, and then
 switches the fixed `current` entry.
 
-SignOs 客户端的标准发布流程为：递增构建号、构建并测试、提交与 push、
-执行 OTA 发布器 `--plan` 并完成 OTA 发布，再将**同一正式签名 IPA**发布到
-Yao App Source。使用 OTA 生成的 `latest-ios.json` 或其原样保存的发布凭证，
-执行下文的 `scripts/publish_signos.py --plan` 和正式发布命令。
-两个渠道均核验通过才算完成；软件源失败时保留已成功的 OTA 版本，修复后重试
-软件源步骤，不重新签名或覆盖历史 OTA 目录。不要将 `packages/SignOs.ipa`
-这一临时签名构建产物直接上架。
+仅在明确要求 OTA 发包时递增构建号，并使用私有配置发布正式签名 IPA。
+常规客户端交付使用上文的 GitHub Actions 构建检查。
 
 The fixed release metadata endpoint is
 `https://192.168.123.79:8769/channels/signos/current/latest-ios.json`; its sibling
@@ -223,19 +240,6 @@ xcrun swiftc Feather/Utilities/SourceRepositoryIdentity.swift Tests/SourceReposi
 /tmp/signos-source-regression
 rm /tmp/signos-source-regression
 ```
-
-### Yao App Source（家中软件源）
-
-- 域名与 URL 从仓库外私有环境文件读取，变量为 `APP_SOURCE_DOMAIN`、`APP_SOURCE_BASE_URL`，不在仓库保存实际地址。
-- 唯一公开入口：`${APP_SOURCE_BASE_URL}/source.json`；`/appstore` 为兼容入口。
-- 家中 Mac mini 通过路由器 TCP 15006 提供 HTTPS 下载，使用公开受信任的证书，无需安装 CA。
-- `scripts/publish_signos.py` 默认发布到本机，配置为 `hosting/home-source/source.config.json`；不再依赖 Cloudflare。仍需先完成独立的本机 OTA 发布，再使用同一正式签名 IPA 及凭证发布软件源。
-- 首次运行先 `--plan`。IPA 原样保存，先校验资源，最后切换清单；版本、构建号、大小和 SHA-256 必须与 OTA 凭证一致。
-- 证书由本机 launchd 每 12 小时检查，通过腾讯云 DNS-01 自动续期，成功后校验并重载 Nginx。配置、凭据和证书均在仓库外。
-- 普通应用可通过 `POST /api/upload` 和共享 Bearer token 上传，自动进入同一软件源；SignOs 仍要求 OTA 凭证。跨机器客户端为 `distribution/app-source/upload_ipa.py`。
-- 完整发布、部署、重试、续期与验收步骤见 [家中软件源说明](hosting/home-source/README.md)。
-- 旧 workers.dev 入口与 Cron 已停用；原 R2 私有文件和发布凭证保留为历史备份。旧配置标记为 disabled，发布器拒绝向它发布；[跨机器上传指南](distribution/app-source/README.md)提供新的单 token IPA 上传方法，旧 Cloudflare 配置仅保留追溯。
-- 已确认的后续方案见 [Cloudflare 软件源聚合与 IPA 元信息解析方案](docs/plans/cloudflare-app-source.md)；目前待实施，现有生产渠道和发布流程保持上述状态。
 
 ## Contact
 

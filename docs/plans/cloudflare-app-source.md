@@ -1,10 +1,10 @@
 # Cloudflare 软件源聚合与 IPA 元信息解析方案
 
-状态：方案已确认，待实施。确认日期：2026-10-11。
+状态：后端与客户端已实现，两个真实案例已验收；现有软件源历史迁移等待公开上传授权。更新日期：2026-10-11。
 
 软件源配置、聚合、定时同步和元信息解析迁移到 Cloudflare，通过 SignOs 管理。IPA 保存在 GitHub Release 或用户填写的原始地址，用户直接从原站下载。自动解析失败时展示原因，不提供手动填写应用元信息的入口。
 
-本方案保存未来实现的目标，不代表生产环境已经迁移。当前家中软件源、OTA 发布和 SignOs 正式发布规则继续以项目 [AGENTS.md](../../AGENTS.md)、[README.md](../../README.md) 和[家中软件源说明](../../hosting/home-source/README.md)为准。
+本方案记录软件源管理功能的设计目标。SignOs 客户端交付以项目 [AGENTS.md](../../AGENTS.md) 和 [GitHub Actions 构建检查](../../README.md#github-actions-构建检查)为准。
 
 ## 整体架构
 
@@ -101,7 +101,7 @@ Cloudflare 保存配置、JSON 和提取出的元信息，不保存完整 IPA，
 
 每段读取校验 HTTP 206、`Content-Range`、实际响应长度及文件一致性；有强 ETag 时在后续片段读取中使用它。原站忽略 Range 返回完整文件时取消响应并报错，不自动退化为完整 IPA 下载。[HTTP Range 标准](https://www.rfc-editor.org/rfc/rfc9110.html#section-14)
 
-CRC-32 校验的是提取出的 plist，不能代表完整 IPA 的 SHA-256。部分读取无法计算完整 IPA 的 SHA-256；SignOs 自身正式发布所需的全包 SHA-256 和发布凭证仍由既有发布流程提供。
+CRC-32 校验的是提取出的 plist，不能代表完整 IPA 的 SHA-256。部分读取无法计算完整 IPA 的 SHA-256。
 
 图标、截图等不是本次 Info.plist 提取的必备产物。迁移时保留已有展示资源；新应用先使用软件源默认图标，后续独立扩展图标提取。
 
@@ -166,26 +166,6 @@ SignOs 增加软件源管理页面，支持：
 
 配置带修订号，多台设备同时编辑时检测冲突，避免覆盖其他设备的修改。
 
-## 第三方 IPA 仓库
-
-使用已创建的公开仓库 [zh0ngtian/ipa-archive](https://github.com/zh0ngtian/ipa-archive)。IPA 上传到 Release 附件中，不存入 Git 文件树。
-
-一个应用的一个版本对应一个 Release：
-
-```text
-tag：<app-key>/v<version>-<build>
-附件：<app-key>.ipa
-```
-
-例如：
-
-```text
-tag：example-app/v1.2.3-45
-附件：example-app.ipa
-```
-
-每个应用订阅限定自己的 tag 前缀，例如 `example-app/`，再匹配附件名。仓库可以存放多个应用，每个应用独立更新，不能用全仓库的最新 Release 代表所有应用。
-
 ## 已验证范围
 
 2026-10-11，正式部署的免费 Worker 在 HKG 节点完成以下实测：
@@ -225,6 +205,21 @@ UTM 的中央目录超出尾部读取范围，测试成功触发补读。两个�
 - 重新安装 SignOs 后可恢复列表；配置导出与恢复有效。
 - 未授权写入被拒绝，Token 轮换与多设备编辑冲突正确处理。
 - 完整流程在免费计划上通过实际 CPU、请求和存储额度验证。
-- SignOs 正式发布保留既有同包、版本、构建号、升级身份和全包 SHA-256 契约。
 
-实施按项目现有规则完成对应测试、提交、推送、服务部署和客户端发包。本次只保存方案与验证资料，不修改服务、客户端或生产入口。
+实施按项目现有规则完成对应测试、提交、推送、必要服务部署和客户端流水线构建检查。实现与线上验收见下文；历史迁移完成后更新最终生产状态。
+
+## 2026-10-11 实施记录
+
+- 已部署新的免费 `signos-source-aggregator` Worker、SQLite Durable Object 和每小时 Cron；不使用旧 Worker 或 R2。
+- 公开入口：`https://signos-source-aggregator.305301890.workers.dev/sources/yao.json`。两项真实订阅已解析、确认发布，并与完整 IPA 的 Python 解析及 GitHub 全包散列比对。
+- Codex Mobile 0.2.150（2150）：全包 3,760,418 字节，Range 读取 67,068 字节，Worker 1,531 ms，本机全包下载 4,580 ms。
+- 哔哩哔哩 3.20.1（82300200）：全包 183,082,982 字节，Range 读取 156,169 字节，Worker 13,376 ms，本机全包下载 52,884 ms。真实 XML plist，实际触发中央目录补读。
+- 上述时间为单次实测，不能当成持续速度保证；Worker 部分读取与本机全包下载的数据量不同。结果见 [真实案例报告](evidence/live-source-acceptance-20261011.json)。
+- Durable Object Alarm 保存了四个执行 CPU 样本：2、2、2、1 ms；包含限流重试及解析，不把这些样本都算成成功解析。见 [CPU 记录](evidence/aggregator-cpu-20261011.json)。
+- 18 项后端测试通过，覆盖 ZIP64、binary/XML、CRC、异常 Range、重定向、附件歧义、Token 轮换、修订冲突和备份完整性。历史导入逐包解析，并核对 GitHub 附件 `digest` 与大小。
+- SignOs 最低系统提高到 iOS 17，使用 Observation；管理 Token 存于钥匙串。设备及模拟器构建、来源变体回归、6 项安装状态回归、客户端真实 API/备份/Keychain 检查通过。
+- SignOs 1.0.9（10）已完成本机 OTA 正式签名发布：16,859,323 字节，SHA-256 `807e5c1a4f172de48d36021920f87f3c03393a69d5a3865526d9a65bea9ffca0`。真机覆盖安装和数据保留未在本次验证。
+- 本机 GitHub Token 经用户明确授权存入 Worker Secret，解决 Cloudflare 匿名出口的 API 限流；公开 JSON、备份、客户端和报告不含该凭据。
+- 迁移计划已核对旧软件源 4 个应用、19 个版本；保留图标及稳定身份。公开归档具体 IPA 的自动审批要求额外明确授权，当前等待该确认，尚未宣称生产迁移完成。
+
+新实例的无签名备份恢复会重新解析配置；同一持久实例的签名备份可恢复已验证历史。被编辑的备份不能作为手填元信息入口。最多 200 个订阅、每项 20 个历史版本；发布前检查目录数据容量，超限保留旧版本。
