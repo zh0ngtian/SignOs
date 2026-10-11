@@ -1,0 +1,127 @@
+{
+  "verifiedAt": "2026-10-11T08:33:49.010519+00:00",
+  "implementationCommit": "00aeea2ce1959142a8ed2f4b649b06f37ebccc24",
+  "ci": {
+    "url": "https://github.com/zh0ngtian/SignOs/actions/runs/38123876714",
+    "conclusion": "success"
+  },
+  "latestOnly": true,
+  "historicalPackagesImported": 0,
+  "sourceURL": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json",
+  "sourceIdentifier": "tech.zh0ngtian.yao-app-source",
+  "subscriptionCount": 5,
+  "legacyDefaultCount": 4,
+  "apps": [
+    {
+      "appID": "bdf9cfa5-6c34-49ca-82fb-31a85ad9e6da",
+      "bundleIdentifier": "vip.loock.codexmobile",
+      "version": "0.2.150",
+      "buildVersion": "2150",
+      "downloadURL": "https://github.com/zh0ngtian/codex-mobile/releases/download/v0.2.150/CodexMobile-v0.2.150-unsigned.ipa",
+      "size": 3760418,
+      "sha256": "1bd89afcbfcc45a0f4cb43fae5130ded7cb86bc340e1b945eadc5d21698955e8",
+      "legacyDefault": false
+    },
+    {
+      "appID": "dbaf3ff3-71e6-4d56-9e76-0475f0b38142",
+      "bundleIdentifier": "com.bilibili.inter",
+      "version": "3.20.1",
+      "buildVersion": "82300200",
+      "downloadURL": "https://github.com/zh0ngtian/ipa-archive/releases/download/bilibili-inter-v3.20.1-b82300200/Bilibili_3.20.1_82300200.ipa",
+      "size": 183082982,
+      "sha256": "a4d0e65408747085659bef0070837aadbf5ea2713e0d672fe0bf845b52153110",
+      "legacyDefault": true
+    },
+    {
+      "appID": "ff230a01-dbcd-4b0e-95bb-4d4c0d2acb78",
+      "bundleIdentifier": "tech.zh0ngtian.MuseumMuse",
+      "version": "1.1.2",
+      "buildVersion": "8",
+      "downloadURL": "https://github.com/zh0ngtian/ipa-archive/releases/download/museum-muse/v1.1.2-8/MuseumMuse.ipa",
+      "size": 2704741,
+      "sha256": "6035209e0d7003ad56f25f788e769991c70f912bd246ec64420702cbe3fb4b70",
+      "legacyDefault": true
+    },
+    {
+      "appID": "b00c4d30-243f-4473-97db-9daf28419d5c",
+      "bundleIdentifier": "vip.loock.codexmobile",
+      "version": "0.2.151",
+      "buildVersion": "2151",
+      "downloadURL": "https://github.com/zh0ngtian/ipa-archive/releases/download/codex-mobile-signed/v0.2.151-2151/CodexMobile-signed.ipa",
+      "size": 3785291,
+      "sha256": "9be6759f08a910025437160f8c40973c6b5604b6a663522a52c46a0c81de1efb",
+      "legacyDefault": true
+    },
+    {
+      "appID": "ba9c4295-207b-433a-b191-2c8908964159",
+      "bundleIdentifier": "com.signos.app",
+      "version": "1.0.10",
+      "buildVersion": "11",
+      "downloadURL": "https://github.com/zh0ngtian/ipa-archive/releases/download/signos/v1.0.10-11/SignOs.ipa",
+      "size": 16866467,
+      "sha256": "c62e46c9618196410041c109b05ba3e756e7c1669ca12b4a79b8155987827933",
+      "legacyDefault": true
+    }
+  ],
+  "versionCounts": {
+    "bdf9cfa5-6c34-49ca-82fb-31a85ad9e6da": 1,
+    "dbaf3ff3-71e6-4d56-9e76-0475f0b38142": 1,
+    "ff230a01-dbcd-4b0e-95bb-4d4c0d2acb78": 1,
+    "b00c4d30-243f-4473-97db-9daf28419d5c": 2,
+    "ba9c4295-207b-433a-b191-2c8908964159": 1
+  },
+  "historyPolicy": "Original historical packages were not migrated; new subsequent releases retain normal version records.",
+  "signos": {
+    "signed": true,
+    "version": "1.0.10",
+    "buildNumber": "11",
+    "bundleId": "com.signos.app",
+    "size": 16866467,
+    "sha256": "c62e46c9618196410041c109b05ba3e756e7c1669ca12b4a79b8155987827933",
+    "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.0.10/latest.ipa",
+    "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.0.10/manifest.plist",
+    "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+    "publishedAt": "2026-10-11T08:22:09.105937+00:00"
+  },
+  "dualChannelFullDownloadVerified": true,
+  "fixedOTAIPAVerified": true,
+  "manifestUsesVersionedIPA": true,
+  "compatibilityRedirects": [
+    {
+      "url": "https://home.zh0ngtian.tech:15006/source.json",
+      "method": "GET",
+      "status": 302,
+      "location": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json?legacy=1"
+    },
+    {
+      "url": "https://home.zh0ngtian.tech:15006/source.json",
+      "method": "HEAD",
+      "status": 302,
+      "location": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json?legacy=1"
+    },
+    {
+      "url": "https://home.zh0ngtian.tech:15006/appstore",
+      "method": "GET",
+      "status": 302,
+      "location": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json?legacy=1"
+    },
+    {
+      "url": "https://home.zh0ngtian.tech:15006/appstore",
+      "method": "HEAD",
+      "status": 302,
+      "location": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json?legacy=1"
+    }
+  ],
+  "oldUploadAPIStatus": 410,
+  "minimumIOS": "17.0",
+  "physicalUpgradeAndDataRetentionVerified": false,
+  "simulatorAcceptance": {
+    "os": "26.5",
+    "startupPassed": true,
+    "migrationBeforeAllFourReady": false,
+    "migrationAfterAllFourReady": true,
+    "visibleSubscriptionCount": 5
+  },
+  "oldIPAHeadAndRangeVerified": true,
+  "oldUploadLaunchAgentDisabled": true
+}

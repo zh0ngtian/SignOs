@@ -101,7 +101,8 @@ Project workflow and post-test delivery requirements are in [AGENTS.md](AGENTS.m
 
 [工作流](.github/workflows/ios-build.yml) 在 `main` push、面向 `main` 的 PR 和
 手动触发时运行。使用 `macos-26` 与 Xcode 26+，递归检出子模块，运行
-`OneViewPhase`、`SourceRepositoryIdentity` 和 `SourceSubscriptionIdentity` 回归，
+`OneViewPhase`、`SourceRepositoryIdentity`、`SourceSubscriptionIdentity` 和
+`SourceMigrationReadiness` 回归，
 再构建 iOS Release 设备包并检查 IPA 完整性、Bundle ID、版本和 SHA-256。
 
 流水线不依赖私有 `TLS_DIR` 或分发签名材料。产物 `SignOs-ci-<commit>` 包含
@@ -217,10 +218,18 @@ switches the fixed `current` entry.
 
 The fixed release metadata endpoint is
 `https://192.168.123.79:8769/channels/signos/current/latest-ios.json`; its sibling
-`manifest.plist` identifies the active IPA. On 2026-10-10, both launch agents were
-running, HTTPS verification with the configured CA succeeded, and the OTA manifest
-pointed to SignOs 1.0.1 (build 2). This is a dated server-side snapshot, not a new
-device-install acceptance result. Recheck the live endpoints after every deployment.
+`manifest.plist` identifies the active IPA. On 2026-10-11, SignOs 1.0.10 (build 11,
+minimum iOS 17) was distribution-signed and published to both local OTA and the
+Cloudflare source. Both channels serve the same 16,866,467-byte IPA with SHA-256
+`c62e46c9618196410041c109b05ba3e756e7c1669ca12b4a79b8155987827933`.
+The fixed manifest points to the versioned IPA. The migration imported only each
+app's latest package; subsequent new releases retain normal version records.
+The old HTTPS source aliases redirect to the four
+original default variants, and old IPA URLs remain available. See the
+[publication evidence](docs/plans/evidence/dual-channel-publication-20261011.json).
+This is a dated server-side snapshot. Simulator startup and source migration were
+verified on iOS 26.5; physical upgrade installation and data retention were not
+tested. Recheck the live endpoints after every deployment.
 
 The installed 1.0.0 release is this project's upgrade baseline. The private
 configuration now uses `compatibilityIpa` plus `compatibilityIpaSha256`, with
