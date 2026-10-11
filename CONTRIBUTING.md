@@ -60,3 +60,5 @@ Submodule changes require an explicit commit-reference update in this repository
 
 ## Contributing to the wiki
 - If you want to add a page or suggest edits, make an issue with your proposed changes.
+
+Before delivery, push the change and confirm that `iOS Build Check / iOS Release build` succeeds for the same commit. The workflow runs on main pushes and PRs; its IPA artifacts require separate signing for installation.

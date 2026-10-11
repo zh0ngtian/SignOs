@@ -1,0 +1,74 @@
+name: iOS Build Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: iOS Release build
+    runs-on: macos-26
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Check Xcode and iOS SDK
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          XCODE_MAJOR=$(xcodebuild -version | awk '/^Xcode / { split($2, version, "."); print version[1] }')
+          test "$XCODE_MAJOR" -ge 26
+          xcodebuild -showsdks | grep iphoneos
+
+      - name: Run Swift regressions
+        run: |
+          set -euo pipefail
+          for TEST in OneViewPhase SourceRepositoryIdentity SourceSubscriptionIdentity; do
+            BINARY="$RUNNER_TEMP/signos-$TEST"
+            xcrun swiftc "Feather/Utilities/$TEST.swift" "Tests/${TEST}Regression.swift" -o "$BINARY"
+            "$BINARY"
+            rm "$BINARY"
+          done
+
+      - name: Build and inspect iOS IPA
+        env:
+          BUILD_OUTPUT: ${{ runner.temp }}/signos-ios-build
+        run: bash scripts/check_ios_build.sh "$BUILD_OUTPUT"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SignOs-ci-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/signos-ios-build/SignOs.ipa
+            ${{ runner.temp }}/signos-ios-build/build-metadata.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SignOs-build-diagnostics-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/signos-ios-build/build.log
+            ${{ runner.temp }}/signos-ios-build/Build.xcresult
+          if-no-files-found: ignore
+          retention-days: 7
