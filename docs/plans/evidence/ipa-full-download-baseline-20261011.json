@@ -1,0 +1,42 @@
+[
+  {
+    "sample": "feather",
+    "metadata": {
+      "name": "Feather",
+      "bundleIdentifier": "thewonderofyou.Feather",
+      "version": "2.9.0",
+      "buildVersion": "1",
+      "minOSVersion": "16.0"
+    },
+    "entry": "Payload/Feather.app/Info.plist",
+    "compression": 8,
+    "compressedBytes": 2028,
+    "uncompressedBytes": 3184,
+    "crc32": "7f0215b2",
+    "plistFormat": "binary",
+    "sha256Verified": true,
+    "fullBytes": 14241853,
+    "entryCount": 112,
+    "centralDirectoryOffset": 14229820
+  },
+  {
+    "sample": "utm",
+    "metadata": {
+      "name": "UTM SE",
+      "bundleIdentifier": "com.utmapp.UTM-SE",
+      "version": "4.7.5",
+      "buildVersion": "118",
+      "minOSVersion": "14.0"
+    },
+    "entry": "Payload/UTM SE.app/Info.plist",
+    "compression": 8,
+    "compressedBytes": 1799,
+    "uncompressedBytes": 2861,
+    "crc32": "a76f1903",
+    "plistFormat": "binary",
+    "sha256Verified": true,
+    "fullBytes": 213878374,
+    "entryCount": 602,
+    "centralDirectoryOffset": 213802898
+  }
+]

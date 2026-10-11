@@ -235,6 +235,7 @@ rm /tmp/signos-source-regression
 - 普通应用可通过 `POST /api/upload` 和共享 Bearer token 上传，自动进入同一软件源；SignOs 仍要求 OTA 凭证。跨机器客户端为 `distribution/app-source/upload_ipa.py`。
 - 完整发布、部署、重试、续期与验收步骤见 [家中软件源说明](hosting/home-source/README.md)。
 - 旧 workers.dev 入口与 Cron 已停用；原 R2 私有文件和发布凭证保留为历史备份。旧配置标记为 disabled，发布器拒绝向它发布；[跨机器上传指南](distribution/app-source/README.md)提供新的单 token IPA 上传方法，旧 Cloudflare 配置仅保留追溯。
+- 已确认的后续方案见 [Cloudflare 软件源聚合与 IPA 元信息解析方案](docs/plans/cloudflare-app-source.md)；目前待实施，现有生产渠道和发布流程保持上述状态。
 
 ## Contact
 

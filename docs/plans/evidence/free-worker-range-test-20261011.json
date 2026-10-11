@@ -1,0 +1,603 @@
+{
+  "testDate": "2026-10-11",
+  "timezone": "Asia/Shanghai",
+  "deploymentName": "signos-range-probe-20261011-d9ca",
+  "cloudflareColo": "HKG",
+  "planConfirmation": {
+    "plan": "Free",
+    "evidence": "Cloudflare rejected custom cpu_ms with API code 100328: CPU limits are not supported for the Free plan. No subscription or account-plan changes performed."
+  },
+  "CPUConstraint": "Native Free plan 10ms CPU time per HTTP request, no custom CPU configuration",
+  "cpuLogSamples": [
+    {
+      "sample": "feather",
+      "phase": "first deployed request",
+      "cpuTimeMs": 8,
+      "outcome": "ok"
+    },
+    {
+      "sample": "utm",
+      "phase": "first deployed request",
+      "cpuTimeMs": 8,
+      "outcome": "ok"
+    },
+    {
+      "sample": "utm",
+      "phase": "last deployed request",
+      "cpuTimeMs": 6,
+      "outcome": "ok"
+    }
+  ],
+  "cpuLogNote": "These are samples visible in captured wrangler tail output; complete per-request CPU statistics were not retained. All ten deployed HTTP requests succeeded.",
+  "method": {
+    "reads": "ZIP EOF/central directory, main app local header, compressed Info.plist only",
+    "parsing": "Binary plist selective scalar metadata extraction; DEFLATE decompression and ZIP CRC-32 check",
+    "timing": "Measured inside Worker before first upstream request until metadata parsing completed, excludes local-to-Worker invocation transport",
+    "upstream": "Fixed public GitHub Release asset URLs with expected total lengths, Content-Range validation and strong ETag checks when provided",
+    "cache": "Upstream responses reported GitHub CDN cache hits",
+    "preview": "A preliminary remote-preview stage also passed ten requests, excluded from final summaries because Wrangler 4.92 remote-preview init omits custom CPU limits"
+  },
+  "scopeLimits": [
+    "No icon extraction or full-file SHA-256 computed",
+    "Upstream must honor byte Range with HTTP 206; HTTP 200 responses are cancelled and rejected",
+    "Probe rejects ZIP64, split/encrypted ZIPs, central directories over 2MiB and Info.plist outputs over 1MiB",
+    "Two public IPA samples only; these results do not guarantee every IPA or server will work"
+  ],
+  "summaries": [
+    {
+      "sample": "feather",
+      "fileBytes": 14241853,
+      "downloadedBytes": 67615,
+      "requestsPerInspection": 3,
+      "successes": 5,
+      "medianMs": 345,
+      "minMs": 304,
+      "maxMs": 1471,
+      "savedPercent": 99.52523734095557,
+      "metadata": {
+        "CFBundleDisplayName": "Feather",
+        "CFBundleIdentifier": "thewonderofyou.Feather",
+        "CFBundleName": "Feather",
+        "CFBundleShortVersionString": "2.9.0",
+        "CFBundleVersion": "1",
+        "MinimumOSVersion": "16.0"
+      }
+    },
+    {
+      "sample": "utm",
+      "fileBytes": 213878374,
+      "downloadedBytes": 142840,
+      "requestsPerInspection": 4,
+      "successes": 5,
+      "medianMs": 525,
+      "minMs": 396,
+      "maxMs": 2863,
+      "savedPercent": 99.93321437912185,
+      "metadata": {
+        "CFBundleIdentifier": "com.utmapp.UTM-SE",
+        "CFBundleName": "UTM SE",
+        "CFBundleShortVersionString": "4.7.5",
+        "CFBundleVersion": "118",
+        "MinimumOSVersion": "14.0"
+      }
+    }
+  ],
+  "records": [
+    {
+      "sample": "feather",
+      "ok": true,
+      "colo": "HKG",
+      "totalMs": 1471,
+      "metadata": {
+        "CFBundleDisplayName": "Feather",
+        "CFBundleIdentifier": "thewonderofyou.Feather",
+        "CFBundleName": "Feather",
+        "CFBundleShortVersionString": "2.9.0",
+        "CFBundleVersion": "1",
+        "MinimumOSVersion": "16.0"
+      },
+      "zipEntries": 112,
+      "plistPath": "Payload/Feather.app/Info.plist",
+      "plistFormat": "binary",
+      "requests": 3,
+      "downloadedBytes": 67615,
+      "fileBytes": 14241853,
+      "savedPercent": 99.52523734095557,
+      "transfers": [
+        {
+          "status": 206,
+          "start": 14176296,
+          "end": 14241852,
+          "bytes": 65557,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 14226510,
+          "end": 14226539,
+          "bytes": 30,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 14226586,
+          "end": 14228613,
+          "bytes": 2028,
+          "cache": "HIT, HIT"
+        }
+      ],
+      "round": 1,
+      "httpStatus": "200",
+      "curlExit": 0,
+      "recordedUTC": "2026-10-11T04:24:01Z"
+    },
+    {
+      "sample": "utm",
+      "ok": true,
+      "colo": "HKG",
+      "totalMs": 2863,
+      "metadata": {
+        "CFBundleIdentifier": "com.utmapp.UTM-SE",
+        "CFBundleName": "UTM SE",
+        "CFBundleShortVersionString": "4.7.5",
+        "CFBundleVersion": "118",
+        "MinimumOSVersion": "14.0"
+      },
+      "zipEntries": 602,
+      "plistPath": "Payload/UTM SE.app/Info.plist",
+      "plistFormat": "binary",
+      "requests": 4,
+      "downloadedBytes": 142840,
+      "fileBytes": 213878374,
+      "savedPercent": 99.93321437912185,
+      "transfers": [
+        {
+          "status": 206,
+          "start": 213812817,
+          "end": 213878373,
+          "bytes": 65557,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 213802898,
+          "end": 213878351,
+          "bytes": 75454,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 213800920,
+          "end": 213800949,
+          "bytes": 30,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 213801007,
+          "end": 213802805,
+          "bytes": 1799,
+          "cache": "HIT, HIT"
+        }
+      ],
+      "round": 1,
+      "httpStatus": "200",
+      "curlExit": 0,
+      "recordedUTC": "2026-10-11T04:24:05Z"
+    },
+    {
+      "sample": "feather",
+      "ok": true,
+      "colo": "HKG",
+      "totalMs": 345,
+      "metadata": {
+        "CFBundleDisplayName": "Feather",
+        "CFBundleIdentifier": "thewonderofyou.Feather",
+        "CFBundleName": "Feather",
+        "CFBundleShortVersionString": "2.9.0",
+        "CFBundleVersion": "1",
+        "MinimumOSVersion": "16.0"
+      },
+      "zipEntries": 112,
+      "plistPath": "Payload/Feather.app/Info.plist",
+      "plistFormat": "binary",
+      "requests": 3,
+      "downloadedBytes": 67615,
+      "fileBytes": 14241853,
+      "savedPercent": 99.52523734095557,
+      "transfers": [
+        {
+          "status": 206,
+          "start": 14176296,
+          "end": 14241852,
+          "bytes": 65557,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 14226510,
+          "end": 14226539,
+          "bytes": 30,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 14226586,
+          "end": 14228613,
+          "bytes": 2028,
+          "cache": "HIT, HIT"
+        }
+      ],
+      "round": 2,
+      "httpStatus": "200",
+      "curlExit": 0,
+      "recordedUTC": "2026-10-11T04:24:06Z"
+    },
+    {
+      "sample": "utm",
+      "ok": true,
+      "colo": "HKG",
+      "totalMs": 643,
+      "metadata": {
+        "CFBundleIdentifier": "com.utmapp.UTM-SE",
+        "CFBundleName": "UTM SE",
+        "CFBundleShortVersionString": "4.7.5",
+        "CFBundleVersion": "118",
+        "MinimumOSVersion": "14.0"
+      },
+      "zipEntries": 602,
+      "plistPath": "Payload/UTM SE.app/Info.plist",
+      "plistFormat": "binary",
+      "requests": 4,
+      "downloadedBytes": 142840,
+      "fileBytes": 213878374,
+      "savedPercent": 99.93321437912185,
+      "transfers": [
+        {
+          "status": 206,
+          "start": 213812817,
+          "end": 213878373,
+          "bytes": 65557,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 213802898,
+          "end": 213878351,
+          "bytes": 75454,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 213800920,
+          "end": 213800949,
+          "bytes": 30,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 213801007,
+          "end": 213802805,
+          "bytes": 1799,
+          "cache": "HIT, HIT"
+        }
+      ],
+      "round": 2,
+      "httpStatus": "200",
+      "curlExit": 0,
+      "recordedUTC": "2026-10-11T04:24:07Z"
+    },
+    {
+      "sample": "feather",
+      "ok": true,
+      "colo": "HKG",
+      "totalMs": 304,
+      "metadata": {
+        "CFBundleDisplayName": "Feather",
+        "CFBundleIdentifier": "thewonderofyou.Feather",
+        "CFBundleName": "Feather",
+        "CFBundleShortVersionString": "2.9.0",
+        "CFBundleVersion": "1",
+        "MinimumOSVersion": "16.0"
+      },
+      "zipEntries": 112,
+      "plistPath": "Payload/Feather.app/Info.plist",
+      "plistFormat": "binary",
+      "requests": 3,
+      "downloadedBytes": 67615,
+      "fileBytes": 14241853,
+      "savedPercent": 99.52523734095557,
+      "transfers": [
+        {
+          "status": 206,
+          "start": 14176296,
+          "end": 14241852,
+          "bytes": 65557,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 14226510,
+          "end": 14226539,
+          "bytes": 30,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 14226586,
+          "end": 14228613,
+          "bytes": 2028,
+          "cache": "HIT, HIT"
+        }
+      ],
+      "round": 3,
+      "httpStatus": "200",
+      "curlExit": 0,
+      "recordedUTC": "2026-10-11T04:24:08Z"
+    },
+    {
+      "sample": "utm",
+      "ok": true,
+      "colo": "HKG",
+      "totalMs": 525,
+      "metadata": {
+        "CFBundleIdentifier": "com.utmapp.UTM-SE",
+        "CFBundleName": "UTM SE",
+        "CFBundleShortVersionString": "4.7.5",
+        "CFBundleVersion": "118",
+        "MinimumOSVersion": "14.0"
+      },
+      "zipEntries": 602,
+      "plistPath": "Payload/UTM SE.app/Info.plist",
+      "plistFormat": "binary",
+      "requests": 4,
+      "downloadedBytes": 142840,
+      "fileBytes": 213878374,
+      "savedPercent": 99.93321437912185,
+      "transfers": [
+        {
+          "status": 206,
+          "start": 213812817,
+          "end": 213878373,
+          "bytes": 65557,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 213802898,
+          "end": 213878351,
+          "bytes": 75454,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 213800920,
+          "end": 213800949,
+          "bytes": 30,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 213801007,
+          "end": 213802805,
+          "bytes": 1799,
+          "cache": "HIT, HIT"
+        }
+      ],
+      "round": 3,
+      "httpStatus": "200",
+      "curlExit": 0,
+      "recordedUTC": "2026-10-11T04:24:09Z"
+    },
+    {
+      "sample": "feather",
+      "ok": true,
+      "colo": "HKG",
+      "totalMs": 452,
+      "metadata": {
+        "CFBundleDisplayName": "Feather",
+        "CFBundleIdentifier": "thewonderofyou.Feather",
+        "CFBundleName": "Feather",
+        "CFBundleShortVersionString": "2.9.0",
+        "CFBundleVersion": "1",
+        "MinimumOSVersion": "16.0"
+      },
+      "zipEntries": 112,
+      "plistPath": "Payload/Feather.app/Info.plist",
+      "plistFormat": "binary",
+      "requests": 3,
+      "downloadedBytes": 67615,
+      "fileBytes": 14241853,
+      "savedPercent": 99.52523734095557,
+      "transfers": [
+        {
+          "status": 206,
+          "start": 14176296,
+          "end": 14241852,
+          "bytes": 65557,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 14226510,
+          "end": 14226539,
+          "bytes": 30,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 14226586,
+          "end": 14228613,
+          "bytes": 2028,
+          "cache": "HIT, HIT"
+        }
+      ],
+      "round": 4,
+      "httpStatus": "200",
+      "curlExit": 0,
+      "recordedUTC": "2026-10-11T04:24:10Z"
+    },
+    {
+      "sample": "utm",
+      "ok": true,
+      "colo": "HKG",
+      "totalMs": 396,
+      "metadata": {
+        "CFBundleIdentifier": "com.utmapp.UTM-SE",
+        "CFBundleName": "UTM SE",
+        "CFBundleShortVersionString": "4.7.5",
+        "CFBundleVersion": "118",
+        "MinimumOSVersion": "14.0"
+      },
+      "zipEntries": 602,
+      "plistPath": "Payload/UTM SE.app/Info.plist",
+      "plistFormat": "binary",
+      "requests": 4,
+      "downloadedBytes": 142840,
+      "fileBytes": 213878374,
+      "savedPercent": 99.93321437912185,
+      "transfers": [
+        {
+          "status": 206,
+          "start": 213812817,
+          "end": 213878373,
+          "bytes": 65557,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 213802898,
+          "end": 213878351,
+          "bytes": 75454,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 213800920,
+          "end": 213800949,
+          "bytes": 30,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 213801007,
+          "end": 213802805,
+          "bytes": 1799,
+          "cache": "HIT, HIT"
+        }
+      ],
+      "round": 4,
+      "httpStatus": "200",
+      "curlExit": 0,
+      "recordedUTC": "2026-10-11T04:24:11Z"
+    },
+    {
+      "sample": "feather",
+      "ok": true,
+      "colo": "HKG",
+      "totalMs": 306,
+      "metadata": {
+        "CFBundleDisplayName": "Feather",
+        "CFBundleIdentifier": "thewonderofyou.Feather",
+        "CFBundleName": "Feather",
+        "CFBundleShortVersionString": "2.9.0",
+        "CFBundleVersion": "1",
+        "MinimumOSVersion": "16.0"
+      },
+      "zipEntries": 112,
+      "plistPath": "Payload/Feather.app/Info.plist",
+      "plistFormat": "binary",
+      "requests": 3,
+      "downloadedBytes": 67615,
+      "fileBytes": 14241853,
+      "savedPercent": 99.52523734095557,
+      "transfers": [
+        {
+          "status": 206,
+          "start": 14176296,
+          "end": 14241852,
+          "bytes": 65557,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 14226510,
+          "end": 14226539,
+          "bytes": 30,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 14226586,
+          "end": 14228613,
+          "bytes": 2028,
+          "cache": "HIT, HIT"
+        }
+      ],
+      "round": 5,
+      "httpStatus": "200",
+      "curlExit": 0,
+      "recordedUTC": "2026-10-11T04:24:13Z"
+    },
+    {
+      "sample": "utm",
+      "ok": true,
+      "colo": "HKG",
+      "totalMs": 412,
+      "metadata": {
+        "CFBundleIdentifier": "com.utmapp.UTM-SE",
+        "CFBundleName": "UTM SE",
+        "CFBundleShortVersionString": "4.7.5",
+        "CFBundleVersion": "118",
+        "MinimumOSVersion": "14.0"
+      },
+      "zipEntries": 602,
+      "plistPath": "Payload/UTM SE.app/Info.plist",
+      "plistFormat": "binary",
+      "requests": 4,
+      "downloadedBytes": 142840,
+      "fileBytes": 213878374,
+      "savedPercent": 99.93321437912185,
+      "transfers": [
+        {
+          "status": 206,
+          "start": 213812817,
+          "end": 213878373,
+          "bytes": 65557,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 213802898,
+          "end": 213878351,
+          "bytes": 75454,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 213800920,
+          "end": 213800949,
+          "bytes": 30,
+          "cache": "HIT, HIT"
+        },
+        {
+          "status": 206,
+          "start": 213801007,
+          "end": 213802805,
+          "bytes": 1799,
+          "cache": "HIT, HIT"
+        }
+      ],
+      "round": 5,
+      "httpStatus": "200",
+      "curlExit": 0,
+      "recordedUTC": "2026-10-11T04:24:13Z"
+    }
+  ],
+  "cleanupStatus": "verified_deleted",
+  "cleanupEvidence": {
+    "deleteSuccess": true,
+    "settingsVerificationHTTP": 404,
+    "previewAndTailStopped": true
+  }
+}
