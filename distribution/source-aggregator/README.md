@@ -24,7 +24,19 @@ GitHub 订阅按 Release 发布时间从新到旧查找，在 tag 前缀、预�
 
 旧客户端使用 `/sources/yao.json?legacy=1`，只返回标记为默认的原有应用变体，避免同 Bundle ID 的签名/未签名包被混用。旧家中 HTTPS 入口在迁移验收后以 302 指向这份兼容清单，旧文件留存用于回退。
 
-最新包迁移使用 `python3 scripts/migrate_cloud_source.py --plan` 和对应实际命令，每个应用只读 `versions[0]`，不导入原历史记录。本次 SignOs 由新正式发布提供，迁移命令加 `--skip-bundle com.signos.app`。图片和展示信息保留，元信息始终由 Range 解析产生。
+最新包迁移使用 `python3 scripts/migrate_cloud_source.py --plan` 和对应实际命令，每个应用只读 `versions[0]`，不导入原历史记录。该工具是原始归档迁移工具；当前仓库订阅已建立，重跑迁移时加 `--skip-bundle com.signos.app --skip-bundle vip.loock.codexmobile --skip-bundle tech.zh0ngtian.MuseumMuse`，避免另建归档订阅。图片和展示信息保留，元信息始终由 Range 解析产生。
+
+2026-10-11 按用户要求，除哔哩哔哩保留固定 IPA URL 外，其余应用均订阅各自的正式 GitHub 仓库，沿用每小时 Cron：
+
+| 应用 | 仓库 / 来源 | tag 前缀 | IPA 匹配 | 包含预发布 |
+| --- | --- | --- | --- | --- |
+| SignOs | `zh0ngtian/SignOs` | `v` | `SignOs.ipa` | 否 |
+| Codex Mobile | `zh0ngtian/codex-mobile` | 无 | `CodexMobile-*-unsigned.ipa` | 否 |
+| 博物女神 | `zh0ngtian/DailyMusuem` | `build-` | `MuseumMuse-unsigned.ipa` | 是 |
+| Bangumi | `czy0729/Bangumi` | 无 | `bangumi_*.ipa` | 否 |
+| 哔哩哔哩 | 原固定 IPA URL，`kind=url` | — | — | — |
+
+SignOs 原订阅已就地从 `ipa-archive` 切换到正式仓库，当前版本为 1.0.11（12）；保留订阅 ID、旧客户端默认标记和原 1.0.10 签名包历史。正式仓库的 IPA 未经分发签名，安装前由客户端签名。其他三个仓库订阅已核对最新匹配附件，哔哩哔哩的配置、当前包和历史均保持原样。普通/兼容清单、图标 HTTPS 接口与 SignOs 全包 SHA-256 验收见 [记录](../../docs/plans/evidence/repository-subscriptions-20261011.json)。固定本地 OTA 渠道独立于正式仓库订阅。
 
 博物女神的持续订阅已于 2026-10-11 从迁移归档切换到公开仓库
 `zh0ngtian/DailyMusuem`：tag 前缀 `build-`，附件精确匹配
@@ -35,7 +47,7 @@ GitHub 订阅按 Release 发布时间从新到旧查找，在 tag 前缀、预�
 `migrate_cloud_source.py` 是原始迁移工具，仍使用归档规则；重跑旧源迁移时应加
 `--skip-bundle tech.zh0ngtian.MuseumMuse`，避免另外创建归档订阅。
 
-用户明确要求双渠道发包时，先按项目的 OTA 流程发布正式签名包，再用 `scripts/publish_signos.py --ipa <同一签名包> --release-json <OTA凭证> --plan` 预检后执行实际发布。工具公开归档到 GitHub，再核对 Cloudflare 的版本、构建号、URL、大小和全包 SHA-256；GitHub 完整 GET 也必须匹配 OTA 凭证。常规交付仍采用 GitHub 构建检查，不自动发布 App。
+`scripts/publish_signos.py` 是原有双渠道签名包发布工具，仍会创建或更新 `ipa-archive` 订阅，不用于当前正式仓库主订阅的更新。仅在用户另行明确要求新增签名包渠道时使用：先按项目 OTA 流程发布正式签名包，再用 `scripts/publish_signos.py --ipa <同一签名包> --release-json <OTA凭证> --plan` 预检后执行实际发布。工具公开归档到 GitHub，再核对 Cloudflare 的版本、构建号、URL、大小和全包 SHA-256；GitHub 完整 GET 也必须匹配 OTA 凭证。常规交付仍采用 GitHub 构建检查，不自动发布 App。
 
 | 接口 | 功能 |
 | --- | --- |

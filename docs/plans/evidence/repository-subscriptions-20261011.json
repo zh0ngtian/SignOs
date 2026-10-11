@@ -1,0 +1,172 @@
+{
+  "verifiedAt": "2026-10-11T14:49:04.052882+00:00",
+  "sourceURL": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json",
+  "sourceIdentityPreserved": true,
+  "subscriptionIdentitiesPreserved": true,
+  "legacyDefaultsPreserved": true,
+  "bilibiliUnchanged": true,
+  "schedule": "0 * * * *",
+  "entries": [
+    {
+      "id": "bdf9cfa5-6c34-49ca-82fb-31a85ad9e6da",
+      "name": "Codex Mobile",
+      "bundleIdentifier": "vip.loock.codexmobile",
+      "config": {
+        "kind": "github",
+        "paused": false,
+        "repository": "zh0ngtian/codex-mobile",
+        "tagPrefix": "",
+        "assetPattern": "CodexMobile-*-unsigned.ipa",
+        "includePrereleases": false
+      },
+      "status": "succeeded",
+      "version": "0.2.155",
+      "buildVersion": "2155",
+      "downloadURL": "https://github.com/zh0ngtian/codex-mobile/releases/download/v0.2.155/CodexMobile-v0.2.155-unsigned.ipa"
+    },
+    {
+      "id": "dbaf3ff3-71e6-4d56-9e76-0475f0b38142",
+      "name": "哔哩哔哩",
+      "bundleIdentifier": "com.bilibili.inter",
+      "config": {
+        "kind": "url",
+        "paused": false,
+        "url": "https://github.com/zh0ngtian/ipa-archive/releases/download/bilibili-inter-v3.20.1-b82300200/Bilibili_3.20.1_82300200.ipa"
+      },
+      "status": "succeeded",
+      "version": "3.20.1",
+      "buildVersion": "82300200",
+      "downloadURL": "https://github.com/zh0ngtian/ipa-archive/releases/download/bilibili-inter-v3.20.1-b82300200/Bilibili_3.20.1_82300200.ipa"
+    },
+    {
+      "id": "ff230a01-dbcd-4b0e-95bb-4d4c0d2acb78",
+      "name": "MuseumMuse",
+      "bundleIdentifier": "tech.zh0ngtian.MuseumMuse",
+      "config": {
+        "kind": "github",
+        "paused": false,
+        "repository": "zh0ngtian/DailyMusuem",
+        "tagPrefix": "build-",
+        "assetPattern": "MuseumMuse-unsigned.ipa",
+        "includePrereleases": true
+      },
+      "status": "succeeded",
+      "version": "1.1.3",
+      "buildVersion": "9",
+      "downloadURL": "https://github.com/zh0ngtian/DailyMusuem/releases/download/build-c39c67baf6f962d2c77bb19999a908c4ee82e6e1/MuseumMuse-unsigned.ipa"
+    },
+    {
+      "id": "ba9c4295-207b-433a-b191-2c8908964159",
+      "name": "SignOs",
+      "bundleIdentifier": "com.signos.app",
+      "config": {
+        "kind": "github",
+        "paused": false,
+        "repository": "zh0ngtian/SignOs",
+        "tagPrefix": "v",
+        "assetPattern": "SignOs.ipa",
+        "includePrereleases": false
+      },
+      "status": "succeeded",
+      "version": "1.0.11",
+      "buildVersion": "12",
+      "downloadURL": "https://github.com/zh0ngtian/SignOs/releases/download/v1.0.11/SignOs.ipa"
+    },
+    {
+      "id": "743644a7-e21a-4788-a345-81cc5d0352c5",
+      "name": "Bangumi",
+      "bundleIdentifier": "tv.bangumi.czy0729",
+      "config": {
+        "kind": "github",
+        "paused": false,
+        "repository": "czy0729/Bangumi",
+        "tagPrefix": "",
+        "assetPattern": "bangumi_*.ipa",
+        "includePrereleases": false
+      },
+      "status": "succeeded",
+      "version": "8.41.1",
+      "buildVersion": "1",
+      "downloadURL": "https://github.com/czy0729/Bangumi/releases/download/8.41.1/bangumi_v8.41.1.ipa"
+    }
+  ],
+  "signos": {
+    "beforeConfig": {
+      "kind": "github",
+      "paused": false,
+      "repository": "zh0ngtian/ipa-archive",
+      "tagPrefix": "signos/",
+      "assetPattern": "SignOs.ipa",
+      "includePrereleases": false
+    },
+    "sha256": "a6605502f03712dc0693a07d4f64cae908a6aa4b57d062e281943eaa78bbf7a2",
+    "size": 14756395,
+    "anonymousFullDownloadVerified": true,
+    "githubAssetDigestVerified": true,
+    "signedArchiveRetainedInHistory": true,
+    "historyVersions": [
+      "1.0.10"
+    ]
+  },
+  "publicEndpoints": [
+    {
+      "url": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json",
+      "status": 200,
+      "appCount": 5,
+      "allCurrentVersionsVerified": true
+    },
+    {
+      "url": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json?legacy=1",
+      "status": 200,
+      "appCount": 4,
+      "allCurrentVersionsVerified": true
+    },
+    {
+      "url": "https://signos-source-aggregator.305301890.workers.dev/source.json",
+      "status": 200,
+      "appCount": 5,
+      "allCurrentVersionsVerified": true
+    },
+    {
+      "url": "https://signos-source-aggregator.305301890.workers.dev/appstore",
+      "status": 200,
+      "appCount": 5,
+      "allCurrentVersionsVerified": true
+    }
+  ],
+  "health": {
+    "status": 200,
+    "body": {
+      "service": "signos-source-aggregator",
+      "version": 1,
+      "sourceId": "yao"
+    }
+  },
+  "icons": [
+    {
+      "entryId": "bdf9cfa5-6c34-49ca-82fb-31a85ad9e6da",
+      "status": 200,
+      "url": "https://signos-source-aggregator.305301890.workers.dev/app-icons/da2e4f20220e5f0b7b2219d2753034fb3724d6377d92f41be35e0b20aa057a4d.png"
+    },
+    {
+      "entryId": "dbaf3ff3-71e6-4d56-9e76-0475f0b38142",
+      "status": 200,
+      "url": "https://signos-source-aggregator.305301890.workers.dev/app-icons/961d523ba13786320438733624d2a08b1499e6323382e9a2b79c61fe5bb54642.png"
+    },
+    {
+      "entryId": "ff230a01-dbcd-4b0e-95bb-4d4c0d2acb78",
+      "status": 200,
+      "url": "https://signos-source-aggregator.305301890.workers.dev/app-icons/011d434a0167414bc1543bf9eb0d86ca6c79df11cb98f6d12acae87d03bf6461.png"
+    },
+    {
+      "entryId": "ba9c4295-207b-433a-b191-2c8908964159",
+      "status": 200,
+      "url": "https://signos-source-aggregator.305301890.workers.dev/app-icons/a08d49a7fed5206644c3b99fa34f51a6dfb8bc8da368e9c4851a978b1b09a396.png"
+    },
+    {
+      "entryId": "743644a7-e21a-4788-a345-81cc5d0352c5",
+      "status": 200,
+      "url": "https://signos-source-aggregator.305301890.workers.dev/app-icons/5ca3133400e6c81ef6ae4fd63f576668b452d10727429fc0c68c8b55d60f8c60.png"
+    }
+  ]
+}

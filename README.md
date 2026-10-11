@@ -302,6 +302,11 @@ This is a dated server-side snapshot. Simulator startup and source migration wer
 verified on iOS 26.5; physical upgrade installation and data retention were not
 tested. Recheck the live endpoints after every deployment.
 
+2026-10-11 后续已将 Cloudflare 中的 SignOs 主订阅切换到 `zh0ngtian/SignOs` 的正式 Release，
+核验 1.0.11（12）未签名 IPA；原 1.0.10 签名包保留在软件源历史中。本地 OTA 渠道未切换。
+除哔哩哔哩的固定 IPA URL 外，其他应用也均订阅各自的正式仓库，每小时检查更新。
+订阅规则与在线验收见 [Cloudflare 软件源](distribution/source-aggregator/README.md)。
+
 The installed 1.0.0 release is this project's upgrade baseline. The private
 configuration now uses `compatibilityIpa` plus `compatibilityIpaSha256`, with
 `firstInstall` removed. Preserve that signed IPA and do not reuse another app's
