@@ -21400,6 +21400,50 @@
           }
         }
       }
+    },
+    "Bundle ID": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用标识符（Bundle ID）"
+          }
+        }
+      }
+    },
+    "Checks every source for app updates.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "检查所有软件源中的应用更新。"
+          }
+        }
+      }
+    },
+    "Downloads and installs all pending app updates in the background.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在后台下载并安装所有待更新的应用。"
+          }
+        }
+      }
+    },
+    "Install Pending Updates": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安装待更新的应用"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
