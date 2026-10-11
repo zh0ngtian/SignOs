@@ -1,0 +1,49 @@
+{
+  "source": "wrangler tail actual deployment",
+  "alarmSamples": [
+    {
+      "executionModel": "durableObject",
+      "cpuTime": 2,
+      "wallTime": 830,
+      "outcome": "ok",
+      "eventTimestamp": 1791701116417,
+      "event": {
+        "scheduledTime": "2026-10-11T06:45:16.419Z"
+      },
+      "exceptions": []
+    },
+    {
+      "executionModel": "durableObject",
+      "cpuTime": 2,
+      "wallTime": 995,
+      "outcome": "ok",
+      "eventTimestamp": 1791701176577,
+      "event": {
+        "scheduledTime": "2026-10-11T06:46:16.576Z"
+      },
+      "exceptions": []
+    },
+    {
+      "executionModel": "durableObject",
+      "cpuTime": 2,
+      "wallTime": 13463,
+      "outcome": "ok",
+      "eventTimestamp": 1791701230150,
+      "event": {
+        "scheduledTime": "2026-10-11T06:47:10.151Z"
+      },
+      "exceptions": []
+    },
+    {
+      "executionModel": "durableObject",
+      "cpuTime": 1,
+      "wallTime": 2028,
+      "outcome": "ok",
+      "eventTimestamp": 1791701296724,
+      "event": {
+        "scheduledTime": "2026-10-11T06:48:16.723Z"
+      },
+      "exceptions": []
+    }
+  ]
+}

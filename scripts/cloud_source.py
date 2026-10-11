@@ -33,13 +33,17 @@ class Client:
     def call(self, path, method='GET', body=None):
         data = None if body is None else json.dumps(body, ensure_ascii=False).encode()
         request = Request(self.url + path, data=data, method=method, headers={
-            'Authorization': 'Bearer ' + self.token, 'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + self.token, 'Content-Type': 'application/json', 'User-Agent': 'SignOs-Publisher/1',
         })
         try:
             with urlopen(request, timeout=45) as response:
                 return json.load(response)
         except HTTPError as error:
-            reason = json.load(error).get('error', {})
+            raw = error.read()
+            try:
+                reason = json.loads(raw).get('error', {})
+            except (ValueError, AttributeError):
+                reason = {'code': 'UPSTREAM_HTTP_ERROR', 'message': '服务返回非 JSON 响应'}
             raise RuntimeError(f"{error.code}: {reason.get('code')} {reason.get('message')}") from None
 
     def state(self):
@@ -114,6 +118,59 @@ def deploy(args):
     print(json.dumps({'deployed': True, 'sourceURL': client.url + '/sources/yao.json', 'revision': state['revision']}))
 
 
+def publish_signos(args, receipt, config):
+    """Publish the same formally signed OTA IPA through GitHub-backed Cloudflare."""
+    client = Client(credentials(config.get('credentialsFile', DEFAULT_CREDENTIALS)))
+    repository = config.get('archiveRepository', ARCHIVE)
+    tag = f"signos/v{receipt['version']}-{receipt['buildNumber']}"
+    download = archive_asset(args.ipa, tag, 'SignOs.ipa', receipt['sha256'], repository)
+    subscription = {'kind': 'github', 'repository': repository, 'tagPrefix': 'signos/', 'assetPattern': 'SignOs.ipa', 'includePrereleases': False}
+    existing = next((e for e in client.state()['entries'] if all(e['config'].get(k) == v for k, v in subscription.items())), None)
+    entry_id = existing['id'] if existing else client.create(subscription)
+    if existing:
+        client.call(f'/api/entries/{entry_id}/sync', 'POST', {})
+    deadline = time.monotonic() + 180
+    while time.monotonic() < deadline:
+        entry = client.entry(entry_id)
+        current = entry['current']
+        if entry['status'] == 'failed':
+            raise RuntimeError(json.dumps(entry['error'], ensure_ascii=False))
+        if current and current['downloadURL'] == download and entry['status'] in ('ready', 'succeeded'):
+            break
+        time.sleep(1)
+    else:
+        raise TimeoutError('New signed SignOs IPA did not reach the source')
+    actual = current['metadata']
+    if (actual['bundleIdentifier'], actual['version'], actual['buildVersion']) != (receipt['bundleId'], receipt['version'], receipt['buildNumber']):
+        raise ValueError('Cloudflare parsing differs from signed OTA receipt')
+    if not entry['published']:
+        client.confirm(entry_id)
+    client.attest(entry_id, receipt['sha256'])
+    digest, count = hashlib.sha256(), 0
+    with urlopen(Request(download, headers={'User-Agent': 'SignOs-Publisher/1'}), timeout=60) as response:
+        while chunk := response.read(1024 * 1024):
+            digest.update(chunk); count += len(chunk)
+    if digest.hexdigest() != receipt['sha256'] or count != receipt['size']:
+        raise ValueError('Public GitHub IPA differs from signed OTA package')
+    source_url = client.url + '/sources/yao.json'
+    with urlopen(Request(source_url, headers={'User-Agent': 'SignOs-Publisher/1'}), timeout=30) as response:
+        document = json.load(response)
+    app = next(a for a in document['apps'] if a.get('appID') == entry_id)
+    if (app['version'], app['buildVersion'], app['downloadURL'], app['sha256'], app['size']) != (receipt['version'], receipt['buildNumber'], download, receipt['sha256'], receipt['size']):
+        raise ValueError('Public source JSON differs from OTA receipt')
+    print(json.dumps({'published': True, 'sourceURL': source_url, 'downloadURL': download, 'version': receipt['version'], 'buildNumber': receipt['buildNumber'], 'sha256': receipt['sha256'], 'size': receipt['size']}, ensure_ascii=False, indent=2))
+
+
+def configure_github():
+    """Requires explicit authorization to transfer the local GitHub credential."""
+    with tempfile.TemporaryDirectory(prefix='signos-github-secret-') as directory:
+        secret_file = Path(directory) / 'github.json'
+        secret_file.write_text(json.dumps({'GITHUB_TOKEN': gh('auth', 'token')}))
+        secret_file.chmod(0o600)
+        subprocess.run(['npx', '--no-install', 'wrangler', 'secret', 'bulk', str(secret_file)], cwd=REPO / 'distribution/source-aggregator', check=True)
+    print('GitHub Token 已保存到 Worker Secret；未输出凭据。')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--credentials', type=Path, default=DEFAULT_CREDENTIALS)
@@ -121,10 +178,13 @@ def main():
     deploy_parser = commands.add_parser('deploy')
     deploy_parser.add_argument('--plan', action='store_true')
     commands.add_parser('status')
+    commands.add_parser('configure-github', help='Explicitly authorized upload of the local GitHub token to Worker Secret')
     export_parser = commands.add_parser('export')
     export_parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
-    if args.command == 'deploy':
+    if args.command == 'configure-github':
+        configure_github()
+    elif args.command == 'deploy':
         deploy(args)
     else:
         client = Client(credentials(args.credentials))

@@ -1,0 +1,157 @@
+{
+  "sourceURL": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json",
+  "cases": [
+    {
+      "case": "github-release",
+      "entryId": "bdf9cfa5-6c34-49ca-82fb-31a85ad9e6da",
+      "downloadURL": "https://github.com/zh0ngtian/codex-mobile/releases/download/v0.2.150/CodexMobile-v0.2.150-unsigned.ipa",
+      "metadata": {
+        "name": "Codex Mobile",
+        "bundleIdentifier": "vip.loock.codexmobile",
+        "version": "0.2.150",
+        "buildVersion": "2150",
+        "minOSVersion": "15.6"
+      },
+      "inspection": {
+        "metadata": {
+          "name": "Codex Mobile",
+          "bundleIdentifier": "vip.loock.codexmobile",
+          "version": "0.2.150",
+          "buildVersion": "2150",
+          "minOSVersion": "15.6"
+        },
+        "entry": "Payload/PakePlus.app/Info.plist",
+        "plistFormat": "binary",
+        "compression": 8,
+        "compressedBytes": 1450,
+        "uncompressedBytes": 2160,
+        "crc32": "908c72a2",
+        "zip64": false,
+        "entryCount": 73,
+        "centralDirectoryBytes": 8574,
+        "requests": [
+          {
+            "range": "bytes=-65557",
+            "bytes": 65557,
+            "status": 206
+          },
+          {
+            "range": "bytes=3668204-3668233",
+            "bytes": 30,
+            "status": 206
+          },
+          {
+            "range": "bytes=3668234-3668264",
+            "bytes": 31,
+            "status": 206
+          },
+          {
+            "range": "bytes=3668293-3669742",
+            "bytes": 1450,
+            "status": 206
+          }
+        ],
+        "requestCount": 4,
+        "downloadedBytes": 67068,
+        "fullBytes": 3760418,
+        "originalURL": "https://github.com/zh0ngtian/codex-mobile/releases/download/v0.2.150/CodexMobile-v0.2.150-unsigned.ipa",
+        "finalHost": "release-assets.githubusercontent.com",
+        "strongETag": "\"0x8DF275E119EC322\"",
+        "elapsedMs": 1531
+      },
+      "baseline": {
+        "metadata": {
+          "name": "Codex Mobile",
+          "bundleIdentifier": "vip.loock.codexmobile",
+          "version": "0.2.150",
+          "buildVersion": "2150",
+          "minOSVersion": "15.6"
+        },
+        "fullBytes": 3760418,
+        "sha256": "1bd89afcbfcc45a0f4cb43fae5130ded7cb86bc340e1b945eadc5d21698955e8",
+        "crc32": "908c72a2",
+        "localDownloadMs": 4580
+      },
+      "passed": true
+    },
+    {
+      "case": "direct-ipa",
+      "entryId": "dbaf3ff3-71e6-4d56-9e76-0475f0b38142",
+      "downloadURL": "https://github.com/zh0ngtian/ipa-archive/releases/download/bilibili-inter-v3.20.1-b82300200/Bilibili_3.20.1_82300200.ipa",
+      "metadata": {
+        "name": "哔哩哔哩",
+        "bundleIdentifier": "com.bilibili.inter",
+        "version": "3.20.1",
+        "buildVersion": "82300200",
+        "minOSVersion": "12.0"
+      },
+      "inspection": {
+        "metadata": {
+          "name": "哔哩哔哩",
+          "bundleIdentifier": "com.bilibili.inter",
+          "version": "3.20.1",
+          "buildVersion": "82300200",
+          "minOSVersion": "12.0"
+        },
+        "entry": "Payload/bili-inter.app/Info.plist",
+        "plistFormat": "xml",
+        "compression": 8,
+        "compressedBytes": 3123,
+        "uncompressedBytes": 11725,
+        "crc32": "0dff24c3",
+        "zip64": false,
+        "entryCount": 775,
+        "centralDirectoryBytes": 87426,
+        "requests": [
+          {
+            "range": "bytes=-65557",
+            "bytes": 65557,
+            "status": 206
+          },
+          {
+            "range": "bytes=182995534-183082959",
+            "bytes": 87426,
+            "status": 206
+          },
+          {
+            "range": "bytes=171878242-171878271",
+            "bytes": 30,
+            "status": 206
+          },
+          {
+            "range": "bytes=171878272-171878304",
+            "bytes": 33,
+            "status": 206
+          },
+          {
+            "range": "bytes=171878305-171881427",
+            "bytes": 3123,
+            "status": 206
+          }
+        ],
+        "requestCount": 5,
+        "downloadedBytes": 156169,
+        "fullBytes": 183082982,
+        "originalURL": "https://github.com/zh0ngtian/ipa-archive/releases/download/bilibili-inter-v3.20.1-b82300200/Bilibili_3.20.1_82300200.ipa",
+        "finalHost": "release-assets.githubusercontent.com",
+        "strongETag": "\"0x8DF275339DB3767\"",
+        "elapsedMs": 13376
+      },
+      "baseline": {
+        "metadata": {
+          "name": "哔哩哔哩",
+          "bundleIdentifier": "com.bilibili.inter",
+          "version": "3.20.1",
+          "buildVersion": "82300200",
+          "minOSVersion": "12.0"
+        },
+        "fullBytes": 183082982,
+        "sha256": "a4d0e65408747085659bef0070837aadbf5ea2713e0d672fe0bf845b52153110",
+        "crc32": "0dff24c3",
+        "localDownloadMs": 52884
+      },
+      "passed": true
+    }
+  ],
+  "publicJSONVerified": true
+}

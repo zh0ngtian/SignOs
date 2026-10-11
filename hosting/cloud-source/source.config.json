@@ -1,0 +1,8 @@
+{
+  "name": "Yao App Source",
+  "identifier": "tech.zh0ngtian.yao-app-source",
+  "backend": "cloudflare",
+  "baseUrl": "https://signos-source-aggregator.305301890.workers.dev",
+  "root": "packages/cloud-source",
+  "archiveRepository": "zh0ngtian/ipa-archive"
+}

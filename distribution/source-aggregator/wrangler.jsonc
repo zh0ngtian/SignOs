@@ -15,5 +15,6 @@
     "SOURCE_NAME": "Yao App Source",
     "SOURCE_IDENTIFIER": "tech.zh0ngtian.yao-app-source"
   },
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": true },
   "observability": {"enabled": true}
 }

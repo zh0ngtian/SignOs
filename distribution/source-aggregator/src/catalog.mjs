@@ -100,7 +100,7 @@ export class Catalog extends DurableObject {
         return {
           name: current.metadata.name, bundleIdentifier: current.metadata.bundleIdentifier,
           // Independent subscription identity preserves variants with the same Bundle ID.
-          appID: entry.id, developerName: entry.presentation?.developerName || (entry.config.kind === 'github' ? entry.config.repository.split('/')[0] : '原始 IPA 发布者'),
+          appID: entry.id, legacyDefault: entry.presentation?.legacyDefault === true, developerName: entry.presentation?.developerName || (entry.config.kind === 'github' ? entry.config.repository.split('/')[0] : '原始 IPA 发布者'),
           localizedDescription: entry.presentation?.description || '', iconURL: entry.presentation?.iconURL || current.iconURL || `${origin}/icon.png`,
           ...version(current), versionDate: current.date, versionDescription: current.notes || '',
           versions: [current, ...entry.history].slice(0, HISTORY_LIMIT + 1).map(version),
@@ -153,11 +153,11 @@ export class Catalog extends DurableObject {
       }
       if (match) {
         const entry = this.entry(match[1]);
-        if (match[2] === 'sync' && method === 'POST') { await this.schedule(entry); return json({ entry, revision: this.data.revision }, 202); }
+        if (match[2] === 'sync' && method === 'POST') { if (entry.config.kind === 'github') await this.ctx.storage.delete(`github:${entry.config.repository.toLowerCase()}`); await this.schedule(entry); return json({ entry, revision: this.data.revision }, 202); }
         this.checkRevision(body);
         if (match[2] === 'presentation' && method === 'POST') {
           if (typeof body.developerName !== 'string' || body.developerName.length > 200 || typeof body.description !== 'string' || body.description.length > 4000) throw new SourceError('INVALID_SETTINGS', '展示信息无效');
-          entry.presentation = { developerName: body.developerName, description: body.description, iconURL: publicURL(body.iconURL) };
+          entry.presentation = { developerName: body.developerName, description: body.description, iconURL: publicURL(body.iconURL), legacyDefault: body.legacyDefault === true };
           this.data.revision++; await this.save(); return json({ revision: this.data.revision });
         }
         if (match[2] === 'attest' && method === 'POST') {

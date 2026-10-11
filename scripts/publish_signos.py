@@ -46,7 +46,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--ipa', required=True, help='Distribution-signed IPA from the OTA release')
     parser.add_argument('--release-json', required=True, help='Matching OTA latest-ios.json / saved release receipt')
-    parser.add_argument('--config', default=str(REPO / 'hosting/home-source/source.config.json'))
+    parser.add_argument('--config', default=str(REPO / 'hosting/cloud-source/source.config.json'))
     parser.add_argument('--transport', choices=['local', 's3', 'wrangler'], default='local')
     parser.add_argument('--upload-workers', type=app_source.upload_workers, default=4)
     parser.add_argument('--verify-all', action='store_true', help='Ignore receipts and download every resource for verification')
@@ -68,7 +68,10 @@ def main():
         'sourceURL': config['baseUrl'].rstrip('/') + '/source.json', 'transport': args.transport,
     }, ensure_ascii=False, indent=2))
     if not args.plan:
-        if config.get('backend') == 'home':
+        if config.get('backend') == 'cloudflare':
+            import cloud_source
+            cloud_source.publish_signos(publish_args, receipt, config)
+        elif config.get('backend') == 'home':
             publish_args.verify_all = args.verify_all
             app_source.publish_home(publish_args, config)
         else:
