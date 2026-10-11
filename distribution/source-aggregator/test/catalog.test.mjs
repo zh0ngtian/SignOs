@@ -24,7 +24,11 @@ test('Durable catalog publishes only parsed apps, preserves old versions on fail
       const url = new URL(request.url);
       if (url.hostname === 'api.github.com') {
         apiCalls++;
-        return Response.json([{ id: 123, tag_name: 'v1', draft: false, prerelease: false, published_at: '2026-10-11T00:00:00Z', assets: [
+        return Response.json([
+          { id: 124, tag_name: 'v2', draft: false, prerelease: false, published_at: '2026-10-12T00:00:00Z', assets: [
+            { id: 3, name: 'App.apk', size: 123, browser_download_url: 'https://fixtures.example/App.apk' },
+          ] },
+          { id: 123, tag_name: 'v1', draft: false, prerelease: false, published_at: '2026-10-11T00:00:00Z', assets: [
           { id: 1, name: 'App.ipa', size: bytes.length, browser_download_url: 'https://fixtures.example/App.ipa', updated_at: '2026-10-11T00:00:00Z' },
           { id: 2, name: 'App-SE.ipa', size: bytes.length, browser_download_url: 'https://fixtures.example/App-SE.ipa', updated_at: '2026-10-11T00:00:00Z' },
         ] }], { headers: { ETag: '"release"' } });
@@ -85,6 +89,7 @@ test('Durable catalog publishes only parsed apps, preserves old versions on fail
     assert.equal(legacy.sourceURL, 'https://source.example/sources/test.json?legacy=1');
     const discovery = await call('/api/discover', 'POST', { config: { kind: 'github', repository: 'owner/repo' } });
     assert.equal(discovery.data.candidates.length, 2);
+    assert.ok(discovery.data.candidates.every(candidate => candidate.tag === 'v1'), 'discover skips the newer Android-only release');
     const state = (await call('/api/catalog')).data;
     const ambiguous = await call('/api/entries', 'POST', { revision: state.revision, config: { kind: 'github', repository: 'owner/repo', assetPattern: '*.ipa' } });
     const failed = await waitFor(ambiguous.data.entry.id, 'failed');

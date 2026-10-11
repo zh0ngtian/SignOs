@@ -53,12 +53,13 @@ export async function releaseCandidates(config, env, cache, transport = fetch) {
   }
   const eligible = releases.filter(x => (config.includePrereleases || !x.prerelease) && (!config.tagPrefix || x.tag.startsWith(config.tagPrefix)));
   eligible.sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt) || b.id - a.id);
-  const release = eligible[0];
-  if (!release) throw new SourceError('RELEASE_NOT_FOUND', '没有找到符合 tag 和预发布规则的 Release');
+  if (!eligible.length) throw new SourceError('RELEASE_NOT_FOUND', '没有找到符合 tag 和预发布规则的 Release');
+  // Android-only releases and unrelated IPA variants must not hide an older matching IPA.
+  const release = eligible.find(x => x.assets.some(a => !config.assetPattern || glob(config.assetPattern, a.name)));
+  if (!release) throw new SourceError('ASSET_NOT_FOUND', '符合 tag 和预发布规则的 Release 中没有符合匹配规则的 IPA 附件');
   const candidates = release.assets.filter(a => !config.assetPattern || glob(config.assetPattern, a.name)).map(a => ({
     ...a, url: publicURL(a.url), releaseId: release.id, tag: release.tag, publishedAt: release.publishedAt, notes: release.notes,
   }));
-  if (!candidates.length) throw new SourceError('ASSET_NOT_FOUND', '目标 Release 中没有符合规则的 IPA 附件');
   return candidates;
 }
 

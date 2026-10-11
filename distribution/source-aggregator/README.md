@@ -18,6 +18,8 @@ python3 scripts/cloud_source.py status
 
 公开入口为 `/sources/yao.json`，兼容 `/source.json`、`/appstore`；`/health` 为探针。管理接口使用 `Authorization: Bearer <管理 Token>`。新增与配置编辑需携带 `/api/catalog` 的当前 `revision`；冲突返回 409。Token 轮换后旧 Token 立即失效，CLI 的私有凭据也需更新。
 
+GitHub 订阅按 Release 发布时间从新到旧查找，在 tag 前缀、预发布及 IPA 文件名匹配规则内选择最新含匹配 IPA 的 Release。只有 APK、没有附件或 IPA 文件名不匹配的版本会跳过；选定版本包含多个匹配 IPA 时仍要求选择或收紧规则，不会退到更旧版本。扫描最多 10 页、每页 100 条；超出扫描或响应限额仍明确报错。
+
 软件源使用 iOS 27 App Store 图标；公开清单中的图标 URL 带资源版本，客户端刷新源时会更新已保存的图标 URL。资源出处及更新方式见 [assets/README.md](assets/README.md)。
 
 旧客户端使用 `/sources/yao.json?legacy=1`，只返回标记为默认的原有应用变体，避免同 Bundle ID 的签名/未签名包被混用。旧家中 HTTPS 入口在迁移验收后以 302 指向这份兼容清单，旧文件留存用于回退。
