@@ -46,6 +46,7 @@ struct FeatherApp: App {
 			.fullScreenCover(isPresented: $_isLocked) {
 				WSLockView(onUnlock: { _isLocked = false })
 			}
+			.task { await storage.migrateOfficialCloudSource() }
 			.onAppear {
 				if let style = UIUserInterfaceStyle(rawValue: UserDefaults.standard.integer(forKey: "Feather.userInterfaceStyle")) {
 					UIApplication.topViewController()?.view.window?.overrideUserInterfaceStyle = style

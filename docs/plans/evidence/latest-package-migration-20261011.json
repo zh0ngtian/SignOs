@@ -1,0 +1,26 @@
+{
+  "latestOnly": true,
+  "identity": "tech.zh0ngtian.yao-app-source",
+  "sourceURL": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json",
+  "apps": [
+    {
+      "bundleIdentifier": "tech.zh0ngtian.MuseumMuse",
+      "entryId": "ff230a01-dbcd-4b0e-95bb-4d4c0d2acb78",
+      "versions": 1,
+      "currentSHA256": "6035209e0d7003ad56f25f788e769991c70f912bd246ec64420702cbe3fb4b70"
+    },
+    {
+      "bundleIdentifier": "com.bilibili.inter",
+      "entryId": "dbaf3ff3-71e6-4d56-9e76-0475f0b38142",
+      "versions": 1,
+      "currentSHA256": "a4d0e65408747085659bef0070837aadbf5ea2713e0d672fe0bf845b52153110"
+    },
+    {
+      "bundleIdentifier": "vip.loock.codexmobile",
+      "entryId": "b00c4d30-243f-4473-97db-9daf28419d5c",
+      "versions": 1,
+      "currentSHA256": "cfb6c5a4aaae3cae93bbc6338aea426377254bd645177b0e9eed4a7ec9aee7e8"
+    }
+  ],
+  "publicJSONVerified": true
+}

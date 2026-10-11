@@ -210,6 +210,11 @@ switches the fixed `current` entry.
 仅在明确要求 OTA 发包时递增构建号，并使用私有配置发布正式签名 IPA。
 常规客户端交付使用上文的 GitHub Actions 构建检查。
 
+本次用户明确要求双渠道正式发包：同一 OTA 签名包通过
+`scripts/publish_signos.py` 归档到 GitHub，并加入 Cloudflare 软件源；发布前执行 `--plan`，
+两端完整下载 SHA-256 必须相同。软件源管理、最新包迁移与兼容入口见
+[Cloudflare 软件源](distribution/source-aggregator/README.md)。该按需操作不改变常规构建检查规则。
+
 The fixed release metadata endpoint is
 `https://192.168.123.79:8769/channels/signos/current/latest-ios.json`; its sibling
 `manifest.plist` identifies the active IPA. On 2026-10-10, both launch agents were

@@ -71,23 +71,6 @@ struct ContentUnavailableCompatView: View {
 	let message: String
 
 	var body: some View {
-		if #available(iOS 17, *) {
-			ContentUnavailableView {
-				Label(title, systemImage: "clock.arrow.circlepath")
-			} description: {
-				Text(message)
-			}
-		} else {
-			VStack(spacing: 10) {
-				Image(systemName: "clock.arrow.circlepath")
-					.font(.system(size: 40))
-					.foregroundStyle(.tint)
-				Text(title)
-					.font(.headline)
-				Text(message)
-					.font(.caption)
-					.foregroundStyle(.secondary)
-			}
-		}
+		ContentUnavailableView(title, systemImage: "clock.arrow.circlepath", description: Text(message))
 	}
 }

@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import secrets
+import shutil
 import subprocess
 import tempfile
 import time
@@ -70,6 +71,25 @@ class Client:
     def confirm(self, entry_id):
         return self.call(f'/api/entries/{entry_id}/confirm', 'POST', {'revision': self.state()['revision']})
 
+    def sync_to(self, entry_id, download, timeout=180):
+        """Refresh after an upload and wait for its exact immutable download URL."""
+        self.call(f'/api/entries/{entry_id}/sync', 'POST', {})
+        deadline = time.monotonic() + timeout
+        refreshed_again = False
+        while time.monotonic() < deadline:
+            entry = self.entry(entry_id)
+            if entry['status'] in ('ready', 'succeeded', 'failed'):
+                if entry['status'] != 'failed' and entry.get('current', {}).get('downloadURL') == download:
+                    return entry
+                # An already running task may have read the old repository cache before sync.
+                if not refreshed_again:
+                    self.call(f'/api/entries/{entry_id}/sync', 'POST', {})
+                    refreshed_again = True
+                    continue
+                raise RuntimeError(json.dumps(entry.get('error') or {'message': 'Release does not contain the expected uploaded IPA'}, ensure_ascii=False))
+            time.sleep(1)
+        raise TimeoutError('Uploaded IPA did not reach the source')
+
     def attest(self, entry_id, digest):
         return self.call(f'/api/entries/{entry_id}/attest', 'POST', {'revision': self.state()['revision'], 'sha256': digest})
 
@@ -81,6 +101,9 @@ def gh(*args, json_result=False):
 
 def archive_asset(ipa, tag, name, digest, repository=ARCHIVE, notes=None):
     """Upload immutable IPA bytes and require GitHub's full-file digest proof."""
+    ipa = Path(ipa)
+    if Path(name).name != name:
+        raise ValueError('Archive asset name must be a filename')
     try:
         release = gh('api', f'repos/{repository}/releases/tags/{quote(tag, safe="")}', json_result=True)
     except subprocess.CalledProcessError:
@@ -88,10 +111,24 @@ def archive_asset(ipa, tag, name, digest, repository=ARCHIVE, notes=None):
         release = gh('api', f'repos/{repository}/releases/tags/{quote(tag, safe="")}', json_result=True)
     asset = next((x for x in release['assets'] if x['name'] == name), None)
     if asset is None:
-        gh('release', 'upload', tag, str(ipa) + '#' + name, '--repo', repository)
-        release = gh('api', f'repos/{repository}/releases/tags/{quote(tag, safe="")}', json_result=True)
-        asset = next(x for x in release['assets'] if x['name'] == name)
-    if asset.get('digest') != 'sha256:' + digest or asset['size'] != Path(ipa).stat().st_size:
+        equivalent = next((x for x in release['assets'] if x.get('digest') == 'sha256:' + digest and x['size'] == ipa.stat().st_size), None)
+        if equivalent:
+            asset = gh('api', '--method', 'PATCH', f"repos/{repository}/releases/assets/{equivalent['id']}", '-f', 'name=' + name, json_result=True)
+        else:
+            # `file#text` in gh sets the asset label, not its filename.
+            with tempfile.TemporaryDirectory(prefix='signos-archive-upload-') as directory:
+                staged = Path(directory) / name
+                shutil.copyfile(ipa, staged)
+                gh('release', 'upload', tag, str(staged), '--repo', repository)
+            for _ in range(6):
+                release = gh('api', f'repos/{repository}/releases/tags/{quote(tag, safe="")}', json_result=True)
+                asset = next((x for x in release['assets'] if x['name'] == name), None)
+                if asset:
+                    break
+                time.sleep(0.5)
+            if asset is None:
+                raise RuntimeError('GitHub upload succeeded but the archive asset is not visible yet')
+    if asset.get('digest') != 'sha256:' + digest or asset['size'] != ipa.stat().st_size:
         raise ValueError('Existing GitHub IPA does not match the full-file SHA-256; nothing overwritten')
     return asset['browser_download_url']
 
@@ -127,25 +164,18 @@ def publish_signos(args, receipt, config):
     subscription = {'kind': 'github', 'repository': repository, 'tagPrefix': 'signos/', 'assetPattern': 'SignOs.ipa', 'includePrereleases': False}
     existing = next((e for e in client.state()['entries'] if all(e['config'].get(k) == v for k, v in subscription.items())), None)
     entry_id = existing['id'] if existing else client.create(subscription)
-    if existing:
-        client.call(f'/api/entries/{entry_id}/sync', 'POST', {})
-    deadline = time.monotonic() + 180
-    while time.monotonic() < deadline:
-        entry = client.entry(entry_id)
-        current = entry['current']
-        if entry['status'] == 'failed':
-            raise RuntimeError(json.dumps(entry['error'], ensure_ascii=False))
-        if current and current['downloadURL'] == download and entry['status'] in ('ready', 'succeeded'):
-            break
-        time.sleep(1)
-    else:
-        raise TimeoutError('New signed SignOs IPA did not reach the source')
+    entry = client.sync_to(entry_id, download)
+    current = entry['current']
     actual = current['metadata']
     if (actual['bundleIdentifier'], actual['version'], actual['buildVersion']) != (receipt['bundleId'], receipt['version'], receipt['buildNumber']):
         raise ValueError('Cloudflare parsing differs from signed OTA receipt')
     if not entry['published']:
         client.confirm(entry_id)
     client.attest(entry_id, receipt['sha256'])
+    client.call(f'/api/entries/{entry_id}/presentation', 'POST', {
+        'revision': client.state()['revision'], 'developerName': args.developer,
+        'description': args.description, 'iconURL': client.url + '/images/com.signos.app.png', 'legacyDefault': True,
+    })
     digest, count = hashlib.sha256(), 0
     with urlopen(Request(download, headers={'User-Agent': 'SignOs-Publisher/1'}), timeout=60) as response:
         while chunk := response.read(1024 * 1024):

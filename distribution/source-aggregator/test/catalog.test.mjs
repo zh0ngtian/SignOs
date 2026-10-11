@@ -57,6 +57,15 @@ test('Durable catalog publishes only parsed apps, preserves old versions on fail
     const source = (await call('/source.json')).data;
     assert.equal(source.apps[0].downloadURL, 'https://fixtures.example/App.ipa');
     assert.equal(source.apps[0].bundleIdentifier, 'com.example.range');
+    assert.equal((await call('/source.json?legacy=1')).data.apps.length, 0, 'unselected variants must not enter the old-client source');
+    await call(`/api/entries/${id}/presentation`, 'POST', {
+      revision: (await call('/api/catalog')).data.revision, developerName: 'Test', description: '',
+      iconURL: 'https://source.example/icon.png', legacyDefault: true,
+    });
+    const legacy = (await call('/source.json?legacy=1')).data;
+    assert.equal(legacy.apps.length, 1);
+    assert.equal(legacy.apps[0].appID, id);
+    assert.equal(legacy.sourceURL, 'https://source.example/sources/test.json?legacy=1');
     const discovery = await call('/api/discover', 'POST', { config: { kind: 'github', repository: 'owner/repo' } });
     assert.equal(discovery.data.candidates.length, 2);
     const state = (await call('/api/catalog')).data;

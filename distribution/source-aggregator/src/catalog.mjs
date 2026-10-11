@@ -91,13 +91,13 @@ export class Catalog extends DurableObject {
     for (const entry of this.data.entries) await this.schedule(entry);
   }
 
-  publicDocument(origin) {
+  publicDocument(origin, legacyOnly = false) {
     const settings = this.data.settings;
     return {
       name: settings.name, identifier: settings.identifier, description: settings.description,
-      subtitle: 'GitHub Release 与 IPA 聚合', sourceURL: `${origin}/sources/${settings.id}.json`,
+      subtitle: 'GitHub Release 与 IPA 聚合', sourceURL: `${origin}/sources/${settings.id}.json${legacyOnly ? '?legacy=1' : ''}`,
       iconURL: `${origin}/icon.png`, sourceicon: `${origin}/icon.png`, news: [],
-      apps: this.data.entries.filter(e => e.published && e.current).map(entry => {
+      apps: this.data.entries.filter(e => e.published && e.current && (!legacyOnly || e.presentation?.legacyDefault === true)).map(entry => {
         const current = entry.current;
         const version = v => ({ version: v.metadata.version, ...(v.metadata.buildVersion ? { buildVersion: v.metadata.buildVersion } : {}),
           date: v.date, localizedDescription: v.notes || '', downloadURL: v.downloadURL, size: v.inspection.fullBytes,
@@ -118,7 +118,7 @@ export class Catalog extends DurableObject {
     try {
       const url = new URL(request.url), path = url.pathname, method = request.method;
       if (['/source.json', '/appstore', `/sources/${this.data.settings.id}.json`].includes(path) && ['GET', 'HEAD'].includes(method)) {
-        const document = this.publicDocument(url.origin);
+        const document = this.publicDocument(url.origin, url.searchParams.get('legacy') === '1');
         const raw = JSON.stringify(document), etag = `"${await tokenHash(raw)}"`;
         const headers = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=60', ETag: etag, 'X-Content-Type-Options': 'nosniff' };
         if (request.headers.get('If-None-Match')?.split(',').some(x => x.trim() === etag || x.trim() === '*')) return new Response(null, { status: 304, headers });

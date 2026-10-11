@@ -40,7 +40,7 @@ jobs:
       - name: Run Swift regressions
         run: |
           set -euo pipefail
-          for TEST in OneViewPhase SourceRepositoryIdentity SourceSubscriptionIdentity; do
+          for TEST in OneViewPhase SourceRepositoryIdentity SourceSubscriptionIdentity SourceMigrationReadiness; do
             BINARY="$RUNNER_TEMP/signos-$TEST"
             xcrun swiftc "Feather/Utilities/$TEST.swift" "Tests/${TEST}Regression.swift" -o "$BINARY"
             "$BINARY"

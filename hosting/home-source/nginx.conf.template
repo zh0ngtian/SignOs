@@ -10,8 +10,10 @@ server {
     sendfile on;
     max_ranges 1;
     large_client_header_buffers 4 16k;
+    set $source_redirect "${APP_SOURCE_REDIRECT_URL}";
 
     location = /api/upload {
+        if ($source_redirect != "") { return 410; }
         client_max_body_size 2g;
         client_body_timeout 300s;
         proxy_request_buffering off;
@@ -26,12 +28,16 @@ server {
     }
 
     location = /source.json {
+        if ($request_method !~ ^(GET|HEAD)$) { return 405; }
+        if ($source_redirect != "") { return 302 $source_redirect; }
         limit_except GET { deny all; }
         default_type application/json;
         add_header Cache-Control "no-store" always;
         try_files /source.json =404;
     }
     location = /appstore {
+        if ($request_method !~ ^(GET|HEAD)$) { return 405; }
+        if ($source_redirect != "") { return 302 $source_redirect; }
         limit_except GET { deny all; }
         default_type application/json;
         add_header Cache-Control "no-store" always;

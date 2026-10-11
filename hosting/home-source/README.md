@@ -1,8 +1,11 @@
-# 家中软件源
+# 旧软件源兼容入口与历史文件
 
-唯一公开入口：`${APP_SOURCE_BASE_URL}/source.json`，`/appstore` 返回相同清单。
-软件源保持 `tech.zh0ngtian.yao-app-source` 身份，IPA 原样保存，不重新签名。
-Cloudflare Worker 的 workers.dev、preview URL 和 Cron 已停用；R2 私有历史文件保留。
+主软件源为新 `signos-source-aggregator` Worker 的 `/sources/yao.json`，保持
+`tech.zh0ngtian.yao-app-source` 身份。最新包保存在 GitHub Release，Cloudflare 只保存配置与元信息。
+旧 `${APP_SOURCE_BASE_URL}/source.json` 和 `/appstore` 在迁移验收后通过
+`APP_SOURCE_REDIRECT_URL` 重定向到新源的 `?legacy=1` 兼容清单。该清单只有原有默认变体，
+供尚未升级的客户端使用；新版客户端完成就绪检查后直接使用 Cloudflare URL。
+旧 `yao-app-source` Worker 的 workers.dev、preview URL 和 Cron 保持停用；R2 私有历史文件保留。
 
 ## 服务与目录
 
@@ -11,7 +14,7 @@ Cloudflare Worker 的 workers.dev、preview URL 和 Cron 已停用；R2 私有�
 - Docker 容器 `signos-home-source` 使用 Nginx，`unless-stopped` 自动重启。
   依赖现有 Colima/Docker 和用户登录会话；本机须在线且不休眠。
 - 下载开放 GET/HEAD `/source.json`、`/appstore`、`/files/<name>.ipa|png`，
-  上传开放带 token 的 POST `/api/upload`。
+  迁移前上传开放带 token 的 POST `/api/upload`；设置重定向后上传返回 410，停用原上传后端。
   其他路径 404，无目录索引。清单不缓存；带版本/摘要的资源长期缓存，支持
   HEAD、Range、If-Range、ETag。
 - `packages/home-source/staging/` 是发布准备目录，`packages/home-source/public/`
@@ -31,11 +34,18 @@ URL 变量填写完整 HTTPS origin（含端口，不含路径）。两个值应
 本机 Python 工具与上传后端会加载这个私有文件，显式进程环境变量优先。
 `source.config.json` 只保存 `baseUrlEnv` 变量名；缺少有效地址时直接报错。
 
-Nginx 使用 `nginx.conf.template`，容器启动时只替换 `APP_SOURCE_DOMAIN`，
+Nginx 使用 `nginx.conf.template`，容器启动时只替换 `APP_SOURCE_DOMAIN` 与 `APP_SOURCE_REDIRECT_URL`，
 保留 `$uri` 等 Nginx 变量。修改模板或私有域名后需要重新创建 source 容器；
 证书正常续期仍只需重载 Nginx。真实证书文件名由域名变量构造。
 
 ## 部署
+
+新源四个原有应用的最新包和全包散列验收完成后，将私有环境文件中的
+`APP_SOURCE_REDIRECT_URL` 设置为
+`https://signos-source-aggregator.305301890.workers.dev/sources/yao.json?legacy=1`，
+检查并重新创建 Nginx 容器。清空该变量可恢复原静态清单；原文件与证书不删除。
+迁移后停用 `local.yao-app-source.upload`，新订阅通过 SignOs 的 Cloudflare 管理页面添加。
+以下上传后端安装命令仅用于旧服务回退，正常兼容入口部署无须重新启用它。
 
 私有 `~/.config/yao-app-source/home-source.env` 包含公开文件目录
 `HOME_SOURCE_ROOT`、独立 ACME 根目录 `HOME_SOURCE_CERTIFICATES`，以及私有

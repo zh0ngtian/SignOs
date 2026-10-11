@@ -7,7 +7,8 @@ services:
       - "15006:15006"
     environment:
       APP_SOURCE_DOMAIN: ${APP_SOURCE_DOMAIN:?set APP_SOURCE_DOMAIN in the private env file}
-      NGINX_ENVSUBST_FILTER: APP_SOURCE_DOMAIN
+      APP_SOURCE_REDIRECT_URL: ${APP_SOURCE_REDIRECT_URL:-}
+      NGINX_ENVSUBST_FILTER: APP_SOURCE_DOMAIN|APP_SOURCE_REDIRECT_URL
     volumes:
       - ./nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
       - ${HOME_SOURCE_ROOT:?set HOME_SOURCE_ROOT}:/srv/source:ro
