@@ -106,7 +106,7 @@ def deploy(args):
     # Secret content only exists in a mode-0600 temporary file and Wrangler's secret store.
     with tempfile.TemporaryDirectory(prefix='signos-worker-secrets-') as directory:
         secret_file = Path(directory) / 'secrets.json'
-        secret_file.write_text(json.dumps({'ADMIN_TOKEN': config['token'], 'GITHUB_TOKEN': gh('auth', 'token')}))
+        secret_file.write_text(json.dumps({'ADMIN_TOKEN': config['token']}))
         secret_file.chmod(0o600)
         subprocess.run(['npx', '--no-install', 'wrangler', 'secret', 'bulk', str(secret_file)], cwd=worker, check=True)
     client = Client(config)

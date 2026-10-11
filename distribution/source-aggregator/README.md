@@ -12,7 +12,7 @@ python3 scripts/cloud_source.py deploy
 python3 scripts/cloud_source.py status
 ```
 
-部署复用本机 Wrangler 登录及 `gh auth token`，私有管理凭据保存到 `~/.config/signos-source-aggregator/credentials.json`（0600）。不要提交此文件。管理 Token 与 GitHub Token 独立，后者写入 Worker Secret。新服务不使用旧 `yao-app-source` Worker 或 R2。
+部署复用本机 Wrangler 登录，私有管理凭据保存到 `~/.config/signos-source-aggregator/credentials.json`（0600）。不要提交此文件。管理 Token 写入 Worker Secret。默认使用公开 GitHub API；需要增加 GitHub 限额时，应另行授权并配置专用的只读 GitHub Token，不能自动上传本机登录凭据。新服务不使用旧 `yao-app-source` Worker 或 R2。
 
 公开入口为 `/sources/yao.json`，兼容 `/source.json`、`/appstore`；`/health` 为探针。管理接口使用 `Authorization: Bearer <管理 Token>`。新增与配置编辑需携带 `/api/catalog` 的当前 `revision`；冲突返回 409。Token 轮换后旧 Token 立即失效，CLI 的私有凭据也需更新。
 
