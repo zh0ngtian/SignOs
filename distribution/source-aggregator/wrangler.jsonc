@@ -1,0 +1,19 @@
+{
+  "name": "signos-source-aggregator",
+  "main": "src/index.mjs",
+  "compatibility_date": "2026-05-22",
+  "compatibility_flags": ["nodejs_compat"],
+  "account_id": "36f197f2dcd122670857a6f4c59d39e4",
+  "workers_dev": true,
+  "preview_urls": false,
+  "rules": [{"type": "Data", "globs": ["**/*.png"], "fallthrough": true}],
+  "triggers": {"crons": ["0 * * * *"]},
+  "durable_objects": {"bindings": [{"name": "CATALOG", "class_name": "Catalog"}]},
+  "migrations": [{"tag": "v1", "new_sqlite_classes": ["Catalog"]}],
+  "vars": {
+    "SOURCE_ID": "yao",
+    "SOURCE_NAME": "Yao App Source",
+    "SOURCE_IDENTIFIER": "tech.zh0ngtian.yao-app-source"
+  },
+  "observability": {"enabled": true}
+}

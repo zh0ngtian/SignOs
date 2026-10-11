@@ -1,0 +1,14 @@
+{
+  "name": "signos-source-aggregator",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "python3 test/generate_fixtures.py && node --test test/*.test.mjs",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12",
+    "miniflare": "5.20261006.1-alpha",
+    "wrangler": "4.149.0"
+  }
+}
