@@ -48,8 +48,14 @@ def main():
         }))
         try:
             subprocess.run(["xcrun", "simctl", "install", args.simulator, str(app)], check=True)
-            result = subprocess.run(["xcrun", "simctl", "launch", "--console", args.simulator, bundle_id],
-                                    check=True, timeout=45, capture_output=True, text=True)
+            # Allow cold CI simulator startup; completion still requires the explicit success marker.
+            try:
+                result = subprocess.run(["xcrun", "simctl", "launch", "--console", args.simulator, bundle_id],
+                                        check=True, timeout=180, capture_output=True, text=True)
+            except subprocess.TimeoutExpired as error:
+                print(error.stdout or b"")
+                print(error.stderr or b"")
+                raise
             print(result.stdout)
             print(result.stderr)
             if "UpdateManagerRegression passed:" not in result.stdout:

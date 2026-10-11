@@ -2,6 +2,7 @@
 import Foundation
 import CoreData
 import Combine
+import Darwin
 
 protocol AppInfoPresentable {
     var uuid: String? { get }
@@ -71,6 +72,8 @@ final class FixtureProtocol: URLProtocol {
 struct UpdateManagerRegression {
     @MainActor
     static func main() async throws {
+        func checkpoint(_ message: String) { print("Update regression: \(message)"); fflush(stdout) }
+        checkpoint("main started")
         let canonical = URL(string: "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json")!
         let officialID = "tech.zh0ngtian.yao-app-source"
         let bundle = "tech.zh0ngtian.MuseumMuse"
@@ -97,6 +100,7 @@ struct UpdateManagerRegression {
         }
         try fixture([app(), app(version: "9.0", entry: "museum-variant", legacy: false)])
         await manager.checkForUpdates(sources: [source], localApps: [local])
+        checkpoint("first legacy check completed")
         precondition(manager.updates["museum"]?.remoteVersion == "1.1.3", "Updates: \(manager.updates), issues: \(manager.checkIssues)")
         precondition(manager.updates["museum"]?.localVersion == "1.1.2")
         precondition(manager.checkIssues.isEmpty)
@@ -106,8 +110,10 @@ struct UpdateManagerRegression {
         precondition(repaired.sourceAppIdentifier == SourceSubscriptionIdentity.key(bundleIdentifier: bundle, subscriptionID: "museum-primary"))
         precondition(FixtureProtocol.requests.last!.cachePolicy == .reloadIgnoringLocalCacheData)
         await manager.checkForUpdates(sources: [source], localApps: [local])
+        checkpoint("repeat legacy check completed")
         precondition(manager.updates["museum"]?.remoteVersion == "1.1.3", "Repeat checks must retain the update after repair")
 
+        checkpoint("repeat check and metadata repair passed")
         manager.setHeld(true, for: bundle)
         await manager.checkForUpdates(sources: [source], localApps: [local])
         precondition(manager.updates.isEmpty && manager.checkIssues.isEmpty)
@@ -120,6 +126,7 @@ struct UpdateManagerRegression {
         precondition(manager.updates["museum"]?.remoteVersion == "1.1.4")
         manager.clearSkip(for: bundle)
 
+        checkpoint("holds and skips passed")
         Storage.shared.reset()
         try fixture([app(legacy: false), app(entry: "other", legacy: false)])
         await manager.checkForUpdates(sources: [source], localApps: [local])
@@ -130,6 +137,7 @@ struct UpdateManagerRegression {
         precondition(manager.updates.isEmpty && !manager.checkIssues.isEmpty)
         precondition(Storage.shared.sourceMetadata(for: "museum") == nil)
         try fixture([app()])
+        checkpoint("ambiguous and unrelated sources passed")
         FixtureProtocol.status = 503
         await manager.checkForUpdates(sources: [source], localApps: [local])
         precondition(manager.updates.isEmpty && !manager.checkIssues.isEmpty, "HTTP failures cannot claim a clean check")
@@ -141,6 +149,7 @@ struct UpdateManagerRegression {
         await manager.checkForUpdates(sources: [source], localApps: [local])
         precondition(manager.updates.isEmpty && manager.checkIssues.isEmpty, "Successful retry must clear failures")
         precondition(Storage.shared.sourceMetadata(for: "museum")?.sourceAppVersion == "1.1.2")
+        checkpoint("HTTP/JSON failures and retry passed")
         print("UpdateManagerRegression passed: migrated legacy record, durable local version, variants, holds/skips, HTTP/JSON failures and retry")
     }
 }
