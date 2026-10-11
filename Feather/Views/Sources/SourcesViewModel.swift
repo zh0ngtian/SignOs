@@ -9,7 +9,6 @@ import Foundation
 import AltSourceKit
 import SwiftUI
 import NimbleJSON
-import CoreData
 
 // MARK: - Class
 final class SourcesViewModel: ObservableObject {
@@ -44,24 +43,6 @@ final class SourcesViewModel: ObservableObject {
 		if didUpdateIcon { Storage.shared.saveContext() }
 	}
 	
-    /// Refresh only this subscription, retaining its last successful data on failure.
-    @MainActor
-    func refreshSource(_ source: AltSource) async throws {
-        guard let url = source.sourceURL else { throw URLError(.badURL) }
-        let revision = _revision
-        let request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 30)
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
-        let repository = try JSONDecoder().decode(ASRepository.self, from: data)
-        try Task.checkCancellation()
-        guard _revision == revision, !source.isDeleted, source.managedObjectContext != nil else { return }
-        source.iconURL = repository.currentIconURL
-        Storage.shared.saveContext()
-        var dates = UserDefaults.standard.dictionary(forKey: "SignOs.sourceRefreshDates") as? [String: Date] ?? [:]
-        dates[source.identifier ?? ""] = Date()
-        UserDefaults.standard.set(dates, forKey: "SignOs.sourceRefreshDates")
-        sources[source] = repository
-    }
 
 	func fetchSources(_ sources: FetchedResults<AltSource>, refresh: Bool = false, batchSize: Int = 4) async {
 		guard isFinished else { return }
@@ -124,10 +105,7 @@ final class SourcesViewModel: ObservableObject {
 						source.iconURL = repo.currentIconURL
 						didUpdateIcon = true
 					}
-					var dates = UserDefaults.standard.dictionary(forKey: "SignOs.sourceRefreshDates") as? [String: Date] ?? [:]
-                    dates[source.identifier ?? ""] = Date()
-                    UserDefaults.standard.set(dates, forKey: "SignOs.sourceRefreshDates")
-                    self.sources[source] = repo
+					self.sources[source] = repo
 				}
 				if didUpdateIcon {
 					Storage.shared.saveContext()
