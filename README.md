@@ -317,6 +317,13 @@ tested. Recheck the live endpoints after every deployment.
 除哔哩哔哩的固定 IPA URL 外，其他应用也均订阅各自的正式仓库，每小时检查更新。
 订阅规则与在线验收见 [Cloudflare 软件源](distribution/source-aggregator/README.md)。
 
+2026-10-12 按用户要求将本地 OTA 固定入口升级到 1.0.14（15），使用已通过 GitHub Actions
+的正式 Release 产物进行 Ad Hoc 签名，保留 1.0.0 兼容基线及原升级身份。
+已核对 HTTPS 固定入口、manifest、安装页和完整 IPA 下载；签名包为 14,839,527 字节，
+SHA-256 为 `5c328d245e765930ff5ad38f46f66e51a82e0939cdbc8e9378112c11d277350e`。
+GitHub Release 保留原未签名产物。真机覆盖安装与数据保留未在本次验证；
+实测记录见 [OTA 发布凭证](docs/plans/evidence/ota-publication-20261012.json)。
+
 The installed 1.0.0 release is this project's upgrade baseline. The private
 configuration now uses `compatibilityIpa` plus `compatibilityIpaSha256`, with
 `firstInstall` removed. Preserve that signed IPA and do not reuse another app's

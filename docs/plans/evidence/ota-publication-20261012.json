@@ -1,0 +1,17 @@
+{
+  "version": "1.0.14",
+  "buildNumber": "15",
+  "bundleId": "com.signos.app",
+  "signed": true,
+  "size": 14839527,
+  "sha256": "5c328d245e765930ff5ad38f46f66e51a82e0939cdbc8e9378112c11d277350e",
+  "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+  "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.0.14/latest.ipa",
+  "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.0.14/manifest.plist",
+  "publishedAt": "2026-10-11T16:51:11.252592+00:00",
+  "sourceCommit": "1d4919a9fe1d6bc05917564acdf0badad9bf95cd",
+  "unsignedIpaSha256": "fcb9c1111b44f15fa6b0b19428b4aac816d39dd530530467590041df167957f8",
+  "fixedIpaUrl": "https://192.168.123.79:8769/channels/signos/current/latest.ipa",
+  "httpsFullDownloadVerified": true,
+  "physicalUpgradeVerified": false
+}
