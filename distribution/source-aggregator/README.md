@@ -18,6 +18,8 @@ python3 scripts/cloud_source.py status
 
 公开入口为 `/sources/yao.json`，兼容 `/source.json`、`/appstore`；`/health` 为探针。管理接口使用 `Authorization: Bearer <管理 Token>`。新增与配置编辑需携带 `/api/catalog` 的当前 `revision`；冲突返回 409。Token 轮换后旧 Token 立即失效，CLI 的私有凭据也需更新。
 
+软件源使用 iOS 27 App Store 图标；公开清单中的图标 URL 带资源版本，客户端刷新源时会更新已保存的图标 URL。资源出处及更新方式见 [assets/README.md](assets/README.md)。
+
 旧客户端使用 `/sources/yao.json?legacy=1`，只返回标记为默认的原有应用变体，避免同 Bundle ID 的签名/未签名包被混用。旧家中 HTTPS 入口在迁移验收后以 302 指向这份兼容清单，旧文件留存用于回退。
 
 最新包迁移使用 `python3 scripts/migrate_cloud_source.py --plan` 和对应实际命令，每个应用只读 `versions[0]`，不导入原历史记录。本次 SignOs 由新正式发布提供，迁移命令加 `--skip-bundle com.signos.app`。图片和展示信息保留，元信息始终由 Range 解析产生。

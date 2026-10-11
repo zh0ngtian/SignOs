@@ -93,10 +93,11 @@ export class Catalog extends DurableObject {
 
   publicDocument(origin, legacyOnly = false) {
     const settings = this.data.settings;
+    const iconURL = `${origin}/icon.png?v=app-store-ios27-84960d13`;
     return {
       name: settings.name, identifier: settings.identifier, description: settings.description,
       subtitle: 'GitHub Release 与 IPA 聚合', sourceURL: `${origin}/sources/${settings.id}.json${legacyOnly ? '?legacy=1' : ''}`,
-      iconURL: `${origin}/icon.png`, sourceicon: `${origin}/icon.png`, news: [],
+      iconURL, sourceicon: iconURL, news: [],
       apps: this.data.entries.filter(e => e.published && e.current && (!legacyOnly || e.presentation?.legacyDefault === true)).map(entry => {
         const current = entry.current;
         const version = v => ({ version: v.metadata.version, ...(v.metadata.buildVersion ? { buildVersion: v.metadata.buildVersion } : {}),
@@ -106,7 +107,7 @@ export class Catalog extends DurableObject {
           name: current.metadata.name, bundleIdentifier: current.metadata.bundleIdentifier,
           // Independent subscription identity preserves variants with the same Bundle ID.
           appID: entry.id, legacyDefault: entry.presentation?.legacyDefault === true, developerName: entry.presentation?.developerName || (entry.config.kind === 'github' ? entry.config.repository.split('/')[0] : '原始 IPA 发布者'),
-          localizedDescription: entry.presentation?.description || '', iconURL: entry.presentation?.iconURL || current.iconURL || `${origin}/icon.png`,
+          localizedDescription: entry.presentation?.description || '', iconURL: entry.presentation?.iconURL || current.iconURL || iconURL,
           ...version(current), versionDate: current.date, versionDescription: current.notes || '',
           versions: [current, ...entry.history].slice(0, HISTORY_LIMIT + 1).map(version),
         };
