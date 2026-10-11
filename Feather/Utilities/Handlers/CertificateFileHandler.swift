@@ -73,6 +73,10 @@ final class CertificateFileHandler: NSObject {
 	}
 }
 
-private enum CertificateFileHandlerError: Error {
+private enum CertificateFileHandlerError: Error, LocalizedError {
 	case certNotValid
+
+	var errorDescription: String? {
+		.localized("The certificate is invalid. Check the certificate, password and provisioning profile.")
+	}
 }

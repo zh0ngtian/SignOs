@@ -89,7 +89,7 @@ extension CertificatesInfoView {
 			_disclosure(.localized("Platform"), keys: data.Platform)
 			
 			if let all = data.ProvisionsAllDevices {
-				_info(.localized("Provision All Devices"), description: all.description)
+				_info(.localized("Provision All Devices"), description: all ? .localized("Yes") : .localized("No"))
 			}
 			
 			if let devices = data.ProvisionedDevices {

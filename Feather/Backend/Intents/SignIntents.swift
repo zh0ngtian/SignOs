@@ -15,9 +15,9 @@ struct CheckUpdatesIntent: AppIntent {
 
 	func perform() async throws -> some IntentResult & ProvidesDialog {
 		let count = await AutoUpdateManager.shared.checkNow(notifyWhenClean: false)
-		let text = count == 0
-			? "All apps are up to date."
-			: "\(count) updates found and prepared."
+		let text: String = count == 0
+			? .localized("All apps are up to date.")
+			: .localized("%lld updates found and prepared.", arguments: count)
 		return .result(dialog: IntentDialog(stringLiteral: text))
 	}
 }
@@ -29,9 +29,9 @@ struct InstallPendingUpdatesIntent: AppIntent {
 
 	func perform() async throws -> some IntentResult & ProvidesDialog {
 		let started = await AutoUpdateManager.shared.downloadAllPendingUpdates()
-		let text = started == 0
-			? "No updates to install."
-			: "Installing \(started) updates in the background."
+		let text: String = started == 0
+			? .localized("No updates to install.")
+			: .localized("Installing %lld updates in the background.", arguments: started)
 		return .result(dialog: IntentDialog(stringLiteral: text))
 	}
 }

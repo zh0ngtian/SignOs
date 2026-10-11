@@ -21,9 +21,9 @@ extension AboutView {
 // MARK: - View
 struct AboutView: View {
 	@State private var _credits: [CreditsModel] = [
-		.init(name: "claration", desc: "Feather Developer", github: "claration"),
-		.init(name: "Asami", desc: "Feather Developer", github: "Nyasami"),
-		.init(name: "Lakhan Lothiyi", desc: "AltStore Repositories", github: "llsc12"),
+		.init(name: "claration", desc: .localized("Feather Developer"), github: "claration"),
+		.init(name: "Asami", desc: .localized("Feather Developer"), github: "Nyasami"),
+		.init(name: "Lakhan Lothiyi", desc: .localized("AltStore Repositories"), github: "llsc12"),
 	]
 
 	@State private var _handleCopied = false
@@ -69,7 +69,7 @@ struct AboutView: View {
 							title: "@ihateios / @zh0ngtian",
 							subtitle: _handleCopied
 								? .localized("Copied to Clipboard")
-								: "Made By @ihateios / @zh0ngtian — tap to copy"
+								: .localized("Made By @ihateios / @zh0ngtian — tap to copy")
 						)
 
 						Spacer()

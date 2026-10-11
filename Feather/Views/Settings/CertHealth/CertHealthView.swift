@@ -70,7 +70,7 @@ struct CertHealthView: View {
 							isPresented: $_reinstallEverything,
 							titleVisibility: .visible
 						) {
-							Button(.localized("Reinstall \(_signedApps.count) apps")) {
+							Button(String.localized("Reinstall %lld apps", arguments: _signedApps.count)) {
 								for app in _signedApps {
 									AutoSignManager.shared.enqueue(app: app, reason: .renewal)
 								}
@@ -122,7 +122,7 @@ extension CertHealthView {
 			)
 
 			VStack(alignment: .leading, spacing: 3) {
-				Text(cert.nickname ?? "Certificate")
+				Text(cert.nickname ?? .localized("Certificate"))
 					.font(.body.weight(.semibold))
 					.lineLimit(1)
 

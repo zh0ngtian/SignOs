@@ -119,7 +119,7 @@ final class AutoSignManager: ObservableObject {
 		var options = OptionsManager.shared.options
 		let base = app.identifier ?? UUID().uuidString
 		options.appIdentifier = "\(base).clone\(Int.random(in: 100...999))"
-		options.appName = "\(app.name ?? "App") \(Int.random(in: 2...9))"
+		options.appName = "\(app.name ?? .localized("App")) \(Int.random(in: 2...9))"
 		options.signingOption = .default
 
 		let certificate = Storage.shared.getCertificate(from: app)
@@ -173,10 +173,10 @@ final class AutoSignManager: ObservableObject {
 		let certificate = job.certificate ?? _certificate(for: app, options: options)
 
 		if certificate == nil && options.signingOption == .default {
-			lastErrorMessage = "No valid certificate available for automatic signing."
+			lastErrorMessage = .localized("No valid certificate available for automatic signing.")
 			AutoUpdateManager.shared.notify(
-				title: "Signing Failed",
-				body: "\(job.appName ?? "App") could not be signed automatically. Import a certificate in Settings.",
+				title: .localized("Signing Failed"),
+				body: .localized("%@ could not be signed automatically. Import a certificate in Settings.", arguments: job.appName ?? .localized("App")),
 				identifier: "signos.sign.failed.\(job.appUUID)"
 			)
 			return
@@ -192,7 +192,7 @@ final class AutoSignManager: ObservableObject {
 
 		if let signingError {
 			lastErrorMessage = signingError.localizedDescription
-			ActivityLog.shared.log(.failed, app: job.appName ?? "App", detail: signingError.localizedDescription)
+			ActivityLog.shared.log(.failed, app: job.appName ?? .localized("App"), detail: signingError.localizedDescription)
 
 			// one automatic retry — transient failures (locks, disk spikes) recover
 			if job.retryCount < 1 {
@@ -210,8 +210,8 @@ final class AutoSignManager: ObservableObject {
 			}
 
 			AutoUpdateManager.shared.notify(
-				title: "Couldn't Install \(job.appName ?? "App")",
-				body: "Open SignOs and try again.",
+				title: .localized("Couldn't Install %@", arguments: job.appName ?? .localized("App")),
+				body: .localized("Open SignOs and try again."),
 				identifier: "signos.failed.\(job.appUUID)"
 			)
 			AutoUpdateManager.shared.updateBadgeFromState()
@@ -232,7 +232,7 @@ final class AutoSignManager: ObservableObject {
 			}
 		}
 		guard let newest = signedApps.max(by: { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }) else {
-			lastErrorMessage = "Signing did not produce a new app entry."
+			lastErrorMessage = .localized("Signing did not produce a new app entry.")
 			return
 		}
 
@@ -273,8 +273,8 @@ final class AutoSignManager: ObservableObject {
 			let state = UIDevice.current.batteryState
 			guard state == .charging || state == .full else {
 				AutoUpdateManager.shared.notify(
-					title: "\(app.name ?? "App") is waiting for power",
-					body: "Connect your device to a charger to finish installing.",
+					title: .localized("%@ is waiting for power", arguments: app.name ?? .localized("App")),
+					body: .localized("Connect your device to a charger to finish installing."),
 					identifier: "signos.charging.\(app.uuid ?? UUID().uuidString)"
 				)
 				return
@@ -295,11 +295,11 @@ final class AutoSignManager: ObservableObject {
 				try await proxy.install(at: packageUrl, suspend: false)
 				if let uuid = app.uuid { confirmedInstallUUIDs.insert(uuid) }
 
-				ActivityLog.shared.log(.installed, app: app.name ?? "App")
+				ActivityLog.shared.log(.installed, app: app.name ?? .localized("App"))
 
 				AutoUpdateManager.shared.notify(
-					title: "Installed \(app.name ?? "App")",
-					body: "The app is ready on your home screen.",
+					title: .localized("Installed %@", arguments: app.name ?? .localized("App")),
+					body: .localized("The app is ready on your home screen."),
 					identifier: "signos.installed.\(app.uuid ?? UUID().uuidString)"
 				)
 			} else {
@@ -308,10 +308,10 @@ final class AutoSignManager: ObservableObject {
 		} catch {
 			lastErrorMessage = error.localizedDescription
 			if let identifier = app.identifier { installErrors[identifier] = error.localizedDescription }
-			ActivityLog.shared.log(.failed, app: app.name ?? "App", detail: error.localizedDescription)
+			ActivityLog.shared.log(.failed, app: app.name ?? .localized("App"), detail: error.localizedDescription)
 			AutoUpdateManager.shared.notify(
-				title: "Couldn't Install \(app.name ?? "App")",
-				body: "Open SignOs to try again.",
+				title: .localized("Couldn't Install %@", arguments: app.name ?? .localized("App")),
+				body: .localized("Open SignOs to try again."),
 				identifier: "signos.failed.\(app.uuid ?? UUID().uuidString)"
 			)
 		}
@@ -332,21 +332,21 @@ final class AutoSignManager: ObservableObject {
 				guard let presenter = UIApplication.topViewController(),
 					!(presenter is SFSafariViewController), !presenter.isBeingDismissed else {
 					throw NSError(domain: "SignOs.Install", code: 1, userInfo: [
-						NSLocalizedDescriptionKey: "Couldn't show the installation page. Tap Install to try again."
+						NSLocalizedDescriptionKey: String.localized("Couldn't show the installation page. Tap Install to try again.")
 					])
 				}
 				presenter.present(SFSafariViewController(url: installer.pageEndpoint), animated: true)
 			} else {
 				guard let url = URL(string: installer.iTunesLink), await UIApplication.shared.open(url) else {
 					throw NSError(domain: "SignOs.Install", code: 2, userInfo: [
-						NSLocalizedDescriptionKey: "iOS did not accept the installation request. Check Settings > Installation, then tap Install to try again."
+						NSLocalizedDescriptionKey: String.localized("iOS did not accept the installation request. Check Settings > Installation, then tap Install to try again.")
 					])
 				}
 			}
 		} else if let uuid = app.uuid {
 			AutoUpdateManager.shared.notify(
-				title: "\(app.name ?? "App") is ready",
-				body: "Tap to install it now.",
+				title: .localized("%@ is ready", arguments: app.name ?? .localized("App")),
+				body: .localized("Tap to install it now."),
 				identifier: "signos.install.\(uuid)",
 				category: "SIGNOS_INSTALL"
 			)

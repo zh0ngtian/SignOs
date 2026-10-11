@@ -192,7 +192,7 @@ class DownloadManager: NSObject, ObservableObject {
 
 		let content = UNMutableNotificationContent()
 		content.title = download.fileName
-		content.body = "Downloading… \(Int(download.overallProgress * 100))%"
+		content.body = .localized("Downloading… %lld%%", arguments: Int(download.overallProgress * 100))
 
 		let request = UNNotificationRequest(
 			identifier: "signos.download.\(download.id)",

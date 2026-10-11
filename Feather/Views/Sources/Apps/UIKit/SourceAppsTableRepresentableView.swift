@@ -163,7 +163,7 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 			}
 			
 			let formatter = DateFormatter()
-			formatter.dateFormat = "MMMM d, yyyy"
+			formatter.dateStyle = .long
 			
 			let grouped = Dictionary(grouping: sorted) {
 				$0.app.currentDate?.date.stripTime() ?? .distantPast

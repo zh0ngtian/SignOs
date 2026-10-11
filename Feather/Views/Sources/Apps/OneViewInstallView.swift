@@ -116,14 +116,7 @@ struct WSOneViewGetButton: View {
 						)
 					}
 				} label: {
-					Text(.localized(updateManager.hasUpdate(for: app, sourceURL: sourceURL) ? "Update" : "Get"))
-						.lineLimit(0)
-						.font(.headline.bold())
-						.foregroundStyle(Color.accentColor)
-						.padding(.horizontal, 24)
-						.padding(.vertical, 6)
-						.background(Color(uiColor: .quaternarySystemFill))
-						.clipShape(Capsule())
+					WSSearchCapsuleLabel(title: updateManager.hasUpdate(for: app, sourceURL: sourceURL) ? "Update" : "Get")
 				}
 				.buttonStyle(.borderless)
 			case .downloading:
@@ -457,8 +450,8 @@ extension OneViewInstallView {
 				.buttonStyle(.plain)
 
 				Text(phase == .needsSign
-					? "Downloaded. Turn on Auto-Sign in Settings for one-tap installs."
-					: "Downloads, signs and installs automatically.")
+					? .localized("Downloaded. Turn on Auto-Sign in Settings for one-tap installs.")
+					: .localized("Downloads, signs and installs automatically."))
 					.font(.caption)
 					.foregroundStyle(.secondary)
 
@@ -476,7 +469,7 @@ extension OneViewInstallView {
 						.progressViewStyle(.linear)
 					HStack {
 						if download.totalBytes > 0 {
-							Text(verbatim: "\(download.bytesDownloaded.formattedByteCount) of \(download.totalBytes.formattedByteCount)")
+							Text(verbatim: .localized("%@ of %@", arguments: download.bytesDownloaded.formattedByteCount, download.totalBytes.formattedByteCount))
 						}
 						Spacer()
 						Button {

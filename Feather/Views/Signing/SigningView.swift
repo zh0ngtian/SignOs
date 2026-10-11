@@ -155,7 +155,7 @@ extension SigningView {
 				}
 
 				VStack(alignment: .leading, spacing: 4) {
-					Text(_temporaryOptions.appName ?? app.name ?? "App")
+					Text(_temporaryOptions.appName ?? app.name ?? .localized("App"))
 						.font(.title3.weight(.bold))
 						.lineLimit(2)
 					Text(verbatim: _temporaryOptions.appVersion ?? app.version ?? "")
@@ -288,7 +288,7 @@ extension SigningView {
 				)
 			}
 			#if NIGHTLY || DEBUG
-				NavigationLink(.localized("Entitlements") + " (BETA)") {
+				NavigationLink(.localized("Entitlements (Beta)")) {
 					SigningEntitlementsView(
 						bindingValue: $_temporaryOptions.appEntitlementsFile
 					)

@@ -159,8 +159,8 @@ struct UpdateManagerRegression {
         precondition(!cancelled && !manager.isChecking)
         precondition(manager.updates == pendingUpdates, "Cancellation must retain pending updates")
         precondition(manager.lastCheckedDate == checkedDate, "Cancellation must not count as a completed check")
-        precondition(manager.checkIssues.count == 1 && manager.checkIssues[0].contains("Tap Check"))
-        precondition(!manager.checkIssues.contains { $0.contains("linked repository") })
+        precondition(manager.checkIssues.count == 1 && manager.checkIssues[0].contains(String(localized: "Update check was cancelled. Tap Check to retry.")))
+        precondition(!manager.checkIssues.contains { $0.contains(String.localized("linked repository is unavailable. Refresh or restore its source in Sources.")) })
         FixtureProtocol.error = nil
         let retryCompleted = await manager.checkForUpdates(sources: [source], localApps: [local])
         precondition(retryCompleted)
@@ -176,7 +176,7 @@ struct UpdateManagerRegression {
         precondition(!taskCompleted && !manager.isChecking)
         precondition(manager.updates == pendingUpdates && manager.lastCheckedDate == retryDate)
         precondition(FixtureProtocol.requests.count == requestsBeforeCancellation + 1, "Cancelled checks must stop before fetching subsequent sources")
-        precondition(!manager.checkIssues.contains { $0.contains("linked repository") })
+        precondition(!manager.checkIssues.contains { $0.contains(String.localized("linked repository is unavailable. Refresh or restore its source in Sources.")) })
         FixtureProtocol.onStart = nil
         FixtureProtocol.waitForCancellation = false
         await manager.checkForUpdates(sources: [source], localApps: [local])
@@ -215,20 +215,20 @@ struct UpdateManagerRegression {
         FixtureProtocol.data = Data("{broken json".utf8)
         await manager.checkForUpdates(sources: [source], localApps: [local])
         precondition(manager.updates.isEmpty && !manager.checkIssues.isEmpty)
-        precondition(!manager.checkIssues.contains { $0.contains("linked repository") })
+        precondition(!manager.checkIssues.contains { $0.contains(String.localized("linked repository is unavailable. Refresh or restore its source in Sources.")) })
         try fixture([app(version: "1.1.2")])
         await manager.checkForUpdates(sources: [source], localApps: [local])
         precondition(manager.updates.isEmpty && manager.checkIssues.isEmpty, "Successful retry must clear failures")
         precondition(Storage.shared.sourceMetadata(for: "museum")?.sourceAppVersion == "1.1.2")
         await manager.checkForUpdates(sources: [], localApps: [local])
-        precondition(manager.checkIssues.contains { $0.contains("linked repository") }, "A removed source must still be reported")
+        precondition(manager.checkIssues.contains { $0.contains(String.localized("linked repository is unavailable. Refresh or restore its source in Sources.")) }, "A removed source must still be reported")
         checkpoint("HTTP/JSON failures and retry passed")
         let beforePreflightCancellation = FixtureProtocol.requests.count
         let cancelledPreflight = await manager.checkForUpdates(sources: [source], localApps: [local], synchronizeSources: {
             throw CancellationError()
         })
         precondition(!cancelledPreflight && FixtureProtocol.requests.count == beforePreflightCancellation)
-        precondition(manager.checkIssues.last?.contains("Tap Check") == true)
+        precondition(manager.checkIssues.last?.contains(String(localized: "Update check was cancelled. Tap Check to retry.")) == true)
 
         let remoteStore = CloudSourceStore(session: URLSession(configuration: configuration))
         var catalogRequests = 0

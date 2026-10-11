@@ -20,12 +20,12 @@ struct ActivityEntry: Codable, Identifiable, Equatable {
 
 		var title: String {
 			switch self {
-			case .checked: return "Checked for Updates"
-			case .downloaded: return "Downloaded"
-			case .installed: return "Installed"
-			case .updated: return "Updated"
-			case .renewed: return "Renewed"
-			case .failed: return "Failed"
+			case .checked: return .localized("Checked for Updates")
+			case .downloaded: return .localized("Downloaded")
+			case .installed: return .localized("Installed")
+			case .updated: return .localized("Updated")
+			case .renewed: return .localized("Renewed")
+			case .failed: return .localized("Failed")
 			}
 		}
 

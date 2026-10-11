@@ -63,7 +63,7 @@ struct WSLockView: View {
 		guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) else { return }
 
 		_isAuthenticating = true
-		context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "Unlock SignOs") { success, _ in
+		context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: .localized("Unlock SignOs")) { success, _ in
 			DispatchQueue.main.async {
 				_isAuthenticating = false
 				if success {

@@ -71,6 +71,6 @@ struct ContentUnavailableCompatView: View {
 	let message: String
 
 	var body: some View {
-		ContentUnavailableView(title, systemImage: "clock.arrow.circlepath", description: Text(message))
+		ContentUnavailableView(String.localized(title), systemImage: "clock.arrow.circlepath", description: Text(String.localized(message)))
 	}
 }

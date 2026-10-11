@@ -60,9 +60,10 @@ contributors for their work, this wouldn't exist without them.
 - Sources tab with source icons, app counts, last refresh times and per-source sync buttons;
   tap a source to manage it or browse its apps. Remote subscription projects show app icons,
   versions and build numbers. Add/import/export and per-source automatic updates remain available
-- Search across every source with recent searches
+- Search across every source with recent searches (tab currently hidden; implementation retained)
 - Library with filters and quick actions
-- Updates tab with app updates and recent activity; tap CHECK or pull down to synchronize every subscribed source, then check for updates using the same fresh data
+- Updates tab with app updates and recent activity; tap Check or pull down to synchronize every subscribed source, then check for updates using the same fresh data
+- Simplified Chinese throughout app controls, settings, status messages and notifications; source sync and update actions share Search's capsule style
 - Automatic update and signing preferences in Settings
 - OneView install — Get (or Update for a detected source update), download progress with speed, signing and Open on one screen
 - Rich app pages with screenshots, What's New, version history and permissions
@@ -161,7 +162,7 @@ python3 scripts/test_download_manager_simulator.py <SIMULATOR_UDID>
 App 的改动都必须发布，不按类型、规模或是否改变用户可见功能区别处理，发布完成才算交付。
 不涉及客户端时，仅完成受影响部分的检查，无须执行、手动触发或等待客户端构建。
 发布默认使用 GitHub Release，版本号和构建号由本次改动递增。普通提交和手动构建本身
-不创建 Release，因此客户端交付必须继续完成标签发布；本机 OTA 仅在明确要求发包时执行。
+不创建 Release，因此客户端交付必须继续完成标签发布；每次 App 发布同时使用该产物完成 OTA 签名与固定渠道更新，并交付安装链接。
 
 ### GitHub Release 标准发布流程
 

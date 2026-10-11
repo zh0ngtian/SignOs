@@ -399,9 +399,18 @@ extension TweakHandler {
 	}
 }
 
-enum TweakHandlerError: Error {
+enum TweakHandlerError: Error, LocalizedError {
 	case unsupportedFileExtension(String)
 	case decompressionFailed(String)
 	case missingFile(String)
 	case noAccess
+
+	var errorDescription: String? {
+		switch self {
+		case .unsupportedFileExtension(let file): .localized("Unsupported tweak file: %@", arguments: file)
+		case .decompressionFailed(let file): .localized("Could not extract tweak file: %@", arguments: file)
+		case .missingFile(let file): .localized("Tweak file not found: %@", arguments: file)
+		case .noAccess: .localized("Permission to access the tweak file was denied.")
+		}
+	}
 }

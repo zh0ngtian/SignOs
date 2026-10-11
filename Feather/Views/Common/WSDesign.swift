@@ -21,7 +21,7 @@ struct WSHeroHeader: View {
 				.textCase(.uppercase)
 				.foregroundStyle(.tint)
 				.kerning(0.8)
-			Text(title)
+			Text(title.localized())
 				.font(.system(size: 34, weight: .bold, design: .default))
 				.foregroundStyle(.primary)
 		}
@@ -38,7 +38,7 @@ struct WSSectionTitle: View {
 
 	var body: some View {
 		HStack(alignment: .firstTextBaseline) {
-			Text(title)
+			Text(title.localized())
 				.font(.title2.weight(.bold))
 				.foregroundStyle(.primary)
 			Spacer()
@@ -47,7 +47,7 @@ struct WSSectionTitle: View {
 					UIImpactFeedbackGenerator(style: .light).impactOccurred()
 					action()
 				} label: {
-					Text(actionTitle)
+					Text(actionTitle.localized())
 						.font(.subheadline.weight(.semibold))
 						.foregroundStyle(.tint)
 				}
@@ -128,7 +128,7 @@ struct WSCapsuleLabel: View {
 	var filled: Bool = false
 
 	var body: some View {
-		Text(title)
+		Text(title.localized())
 			.font(.caption.weight(.bold))
 			.textCase(.uppercase)
 			.foregroundStyle(filled ? Color.white : Color.accentColor)
@@ -138,4 +138,43 @@ struct WSCapsuleLabel: View {
 				Capsule().fill(filled ? AnyShapeStyle(.tint) : AnyShapeStyle(Color(uiColor: .secondarySystemFill)))
 			)
 	}
+}
+
+// The capsule used by Search's Get action, shared with source sync and update checks.
+struct WSSearchCapsuleLabel: View {
+    let title: String
+    var isLoading = false
+
+    var body: some View {
+        Text(title.localized())
+            .font(.headline.bold())
+            .foregroundStyle(Color.accentColor)
+            .lineLimit(1)
+            .opacity(isLoading ? 0 : 1)
+            .overlay {
+                if isLoading { ProgressView().tint(.accentColor) }
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 6)
+            .background(Color(uiColor: .quaternarySystemFill))
+            .clipShape(Capsule())
+    }
+}
+
+struct WSSearchCapsuleButton: View {
+    let title: String
+    var isDisabled = false
+    let action: () -> Void
+
+    var body: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        } label: {
+            WSSearchCapsuleLabel(title: title)
+                .frame(minHeight: 44)
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+    }
 }

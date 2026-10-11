@@ -37,7 +37,7 @@ struct FeatherApp: App {
 			.onReceive(NotificationCenter.default.publisher(for: .heartbeatInvalidHost)) { _ in
 				DispatchQueue.main.async {
 					UIAlertController.showAlertWithOk(
-						title: "InvalidHostID",
+						title: .localized("Invalid pairing file"),
 						message: .localized("Your pairing file is invalid and is incompatible with your device, please import a valid pairing file.")
 					)
 				}

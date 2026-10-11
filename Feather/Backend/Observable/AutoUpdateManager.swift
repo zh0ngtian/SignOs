@@ -177,15 +177,15 @@ final class AutoUpdateManager: ObservableObject {
 
 		let checkIncomplete = !UpdateManager.shared.checkIssues.isEmpty
 		ActivityLog.shared.log(.checked, app: "SignOs", detail: checkIncomplete
-			? "\(updates.count) found; update check incomplete"
-			: (updates.isEmpty ? "all apps up to date" : "\(updates.count) found"))
+			? .localized("%lld found; update check incomplete", arguments: updates.count)
+			: (updates.isEmpty ? .localized("all apps up to date") : .localized("%lld found", arguments: updates.count)))
 
 		if updates.isEmpty {
 			_updateBadge(0)
 			if notifyWhenClean && !silent && !checkIncomplete {
 				notify(
-					title: "All Apps Up to Date",
-					body: "Every app matches the latest version in its repository.",
+					title: .localized("All Apps Up to Date"),
+					body: .localized("Every app matches the latest version in its repository."),
 					identifier: "signos.updates.clean"
 				)
 			}
@@ -205,11 +205,11 @@ final class AutoUpdateManager: ObservableObject {
 				let trimmed = whatsNew.count > 120 ? String(whatsNew.prefix(120)) + "…" : whatsNew
 				body = "\(updates[0].appName) \(updates[0].remoteVersion): \(trimmed)"
 			} else if updates.count == 1 {
-				body = "\(updates[0].appName) has a new version available."
+				body = .localized("%@ has a new version available.", arguments: updates[0].appName)
 			} else {
-				body = "\(updates.count) apps have new versions available."
+				body = .localized("%lld apps have new versions available.", arguments: updates.count)
 			}
-			notify(title: "Updates Available", body: body, identifier: "signos.updates.available")
+			notify(title: .localized("Updates Available"), body: body, identifier: "signos.updates.available")
 			return updates.count
 		}
 
@@ -233,10 +233,10 @@ final class AutoUpdateManager: ObservableObject {
 
 		if started > 0 {
 			notify(
-				title: "Updating Apps",
+				title: .localized("Updating Apps"),
 				body: started == 1
-					? "Downloading \(updates.count == 1 ? updates[0].appName : "1 app") in the background."
-					: "Downloading \(started) app updates in the background.",
+					? .localized("Downloading %@ in the background.", arguments: updates.count == 1 ? updates[0].appName : String.localized("1 app"))
+					: .localized("Downloading %lld app updates in the background.", arguments: started),
 				identifier: "signos.updates.downloading"
 			)
 		}
@@ -387,8 +387,8 @@ final class AutoUpdateManager: ObservableObject {
 	// MARK: - Notifications
 
 	func requestNotificationAuthorization() {
-		let install = UNNotificationAction(identifier: "SIGNOS_INSTALL_ACTION", title: "Install", options: [.foreground])
-		let later = UNNotificationAction(identifier: "SIGNOS_LATER_ACTION", title: "Later", options: [])
+		let install = UNNotificationAction(identifier: "SIGNOS_INSTALL_ACTION", title: .localized("Install"), options: [.foreground])
+		let later = UNNotificationAction(identifier: "SIGNOS_LATER_ACTION", title: .localized("Later"), options: [])
 		UNUserNotificationCenter.current().setNotificationCategories([
 			UNNotificationCategory(identifier: "SIGNOS_INSTALL", actions: [install, later], intentIdentifiers: [])
 		])

@@ -14,12 +14,12 @@ enum SourceSynchronization {
                 let failures = try await CloudSourceStore().synchronizeAndWait(
                     address: endpoint.absoluteString, token: token, expectedIdentifier: source.identifier
                 )
-                issues += failures.map { "\(source.name ?? "Source"): \($0)" }
+                issues += failures.map { "\(source.name ?? .localized("Source")): \($0)" }
             } catch {
                 if Task.isCancelled || error is CancellationError || (error as? URLError)?.code == .cancelled {
                     throw CancellationError()
                 }
-                issues.append("\(source.name ?? "Source"): \(error.localizedDescription)")
+                issues.append("\(source.name ?? .localized("Source")): \(error.localizedDescription)")
             }
         }
         return issues

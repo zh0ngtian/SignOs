@@ -52,10 +52,15 @@ struct UpdatesView: View {
 					WSHeroHeader(eyebrow: "SignOs", title: "Updates")
 					HStack {
 						Spacer()
-						if _isChecking { ProgressView() }
-						WSActionButton(title: "Check", isDisabled: _isChecking, minimumHeight: 44) {
+						Button {
 							Task { await autoUpdateManager.checkNow(notifyWhenClean: false, syncManagedSources: true) }
+						} label: {
+							WSSearchCapsuleLabel(title: "Check", isLoading: _isChecking)
+								.frame(minHeight: 44)
 						}
+						.buttonStyle(.plain)
+						.disabled(_isChecking)
+						.accessibilityLabel(_isChecking ? String.localized("Checking") : String.localized("Check"))
 						.accessibilityIdentifier("updates.check")
 					}
 
@@ -153,7 +158,7 @@ struct UpdatesView: View {
 
 			Spacer()
 
-			WSActionButton(title: "Update") { _download(update) }
+			WSSearchCapsuleButton(title: "Update") { _download(update) }
 		}
 		.padding(WSSpacing.cardPadding)
 		.background(WSRadius.continuous(WSRadius.lg).fill(WSSurface.card))
@@ -207,7 +212,7 @@ struct UpdatesView: View {
 				.frame(width: 30)
 
 			VStack(alignment: .leading, spacing: 2) {
-				Text(job.appName ?? "Unknown")
+				Text(job.appName ?? .localized("Unknown"))
 					.font(.body.weight(.semibold))
 					.foregroundStyle(.primary)
 					.lineLimit(1)
@@ -237,7 +242,7 @@ struct UpdatesView: View {
 						FRAppIconView(app: app, size: 57)
 
 						VStack(alignment: .leading, spacing: 3) {
-							Text(app.name ?? "Unknown")
+							Text(app.name ?? .localized("Unknown"))
 								.font(.body.weight(.semibold))
 								.foregroundStyle(.primary)
 								.lineLimit(1)
@@ -252,7 +257,7 @@ struct UpdatesView: View {
 
 						Spacer()
 
-						WSActionButton(title: "Open") {
+						WSSearchCapsuleButton(title: "Open") {
 							UIApplication.openApp(with: app.identifier ?? "")
 						}
 					}
@@ -285,14 +290,14 @@ struct UpdatesView: View {
 									.font(.body.weight(.semibold))
 									.foregroundStyle(.primary)
 									.lineLimit(1)
-								Text(verbatim: row.held ? "Updates held" : "Skipped \(row.skipped ?? "")")
+								Text(verbatim: row.held ? .localized("Updates held") : .localized("Skipped %@", arguments: row.skipped ?? ""))
 									.font(WSType.micro)
 									.foregroundStyle(.secondary)
 							}
 
 							Spacer()
 
-							WSActionButton(title: row.held ? "Resume" : "Unskip", style: .quiet) {
+							WSSearchCapsuleButton(title: row.held ? "Resume" : "Unskip") {
 								if row.held {
 									updateManager.setHeld(false, for: row.identifier)
 								} else {

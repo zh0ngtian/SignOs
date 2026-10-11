@@ -216,7 +216,7 @@ extension LibraryView {
 				}
 
 			VStack(alignment: .leading, spacing: 3) {
-				Text(app.name ?? "Unknown")
+				Text(app.name ?? .localized("Unknown"))
 					.font(.body.weight(.semibold))
 					.foregroundStyle(.primary)
 					.lineLimit(1)

@@ -31,7 +31,7 @@ struct WSActionButton: View {
 				Image(systemName: systemImage)
 					.font(.caption2.weight(.bold))
 			}
-			Text(title)
+			Text(title.localized())
 				.font(.caption.weight(.bold))
 				.textCase(.uppercase)
 				.lineLimit(1)
@@ -101,14 +101,14 @@ struct WSSectionHeader: View {
 
 	var body: some View {
 		HStack(alignment: .firstTextBaseline) {
-			Text(title)
+			Text(title.localized())
 				.font(.footnote.weight(.semibold))
 				.textCase(.uppercase)
 				.foregroundStyle(.secondary)
 				.kerning(0.4)
 			Spacer()
 			if let trailing {
-				Text(trailing)
+				Text(trailing.localized())
 					.font(.footnote.weight(.semibold))
 					.textCase(.uppercase)
 					.foregroundStyle(.tertiary)
@@ -194,7 +194,7 @@ extension Double {
 	var formattedEta: String {
 		guard self.isFinite, self > 0 else { return "" }
 		let seconds = Int(self)
-		if seconds < 60 { return "\(seconds)s left" }
-		return "\(seconds / 60)m \(seconds % 60)s left"
+		if seconds < 60 { return .localized("%llds left", arguments: seconds) }
+		return .localized("%lldm %llds left", arguments: seconds / 60, seconds % 60)
 	}
 }

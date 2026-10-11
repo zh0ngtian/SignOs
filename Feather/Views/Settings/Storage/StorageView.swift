@@ -40,7 +40,7 @@ struct StorageView: View {
 				NBSection(.localized("Usage")) {
 					ForEach(Category.allCases, id: \.self) { category in
 						HStack {
-							Label(category.rawValue, systemImage: _icon(for: category))
+							Label(String.localized(category.rawValue), systemImage: _icon(for: category))
 							Spacer()
 							Text(verbatim: (_sizes[category] ?? 0).formattedByteCount)
 								.font(.footnote.weight(.semibold).monospacedDigit())

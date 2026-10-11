@@ -160,6 +160,10 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 	}
 }
 
-private enum ImportedFileHandlerError: Error {
+private enum ImportedFileHandlerError: Error, LocalizedError {
 	case payloadNotFound
+
+	var errorDescription: String? {
+		.localized("The IPA does not contain a valid Payload application.")
+	}
 }

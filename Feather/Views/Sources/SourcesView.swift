@@ -61,7 +61,7 @@ struct SourcesView: View {
                             Text(caption(source)).font(.caption).foregroundStyle(.secondary)
                         }
                         Spacer(minLength: 0)
-                        if !dynamicTypeSize.isAccessibilitySize { Color.clear.frame(width: 60) }
+                        if !dynamicTypeSize.isAccessibilitySize { Color.clear.frame(width: 90) }
                         Image(systemName: "chevron.forward")
                             .font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
                             .accessibilityHidden(true)
@@ -90,18 +90,14 @@ struct SourcesView: View {
 
     private func syncButton(_ source: AltSource) -> some View {
         Button { Task { await synchronize(source) } } label: {
-            Group {
-                if syncing.contains(source.objectID) { ProgressView() }
-                else { Text("同步").font(.subheadline.weight(.semibold)) }
-            }
-            .frame(minWidth: 60, minHeight: 44)
-            .padding(.horizontal, dynamicTypeSize.isAccessibilitySize ? 12 : 0)
-            .background(Capsule().fill(WSSurface.input))
+            WSSearchCapsuleLabel(title: "Sync", isLoading: syncing.contains(source.objectID))
+                .frame(minHeight: 44)
         }
         .buttonStyle(.plain)
         .foregroundStyle(.primary)
         .disabled(syncing.contains(source.objectID))
         .accessibilityLabel("同步 \(source.name ?? .localized("Source"))")
+        .accessibilityIdentifier("sources.sync")
     }
 
     private func caption(_ source: AltSource) -> String {
@@ -109,7 +105,7 @@ struct SourcesView: View {
             return viewModel.isFinished ? "无法刷新，点击同步重试" : "正在刷新…"
         }
         let count = repository.apps.count
-        let base = count == 1 ? "1 app" : "\(count) apps"
+        let base = String.localized("%lld apps", arguments: count)
         guard let date = refreshDates[source.identifier ?? ""] else { return base }
         return base + " · " + date.formatted(.relative(presentation: .named))
     }

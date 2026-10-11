@@ -143,7 +143,7 @@ final class UpdateManager: ObservableObject {
 		for source in sources {
 			try Task.checkCancellation()
 			guard let url = source.sourceURL else {
-				issues.append("\(source.name ?? "Repository"): source URL is missing.")
+				issues.append("\(source.name ?? .localized("Source")): \(String.localized("source URL is missing."))")
 				continue
 			}
 			
@@ -205,7 +205,7 @@ final class UpdateManager: ObservableObject {
 					let metadataSourceAppIdentifier = directMetadata.sourceAppIdentifier,
 					let metadataSourceURL = directMetadata.sourceRepositoryURL
 				else {
-					checkIssues.append("\(localApp.name ?? localUUID): incomplete source metadata.")
+					checkIssues.append("\(localApp.name ?? localUUID): \(String.localized("incomplete source metadata."))")
 					continue
 				}
 				
@@ -222,7 +222,7 @@ final class UpdateManager: ObservableObject {
 					let metadataSourceAppIdentifier = fallback.metadata.sourceAppIdentifier,
 					let metadataSourceURL = fallback.metadata.sourceRepositoryURL
 				else {
-					checkIssues.append("\(localApp.name ?? localUUID): incomplete source metadata.")
+					checkIssues.append("\(localApp.name ?? localUUID): \(String.localized("incomplete source metadata."))")
 					continue
 				}
 				
@@ -268,7 +268,7 @@ final class UpdateManager: ObservableObject {
 					candidates: repository.apps.map { ($0.id ?? "", $0.sourceEntryIdentifier) },
 					legacyPreferredIndex: repository.apps.firstIndex { $0.id == sourceAppIdentifier && $0.legacyDefault == true }
 				) else {
-					checkIssues.append("\(localApp.name ?? localUUID): source subscription is missing or ambiguous.")
+					checkIssues.append("\(localApp.name ?? localUUID): \(String.localized("source subscription is missing or ambiguous."))")
 					continue
 				}
 				let remoteApp = repository.apps[remoteIndex]
@@ -289,7 +289,7 @@ final class UpdateManager: ObservableObject {
 				}
 				
 				guard let remoteVersion = remoteApp.currentVersion, !remoteVersion.isEmpty else {
-					checkIssues.append("\(localApp.name ?? localUUID): source version is missing.")
+					checkIssues.append("\(localApp.name ?? localUUID): \(String.localized("source version is missing."))")
 					continue
 				}
 				
@@ -298,7 +298,7 @@ final class UpdateManager: ObservableObject {
 				}
 				
 				guard let downloadURL = remoteApp.currentDownloadUrl else {
-					checkIssues.append("\(localApp.name ?? localUUID): update download URL is missing.")
+					checkIssues.append("\(localApp.name ?? localUUID): \(String.localized("update download URL is missing."))")
 					continue
 				}
 				
@@ -332,7 +332,7 @@ final class UpdateManager: ObservableObject {
 				)
 			}
 			if !matchedRepository && !linkedSourceFailed {
-				checkIssues.append("\(localApp.name ?? localUUID): linked repository is unavailable. Refresh or restore its source in Sources.")
+				checkIssues.append("\(localApp.name ?? localUUID): \(String.localized("linked repository is unavailable. Refresh or restore its source in Sources."))")
 			}
 		}
 		checkIssues = Array(Set(checkIssues)).sorted()

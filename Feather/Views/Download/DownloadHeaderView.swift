@@ -94,7 +94,7 @@ struct DownloadItemView: View {
 
 			HStack(spacing: 6) {
 				if totalBytes > 0 {
-					Text(verbatim: "\(bytesDownloaded.formattedByteCount) of \(totalBytes.formattedByteCount)")
+					Text(verbatim: .localized("%@ of %@", arguments: bytesDownloaded.formattedByteCount, totalBytes.formattedByteCount))
 				}
 				if !_speedText.isEmpty {
 					Text(verbatim: "• \(_speedText)")

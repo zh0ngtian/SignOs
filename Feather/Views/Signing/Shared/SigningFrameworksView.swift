@@ -13,8 +13,8 @@ struct SigningFrameworksView: View {
 	@State private var _frameworks: [String] = []
 	@State private var _plugins: [String] = []
 	
-	private let _frameworksPath: String = .localized("Frameworks")
-	private let _pluginsPath: String = .localized("PlugIns")
+	private let _frameworksPath: String = "Frameworks"
+	private let _pluginsPath: String = "PlugIns"
 	
 	var app: AppInfoPresentable
 	@Binding var options: Options?
@@ -24,7 +24,7 @@ struct SigningFrameworksView: View {
 		NBList(.localized("Frameworks & PlugIns")) {
 			Group {
 				if !_frameworks.isEmpty {
-					NBSection(_frameworksPath) {
+					NBSection(.localized("Frameworks")) {
 						ForEach(_frameworks, id: \.self) { framework in
 							SigningToggleCellView(
 								title: "\(self._frameworksPath)/\(framework)",
@@ -36,7 +36,7 @@ struct SigningFrameworksView: View {
 				}
 				
 				if !_plugins.isEmpty {
-					NBSection(_pluginsPath) {
+					NBSection(.localized("PlugIns")) {
 						ForEach(_plugins, id: \.self) { plugin in
 							SigningToggleCellView(
 								title: "\(self._pluginsPath)/\(plugin)",

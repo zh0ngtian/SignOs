@@ -125,7 +125,7 @@ extension SearchView {
 								WSAppIcon(url: source.iconURL, size: 44, cornerRadius: 10)
 
 								VStack(alignment: .leading, spacing: 2) {
-									Text(source.name ?? "Source")
+									Text(source.name ?? .localized("Source"))
 										.font(.body.weight(.semibold))
 										.foregroundStyle(.primary)
 										.lineLimit(1)

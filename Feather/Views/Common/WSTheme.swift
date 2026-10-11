@@ -80,10 +80,10 @@ struct WSEmptyState: View {
 				.foregroundStyle(.tint)
 				.accessibilityHidden(true)
 
-			Text(title)
+			Text(title.localized())
 				.font(.headline)
 
-			Text(message)
+			Text(message.localized())
 				.font(.caption)
 				.foregroundStyle(.secondary)
 				.multilineTextAlignment(.center)

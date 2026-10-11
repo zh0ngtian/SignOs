@@ -40,11 +40,14 @@ def main():
                             "Feather/Backend/Storage/Storage+SourceMetadata.swift", "Feather/Backend/Observable/UpdateManager.swift",
                             "Feather/Backend/CloudSource/CloudSourceModels.swift", "Feather/Backend/CloudSource/CloudSourceStore.swift",
                             "Feather/Backend/CloudSource/CloudSourceCredentials.swift",
+                            "NimbleKit/Sources/NimbleExtensions/String/String+localized.swift",
                             "Tests/UpdateManagerRegression.swift"]], "-o", str(binary)], check=True, env=env)
+        subprocess.run(["xcrun", "xcstringstool", "compile", str(ROOT / "Feather/Resources/Localizable.xcstrings"),
+                        "--output-directory", str(app), "--language", "zh-Hans", "--language", "en"], check=True)
         bundle_id = "com.signos.update-test-" + uuid.uuid4().hex
         (app / "Info.plist").write_bytes(plistlib.dumps({
             "CFBundleIdentifier": bundle_id, "CFBundleExecutable": binary.name,
-            "CFBundleName": "Update Regression", "CFBundlePackageType": "APPL",
+            "CFBundleName": "Update Regression", "CFBundleDevelopmentRegion": "en", "CFBundlePackageType": "APPL",
             "CFBundleVersion": "1", "CFBundleShortVersionString": "1.0",
             "CFBundleSupportedPlatforms": ["iPhoneSimulator"], "MinimumOSVersion": "17.0",
         }))
@@ -52,7 +55,7 @@ def main():
             subprocess.run(["xcrun", "simctl", "install", args.simulator, str(app)], check=True)
             # Allow cold CI simulator startup; completion still requires the explicit success marker.
             try:
-                result = subprocess.run(["xcrun", "simctl", "launch", "--console", args.simulator, bundle_id],
+                result = subprocess.run(["xcrun", "simctl", "launch", "--console", args.simulator, bundle_id, "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"],
                                         check=True, timeout=180, capture_output=True, text=True)
             except subprocess.TimeoutExpired as error:
                 print(error.stdout or b"")

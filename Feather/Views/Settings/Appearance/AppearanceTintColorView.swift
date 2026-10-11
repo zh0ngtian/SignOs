@@ -45,7 +45,7 @@ struct AppearanceTintColorView: View {
 									.strokeBorder(Color.black.opacity(0.3), lineWidth: 2)
 							)
 
-						Text(option.name)
+						Text(String.localized(option.name))
 							.font(.subheadline)
 							.foregroundColor(.secondary)
 					}
@@ -59,7 +59,7 @@ struct AppearanceTintColorView: View {
 					.onTapGesture {
 						_selectedColorHex = option.hex
 					}
-					.accessibilityLabel(Text(option.name))
+					.accessibilityLabel(Text(String.localized(option.name)))
 				}
 			}
 		}

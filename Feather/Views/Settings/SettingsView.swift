@@ -67,7 +67,7 @@ extension SettingsView {
 					VStack(alignment: .leading, spacing: 3) {
 						Text("SignOs")
 							.font(.title2.weight(.bold))
-						Text(verbatim: "Made By @ihateios / @zh0ngtian")
+						Text(.localized("Made By @ihateios / @zh0ngtian"))
 							.font(.subheadline)
 							.foregroundStyle(.secondary)
 					}
@@ -91,7 +91,6 @@ extension SettingsView {
 		Section {
 			Picker(selection: $_defaultTabRaw) {
 				Text(.localized("Sources")).tag(TabEnum.sources.rawValue)
-				Text(.localized("Search")).tag(TabEnum.search.rawValue)
 				Text(.localized("Library")).tag(TabEnum.library.rawValue)
 				Text(.localized("Updates")).tag(TabEnum.updates.rawValue)
 				Text(.localized("Settings")).tag(TabEnum.settings.rawValue)
@@ -382,7 +381,7 @@ extension SettingsView {
 	@ViewBuilder
 	private func _footer() -> some View {
 		Section {
-			Text(verbatim: "SignOs \(Bundle.main.version) • Made By @ihateios / @zh0ngtian")
+			Text(verbatim: "SignOs \(Bundle.main.version) • \(String.localized("Made By @ihateios / @zh0ngtian"))")
 				.font(.footnote)
 				.foregroundStyle(.tertiary)
 				.frame(maxWidth: .infinity, alignment: .center)
