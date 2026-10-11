@@ -84,8 +84,9 @@ contributors for their work, this wouldn't exist without them.
 
 Download `SignOs.ipa` from [Releases](../../releases/latest) and sign
 it with SideStore, Sideloadly, AltStore, TrollStore or SignOs itself. New commits
-are verified by [iOS Build Check](../../actions/workflows/ios-build.yml).
-Its IPA artifacts and GitHub Release packages require separate signing before installation.
+are build-checked by [iOS Build Check](../../actions/workflows/ios-build.yml).
+CI success means the iOS Release build compiled and linked; functionality is verified
+locally for each change. GitHub Release packages require separate signing before installation.
 `app-repo.json` describes the upstream public 1.0.0 channel and is not updated
 by this build-check workflow.
 
@@ -103,17 +104,19 @@ Project workflow and post-test delivery requirements are in [AGENTS.md](AGENTS.m
 
 [工作流](.github/workflows/ios-build.yml) 在涉及客户端的 `main` push 和面向 `main` 的 PR
 时自动运行，另保留手动构建和 `v*` 标签发布入口。自动触发路径覆盖 `Feather/`、Xcode
-工程与配置、本地 Swift 包源码与清单、子模块引用与配置、`Makefile`、许可证资源配置、Swift 回归及
-客户端构建和下载管理器回归脚本；纯服务、文档、规则及其他非客户端改动跳过构建。
-路径过滤不影响标签发布或手动构建。使用 `macos-26` 与 Xcode 26+，递归检出子模块，运行
-`OneViewPhase`、`SourceRepositoryIdentity`、`SourceSubscriptionIdentity` 和
-`SourceMigrationReadiness` 回归及 `GitHubReleaseRegression.py` 发布产物校验回归，
-以及下载管理器的 iOS 模拟器回归，再构建 iOS Release 设备包并检查 IPA 完整性、
-Bundle ID、版本和 SHA-256。
+工程与配置、本地 Swift 包源码与清单、子模块引用与配置、`Makefile`、许可证资源配置、
+Swift 回归、客户端构建和模拟器回归脚本及构建工作流自身；纯服务、文档、规则和其他
+非客户端改动跳过自动构建。
+路径过滤不影响标签发布或手动构建。使用 `macos-26` 与 Xcode 26+，递归检出子模块，
+检查 Xcode 和 iOS SDK 后，仅执行一次 `generic/platform=iOS` 的 Release 构建，
+设置 `CODE_SIGNING_ALLOWED=NO`。编译、链接成功即通过。
 
-流水线不依赖私有 `TLS_DIR` 或分发签名材料。产物 `SignOs-ci-<commit>` 包含
-`SignOs.ipa` 与 `build-metadata.json`，保留 14 天；构建日志与 Xcode result bundle
-保留 7 天，构建失败时也会尝试上传。IPA 是构建检查产物，安装前需另行签名。
+日常 push / PR 和手动构建不运行 Swift / Python 回归，不启动、安装或运行模拟器，
+不打包或校验 IPA、不生成构建元数据，也不上传成功产物或诊断文件。
+失败时尝试上传构建日志与 Xcode result bundle，保留 7 天。
+流水线不依赖私有 `TLS_DIR` 或分发签名材料。**CI 成功只表示构建通过**；功能按改动范围
+在本地完成回归与运行验收。此前一次模拟器回归耗时 8 分 16 秒，精简后省去这一段；
+依赖下载和 Release 编译仍需时间，实际节省量以运行结果为准。
 
 本地复现流水线构建步骤：
 
@@ -122,6 +125,20 @@ git submodule sync --recursive
 git submodule update --init --recursive
 bash scripts/check_ios_build.sh "$(mktemp -d /tmp/signos-ios-build.XXXXXX)"
 ```
+
+### 手动按需完整回归
+
+[Full iOS Regression](.github/workflows/ios-regression.yml) 只通过 `workflow_dispatch`
+按需运行，与日常构建及标签发布独立。它运行 `Tests/test_*.py` 的 Python 回归、
+`GitHubReleaseRegression.py` 发布工具回归、`OneViewPhase`、`SourceRepositoryIdentity`、
+`SourceSubscriptionIdentity`、`SourceMigrationReadiness` Swift 回归，以及更新管理器和
+下载管理器的 iOS 模拟器回归；需要时在 Actions 页面选择分支并点击 Run workflow，或运行：
+
+```sh
+gh workflow run ios-regression.yml --ref main
+```
+
+该手动入口不替代改动所需的本地功能验收，也不包含依赖真机或私有配置的 OTA 验收。
 
 下载管理器回归使用生产 `DownloadManager.swift` 和本地限速 HTTP 服务，验证重复调用
 只产生一个传输、暂停恢复复用原任务、取消行为及下载完成后的导入等待。签名、导入和
@@ -154,13 +171,19 @@ git tag -a v1.0.11 <verified-commit-sha> -m "SignOs 1.0.11"
 git push origin v1.0.11
 ```
 
-标签 push 会重新执行回归与 iOS Release 构建。只有构建成功、标签版本与
+标签 push 会执行一次 iOS Release 构建，并通过构建脚本的 `--package-ipa` 模式打包和
+校验 IPA，生成版本、身份、提交和 SHA-256 元数据。此流程不自动运行回归；发布前按改动
+范围完成本地验证，需要完整回归时运行上文的手动工作流。只有构建成功、标签版本与
 IPA 版本一致，且下载产物的提交、身份、大小和校验和通过检查，
 `Publish GitHub Release` 才会发布以下长期下载文件：
 
 - `SignOs.ipa`：未经过分发签名的 iOS 包，安装前需自行签名。
 - `build-metadata.json`：提交、版本、构建号、最低 iOS 版本和 IPA SHA-256。
 - `SHA256SUMS`：IPA 和元数据的 SHA-256；下载后运行 `shasum -a 256 -c SHA256SUMS` 验证。
+
+标签构建的中间产物 `SignOs-ci-<commit>` 包含 `SignOs.ipa` 与 `build-metadata.json`，
+保留 14 天，供发布任务下载校验；Release 附件长期保留。标签流程同样只在失败时上传
+构建诊断，IPA 安装前需另行签名。
 
 Release 说明包含安装要求和自动生成的变更记录。发布使用仓库自带的
 `GITHUB_TOKEN`，无须私有签名或 TLS 配置。等待标签对应的整个工作流成功，

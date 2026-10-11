@@ -1,0 +1,58 @@
+name: Full iOS Regression
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regression:
+    name: Swift, Python and simulator regressions
+    runs-on: macos-26
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Check Xcode and iOS SDK
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          XCODE_MAJOR=$(xcodebuild -version | awk '/^Xcode / { split($2, version, "."); print version[1] }')
+          test "$XCODE_MAJOR" -ge 26
+          xcodebuild -showsdks | grep iphoneos
+
+      - name: Run Python regressions
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s Tests -p 'test_*.py'
+          python3 Tests/GitHubReleaseRegression.py
+
+      - name: Run Swift regressions
+        run: |
+          set -euo pipefail
+          for TEST in OneViewPhase SourceRepositoryIdentity SourceSubscriptionIdentity SourceMigrationReadiness; do
+            BINARY="$RUNNER_TEMP/signos-$TEST"
+            xcrun swiftc "Feather/Utilities/$TEST.swift" "Tests/${TEST}Regression.swift" -o "$BINARY"
+            "$BINARY"
+            rm "$BINARY"
+          done
+
+      - name: Run update and download manager simulator regressions
+        run: |
+          set -euo pipefail
+          SIMULATOR_ID=$(xcrun simctl list devices available -j | python3 -c 'import json, sys; print(next(d["udid"] for ds in json.load(sys.stdin)["devices"].values() for d in ds if d["name"].startswith("iPhone")))')
+          xcrun simctl bootstatus "$SIMULATOR_ID" -b
+          python3 scripts/test_update_manager.py "$SIMULATOR_ID"
+          python3 scripts/test_download_manager_simulator.py "$SIMULATOR_ID"

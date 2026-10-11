@@ -1,14 +1,20 @@
 #!/bin/bash
-# Build a device IPA for CI checks without distribution signing or private TLS.
+# Build for iOS without signing; optionally package an IPA for tag releases.
 set -euo pipefail
 
-if [[ -n ${RELEASE_TAG:-} ]] && [[ ! $RELEASE_TAG =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+BUILD_OUTPUT=${1:?Usage: bash scripts/check_ios_build.sh /path/to/empty-output-directory [--package-ipa]}
+PACKAGE_IPA=${2:-}
+if [[ $# -gt 2 ]] || [[ -n $PACKAGE_IPA && $PACKAGE_IPA != --package-ipa ]]; then
+  echo 'Usage: bash scripts/check_ios_build.sh /path/to/empty-output-directory [--package-ipa]' >&2
+  exit 1
+fi
+
+if [[ $PACKAGE_IPA == --package-ipa && -n ${RELEASE_TAG:-} ]] && [[ ! $RELEASE_TAG =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
   echo 'Release tags must use vX.Y.Z (for example, v1.0.11).' >&2
   exit 1
 fi
 
 REPO_ROOT=$(cd "$(dirname "$0")/.." && pwd)
-BUILD_OUTPUT=${1:?Usage: bash scripts/check_ios_build.sh /path/to/empty-output-directory}
 mkdir -p "$BUILD_OUTPUT"
 BUILD_OUTPUT=$(cd "$BUILD_OUTPUT" && pwd)
 cd "$REPO_ROOT"
@@ -25,6 +31,10 @@ xcodebuild \
   DEPLOYMENT_LOCATION=NO \
   ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES=NO \
   build 2>&1 | tee "$BUILD_OUTPUT/build.log"
+
+if [[ $PACKAGE_IPA != --package-ipa ]]; then
+  exit 0
+fi
 
 mkdir -p "$BUILD_OUTPUT/Payload"
 ditto "$BUILD_OUTPUT/DerivedData/Build/Products/Release-iphoneos/SignOs.app" "$BUILD_OUTPUT/Payload/SignOs.app"
