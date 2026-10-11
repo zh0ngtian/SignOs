@@ -329,6 +329,14 @@ SHA-256 为 `5c328d245e765930ff5ad38f46f66e51a82e0939cdbc8e9378112c11d277350e`�
 GitHub Release 保留原未签名产物。真机覆盖安装与数据保留未在本次验证；
 实测记录见 [OTA 发布凭证](docs/plans/evidence/ota-publication-20261012.json)。
 
+2026-10-12 后续发布 1.0.15（16）：软件源同步及更新操作统一为搜索页的胶囊样式，
+隐藏搜索标签但保留实现；补齐 523 条简体中文翻译，覆盖界面、动态提示、通知和快捷指令。
+最终提交通过本地构建、中文更新管理器回归及模拟器界面验收（含深色和最大辅助字体），
+GitHub Actions 构建与标签发布均成功。相同 CI 产物完成 Ad Hoc 签名及 OTA 发布，
+固定入口、manifest、安装页和完整 IPA 下载核验通过。签名包为 14,855,845 字节，
+SHA-256 为 `f3ed710e2c1a071a573885d12dde37abf428fb571b5c7ddadff7bfa3529cc7bd`。真机覆盖安装未在本次验证；
+实测记录见 [1.0.15 发布凭证](docs/plans/evidence/ota-publication-1.0.15-20261012.json)。
+
 The installed 1.0.0 release is this project's upgrade baseline. The private
 configuration now uses `compatibilityIpa` plus `compatibilityIpaSha256`, with
 `firstInstall` removed. Preserve that signed IPA and do not reuse another app's

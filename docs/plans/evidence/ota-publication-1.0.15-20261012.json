@@ -1,0 +1,39 @@
+{
+  "version": "1.0.15",
+  "buildNumber": "16",
+  "bundleId": "com.signos.app",
+  "signed": true,
+  "size": 14855845,
+  "sha256": "f3ed710e2c1a071a573885d12dde37abf428fb571b5c7ddadff7bfa3529cc7bd",
+  "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+  "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.0.15/latest.ipa",
+  "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.0.15/manifest.plist",
+  "publishedAt": "2026-10-11T17:40:20.905944+00:00",
+  "sourceCommit": "f6af79325526f05ede4703d164d3ad694ed46d99",
+  "unsignedIpaSha256": "bad3321bdf770f3a3b766a347ee60b3c61f91dabf7a95fb5e9a0479c9ba80c48",
+  "githubReleaseUrl": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.0.15",
+  "buildRun": 38159617004,
+  "releaseRun": 38160477787,
+  "fixedIpaUrl": "https://192.168.123.79:8769/channels/signos/current/latest.ipa",
+  "httpsFullDownloadVerified": true,
+  "localQA": {
+    "version": "1.0.15",
+    "buildNumber": "16",
+    "sourceCommit": "f6af79325526f05ede4703d164d3ad694ed46d99",
+    "simplifiedChineseEntries": 523,
+    "simulator": "iPhone 17 Pro / iOS 26.5",
+    "checks": [
+      "Simulator Debug build passed",
+      "Chinese update manager regression passed",
+      "Four tabs without Search; Search implementation retained",
+      "Legacy Search launch preference falls back to Sources",
+      "Source Sync and Updates actions share the Search Get capsule label",
+      "Chinese Sources, Updates and Settings screens verified",
+      "Check completes source synchronization and update comparison",
+      "Dark appearance and maximum accessibility text size verified",
+      "Compiler-extracted English UI and Shortcuts keys covered; URL placeholders preserved",
+      "Other locale values preserved"
+    ],
+    "physicalUpgradeVerified": false
+  }
+}
