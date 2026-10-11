@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build for iOS without signing; optionally package an IPA for tag releases.
+# Build for iOS without signing; optionally retain an IPA for a later tag release.
 set -euo pipefail
 
 BUILD_OUTPUT=${1:?Usage: bash scripts/check_ios_build.sh /path/to/empty-output-directory [--package-ipa]}

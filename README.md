@@ -105,17 +105,20 @@ Project workflow and post-test delivery requirements are in [AGENTS.md](AGENTS.m
 [工作流](.github/workflows/ios-build.yml) 在涉及客户端的 `main` push 和面向 `main` 的 PR
 时自动运行，另保留手动构建和 `v*` 标签发布入口。自动触发路径覆盖 `Feather/`、Xcode
 工程与配置、本地 Swift 包源码与清单、子模块引用与配置、`Makefile`、许可证资源配置、
-Swift 回归、客户端构建和模拟器回归脚本及构建工作流自身；纯服务、文档、规则和其他
+Swift 回归、客户端构建、发布脚本及对应回归、模拟器回归脚本和构建工作流自身；纯服务、文档、规则和其他
 非客户端改动跳过自动构建。
 路径过滤不影响标签发布或手动构建。使用 `macos-26` 与 Xcode 26+，递归检出子模块，
 检查 Xcode 和 iOS SDK 后，仅执行一次 `generic/platform=iOS` 的 Release 构建，
-设置 `CODE_SIGNING_ALLOWED=NO`。编译、链接成功即通过。
+设置 `CODE_SIGNING_ALLOWED=NO`。PR 和其他分支的手动构建以编译、链接成功为准；
+`main` push 与 `main` 手动构建还会打包、校验 IPA 并保留发布产物。
 
-日常 push / PR 和手动构建不运行 Swift / Python 回归，不启动、安装或运行模拟器，
-不打包或校验 IPA、不生成构建元数据，也不上传成功产物或诊断文件。
-失败时尝试上传构建日志与 Xcode result bundle，保留 7 天。
-流水线不依赖私有 `TLS_DIR` 或分发签名材料。**CI 成功只表示构建通过**；功能按改动范围
-在本地完成回归与运行验收。此前一次模拟器回归耗时 8 分 16 秒，精简后省去这一段；
+日常 push / PR 和手动构建不运行 Swift / Python 回归，不启动、安装或运行模拟器。
+`main` 构建使用 `--package-ipa` 模式，上传 `SignOs-ci-<commit>`，包含 IPA 与构建元数据，
+保留 14 天；其他构建不打包或上传成功产物。失败时尝试上传构建日志与 Xcode result bundle，
+保留 7 天。
+流水线不依赖私有 `TLS_DIR` 或分发签名材料。**CI 成功不能替代功能验收**；功能按改动范围
+在本地完成回归与运行验收；`main` 构建还证明 IPA 身份与完整性校验通过。
+此前一次模拟器回归耗时 8 分 16 秒，精简后省去这一段；
 依赖下载和 Release 编译仍需时间，实际节省量以运行结果为准。
 
 本地复现流水线构建步骤：
@@ -172,8 +175,10 @@ git tag -a v1.0.11 <verified-commit-sha> -m "SignOs 1.0.11"
 git push origin v1.0.11
 ```
 
-标签 push 会执行一次 iOS Release 构建，并通过构建脚本的 `--package-ipa` 模式打包和
-校验 IPA，生成版本、身份、提交和 SHA-256 元数据。此流程不自动运行回归；发布前按改动
+标签 push **不再执行 iOS 构建**。发布任务通过 `scripts/find_release_artifact.py` 查找
+同一仓库、同一完整提交 SHA 的成功 `main` push / 手动构建，只下载其中未过期的
+`SignOs-ci-<commit>` 产物；不使用其他提交、标签或 PR 构建。随后重新校验包版本、
+身份、提交、大小和 SHA-256，生成校验和与发布说明。此流程不自动运行回归；发布前按改动
 范围完成本地验证，需要完整回归时运行上文的手动工作流。只有构建成功、标签版本与
 IPA 版本一致，且下载产物的提交、身份、大小和校验和通过检查，
 `Publish GitHub Release` 才会发布以下长期下载文件：
@@ -182,9 +187,12 @@ IPA 版本一致，且下载产物的提交、身份、大小和校验和通过�
 - `build-metadata.json`：提交、版本、构建号、最低 iOS 版本和 IPA SHA-256。
 - `SHA256SUMS`：IPA 和元数据的 SHA-256；下载后运行 `shasum -a 256 -c SHA256SUMS` 验证。
 
-标签构建的中间产物 `SignOs-ci-<commit>` 包含 `SignOs.ipa` 与 `build-metadata.json`，
-保留 14 天，供发布任务下载校验；Release 附件长期保留。标签流程同样只在失败时上传
-构建诊断，IPA 安装前需另行签名。
+`main` 构建的中间产物 `SignOs-ci-<commit>` 保留 14 天，Release 附件长期保留。
+若该提交没有成功构建产物或产物已过期，标签发布会失败并提示先重跑该提交对应的
+`main` 构建工作流，再重跑标签工作流；不会自动重复构建或改用其他提交的包。
+标签发布在 Ubuntu 上完成，无须再次申请 macOS runner。IPA 安装前需另行签名。
+跨工作流产物下载使用 `GITHUB_TOKEN` 的 `actions: read` 权限，见
+[download-artifact 官方说明](https://github.com/actions/download-artifact/blob/v4/README.md#download-artifacts-from-other-workflow-runs-or-repositories)。
 
 Release 说明包含安装要求和自动生成的变更记录。发布使用仓库自带的
 `GITHUB_TOKEN`，无须私有签名或 TLS 配置。等待标签对应的整个工作流成功，
