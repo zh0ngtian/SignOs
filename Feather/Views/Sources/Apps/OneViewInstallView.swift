@@ -89,7 +89,7 @@ struct WSOneViewGetButton: View {
 	@State private var _presentingSign = false
 	@State private var _cancellable: AnyCancellable?
 	@State private var _speedometer = WSSpeedometer()
-	@State private var _observedDownloadID: String?
+	@State private var _observedDownload: Download?
 
 	var body: some View {
 		let tracker = OneViewTracker(sourceURL: sourceURL, source: source, app: app, startedAt: _startedAt)
@@ -241,14 +241,14 @@ struct WSOneViewGetButton: View {
 	private func _setupObserver() {
 		_cancellable?.cancel()
 		guard let download = downloadManager.getDownload(by: app.currentUniqueId) else {
-			_observedDownloadID = nil
+			_observedDownload = nil
 			_progress = 0
 			_speedText = ""
 			return
 		}
-		if _observedDownloadID != download.id {
+		if _observedDownload !== download {
 			_speedometer = WSSpeedometer()
-			_observedDownloadID = download.id
+			_observedDownload = download
 		}
 		_progress = download.overallProgress
 		_cancellable = Publishers.CombineLatest(download.$progress, download.$bytesDownloaded).sink { _, bytes in
