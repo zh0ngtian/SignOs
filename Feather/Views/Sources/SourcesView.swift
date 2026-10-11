@@ -1,8 +1,8 @@
 //
-//  DiscoverView.swift
+//  SourcesView.swift
 //  Feather
 //
-//  App Store "Today"-style discover surface, built from scratch.
+//  Source subscriptions and management in one dedicated tab.
 //
 
 import SwiftUI
@@ -12,7 +12,7 @@ import NukeUI
 import NimbleViews
 
 // MARK: - View
-struct DiscoverView: View {
+struct SourcesView: View {
 	@StateObject private var viewModel = SourcesViewModel.shared
 	@State private var _isAddingPresenting = false
 	@State private var _autoSourceOverrides: [String: Bool] = [:]
@@ -28,11 +28,13 @@ struct DiscoverView: View {
 	var body: some View {
 		NavigationStack {
 			ScrollView {
-				VStack(alignment: .leading, spacing: 30) {
+				VStack(alignment: .leading, spacing: WSSpacing.sectionGap) {
 					WSHeroHeader(
-						eyebrow: Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day()),
-						title: "Discover"
+						eyebrow: "SignOs",
+						title: .localized("Sources")
 					)
+
+					_remoteManagementCard()
 
 					_sourcesSection()
 
@@ -42,11 +44,11 @@ struct DiscoverView: View {
 						_addCard()
 					}
 				}
-				.padding(.horizontal, 16)
-				.padding(.top, 4)
-				.padding(.bottom, 28)
+				.padding(.horizontal, WSSpacing.screenPadding)
+				.padding(.top, WSSpacing.xs)
+				.padding(.bottom, WSSpacing.xxl + 8)
 			}
-			.background(Color(uiColor: .systemGroupedBackground))
+			.background(WSSurface.background)
 			.toolbar(.hidden, for: .navigationBar)
 			.refreshable {
 				await viewModel.fetchSources(_sources, refresh: true)
@@ -65,7 +67,7 @@ struct DiscoverView: View {
 }
 
 // MARK: - Sections
-extension DiscoverView {
+extension SourcesView {
 	@ViewBuilder
 	private func _sourcesSection() -> some View {
 		VStack(alignment: .leading, spacing: 12) {
@@ -85,19 +87,48 @@ extension DiscoverView {
 					.buttonStyle(.plain)
 
 					ForEach(_sources) { source in
-						NavigationLink {
-							SourceAppsView(object: [source], viewModel: viewModel)
-						} label: {
-							_sourceCard(source)
+						HStack(spacing: 0) {
+							NavigationLink {
+								SourceAppsView(object: [source], viewModel: viewModel)
+							} label: {
+								_sourceCard(source)
+							}
+							.buttonStyle(.plain)
+
+							Menu {
+								_sourceContextMenu(source)
+							} label: {
+								Image(systemName: "ellipsis.circle")
+									.font(.title3)
+									.frame(width: 44, height: 44)
+							}
+							.accessibilityLabel(Text("Manage Source"))
+							.accessibilityValue(source.name ?? .localized("Source"))
+							.padding(.trailing, 8)
 						}
-						.buttonStyle(.plain)
-						.contextMenu {
-							_sourceContextMenu(source)
-						}
+						.background(WSRadius.continuous(WSRadius.lg).fill(WSSurface.card))
 					}
 				}
 			}
 		}
+	}
+
+	private func _remoteManagementCard() -> some View {
+		NavigationLink(destination: CloudSourceManagerView()) {
+			HStack(spacing: WSSpacing.md) {
+				WSIconTile(systemImage: "cloud.fill", color: .cyan)
+				Text("管理远端软件源")
+					.font(.body.weight(.semibold))
+					.foregroundStyle(.primary)
+				Spacer()
+				Image(systemName: "chevron.forward")
+					.font(.footnote.weight(.semibold))
+					.foregroundStyle(.secondary)
+			}
+			.padding(WSSpacing.cardPadding)
+			.background(WSRadius.continuous(WSRadius.lg).fill(WSSurface.card))
+		}
+		.buttonStyle(.plain)
 	}
 
 	private func _allAppsCard() -> some View {
@@ -151,10 +182,6 @@ extension DiscoverView {
 				.foregroundStyle(.tertiary)
 		}
 		.padding(14)
-		.background(
-			RoundedRectangle(cornerRadius: 20, style: .continuous)
-				.fill(Color(uiColor: .secondarySystemGroupedBackground))
-		)
 	}
 
 	private func _emptyCard() -> some View {
@@ -220,7 +247,7 @@ extension DiscoverView {
 }
 
 // MARK: - Source health & rules
-extension DiscoverView {
+extension SourcesView {
 	private func _sourceContextMenu(_ source: AltSource) -> some View {
 		let autoEnabled = _autoSourceOverrides[source.identifier ?? ""] ?? true
 		return Group {
@@ -231,7 +258,7 @@ extension DiscoverView {
 				AutoUpdateManager.shared.setSourceAutoUpdate(now, for: source)
 			} label: {
 				Label(
-					autoEnabled ? "Disable Auto-Updates" : "Enable Auto-Updates",
+					autoEnabled ? String.localized("Disable Auto-Updates") : String.localized("Enable Auto-Updates"),
 					systemImage: "automatic"
 				)
 			}

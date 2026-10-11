@@ -12,23 +12,21 @@ import SwiftUI
 struct ExtendedTabbarView: View {
 	@Environment(\.horizontalSizeClass) var horizontalSizeClass
 	@AppStorage("Feather.tabCustomization") var customization = TabViewCustomization()
-	@AppStorage("SignOs.defaultTab") private var _defaultTabRaw: String = TabEnum.discover.rawValue
 	@State private var _selection: TabEnum
 
 	init() {
-		let stored = UserDefaults.standard.string(forKey: "SignOs.defaultTab") ?? TabEnum.discover.rawValue
-		__selection = State(initialValue: TabEnum(rawValue: stored) ?? .discover)
+		__selection = State(initialValue: TabEnum.launchTab())
 	}
 
 	var body: some View {
 		TabView(selection: $_selection) {
-			ForEach(TabEnum.defaultTabs, id: \.hashValue) { tab in
+			ForEach(TabEnum.defaultTabs, id: \.self) { tab in
 				Tab(tab.title, systemImage: tab.icon, value: tab) {
 					TabEnum.view(for: tab)
 				}
 			}
 
-			ForEach(TabEnum.customizableTabs, id: \.hashValue) { tab in
+			ForEach(TabEnum.customizableTabs, id: \.self) { tab in
 				Tab(tab.title, systemImage: tab.icon, value: tab) {
 					TabEnum.view(for: tab)
 				}

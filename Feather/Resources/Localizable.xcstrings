@@ -15938,6 +15938,13 @@
         }
       }
     },
+    "Manage Source": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Manage Source" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "管理软件源" } }
+      }
+    },
     "Sources": {
       "comment": "Sources tab",
       "extractionState": "manual",

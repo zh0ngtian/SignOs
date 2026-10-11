@@ -9,7 +9,7 @@ import SwiftUI
 import NimbleViews
 
 enum TabEnum: String, CaseIterable, Hashable {
-	case discover
+	case sources
 	case search
 	case library
 	case updates
@@ -18,7 +18,7 @@ enum TabEnum: String, CaseIterable, Hashable {
 
 	var title: String {
 		switch self {
-		case .discover: 	return .localized("Discover")
+		case .sources: 	return .localized("Sources")
 		case .search: 		return .localized("Search")
 		case .library: 		return .localized("Library")
 		case .updates: 		return .localized("Updates")
@@ -29,7 +29,7 @@ enum TabEnum: String, CaseIterable, Hashable {
 
 	var icon: String {
 		switch self {
-		case .discover: 	return "newspaper.fill"
+		case .sources: 	return "externaldrive.fill"
 		case .search: 		return "magnifyingglass"
 		case .library: 		return "square.stack.3d.up.fill"
 		case .updates: 		return "arrow.triangle.2.circlepath"
@@ -41,7 +41,7 @@ enum TabEnum: String, CaseIterable, Hashable {
 	@ViewBuilder
 	static func view(for tab: TabEnum) -> some View {
 		switch tab {
-		case .discover: DiscoverView()
+		case .sources: SourcesView()
 		case .search: SearchView()
 		case .library: LibraryView()
 		case .updates: UpdatesView()
@@ -50,9 +50,19 @@ enum TabEnum: String, CaseIterable, Hashable {
 		}
 	}
 
+	static func launchTab(in defaults: UserDefaults = .standard) -> TabEnum {
+		let stored = defaults.string(forKey: "SignOs.defaultTab")
+		let tab = stored.flatMap(TabEnum.init(rawValue:)) ?? .sources
+		let launchTab = defaultTabs.contains(tab) ? tab : .sources
+		if stored != launchTab.rawValue {
+			defaults.set(launchTab.rawValue, forKey: "SignOs.defaultTab")
+		}
+		return launchTab
+	}
+
 	static var defaultTabs: [TabEnum] {
 		return [
-			.discover,
+			.sources,
 			.search,
 			.library,
 			.updates,

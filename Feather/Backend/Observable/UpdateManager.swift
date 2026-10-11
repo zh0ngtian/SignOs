@@ -295,7 +295,7 @@ final class UpdateManager: ObservableObject {
 				break
 			}
 			if !matchedRepository {
-				checkIssues.append("\(localApp.name ?? localUUID): linked repository is unavailable. Refresh or restore its source in Discover.")
+				checkIssues.append("\(localApp.name ?? localUUID): linked repository is unavailable. Refresh or restore its source in Sources.")
 			}
 		}
 		checkIssues = Array(Set(checkIssues)).sorted()

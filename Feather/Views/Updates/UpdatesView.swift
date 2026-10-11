@@ -51,8 +51,6 @@ struct UpdatesView: View {
 				VStack(alignment: .leading, spacing: WSSpacing.sectionGap) {
 					WSHeroHeader(eyebrow: "SignOs", title: "Updates")
 
-					_automation()
-
 					if !_sortedUpdates.isEmpty {
 						_availableUpdates()
 					}
@@ -106,70 +104,6 @@ struct UpdatesView: View {
 
 	private var _showEmpty: Bool {
 		updateManager.checkIssues.isEmpty && updateManager.lastCheckedDate != nil && _sortedUpdates.isEmpty && downloadManager.downloads.isEmpty && autoSignManager.currentJob == nil && !_isChecking
-	}
-
-	// MARK: Automation
-
-	@ViewBuilder
-	private func _automation() -> some View {
-		VStack(spacing: WSSpacing.sm + 2) {
-			WSCard {
-				Toggle(isOn: Binding(
-					get: { autoUpdateManager.isAutoUpdateEnabled },
-					set: { autoUpdateManager.isAutoUpdateEnabled = $0 }
-				)) {
-					VStack(alignment: .leading, spacing: 3) {
-						Text("Automatic Updates")
-							.font(.body.weight(.semibold))
-						Text("Updates install themselves in the background")
-							.font(WSType.cardSubtitle)
-							.foregroundStyle(.secondary)
-					}
-				}
-				.tint(.accentColor)
-			}
-
-			WSCard {
-				Toggle(isOn: Binding(
-					get: { autoUpdateManager.isAutoRenewEnabled },
-					set: { autoUpdateManager.isAutoRenewEnabled = $0 }
-				)) {
-					VStack(alignment: .leading, spacing: 3) {
-						Text("Keep Apps Signed")
-							.font(.body.weight(.semibold))
-						Text("Renews your apps automatically in the background")
-							.font(WSType.cardSubtitle)
-							.foregroundStyle(.secondary)
-					}
-				}
-				.tint(.accentColor)
-			}
-
-			HStack(spacing: WSSpacing.sm + 2) {
-				if _isChecking {
-					ProgressView()
-				}
-
-				Text(_statusText)
-					.font(.footnote)
-					.foregroundStyle(.secondary)
-
-				Spacer()
-
-				WSActionButton(title: "Check") {
-					Task { await autoUpdateManager.checkNow(notifyWhenClean: false) }
-				}
-			}
-			.padding(.horizontal, 6)
-		}
-	}
-
-	private var _statusText: String {
-		if _isChecking { return .localized("Checking for Updates") }
-		if let last = autoUpdateManager.lastCheckDate {
-			return .localized("Last checked %@.", arguments: last.formatted(.relative(presentation: .named)))
-		}
-		return .localized("Never checked.")
 	}
 
 	// MARK: Available Updates

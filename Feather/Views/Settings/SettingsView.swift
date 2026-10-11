@@ -31,7 +31,7 @@ struct WSIconTile: View {
 struct SettingsView: View {
 	@AppStorage("SignOs.autoDeleteOldVersions") private var _autoDeleteOldVersions: Bool = true
 	@AppStorage("SignOs.biometricLock") private var _biometricLock: Bool = false
-	@AppStorage("SignOs.defaultTab") private var _defaultTabRaw: String = TabEnum.discover.rawValue
+	@AppStorage("SignOs.defaultTab") private var _defaultTabRaw: String = TabEnum.sources.rawValue
 	@AppStorage("SignOs.badgeUpdates") private var _badgeUpdates: Bool = false
 	@StateObject private var autoUpdateManager = AutoUpdateManager.shared
 	@StateObject private var autoSignManager = AutoSignManager.shared
@@ -90,7 +90,7 @@ extension SettingsView {
 	private func _general() -> some View {
 		Section {
 			Picker(selection: $_defaultTabRaw) {
-				Text(.localized("Discover")).tag(TabEnum.discover.rawValue)
+				Text(.localized("Sources")).tag(TabEnum.sources.rawValue)
 				Text(.localized("Search")).tag(TabEnum.search.rawValue)
 				Text(.localized("Library")).tag(TabEnum.library.rawValue)
 				Text(.localized("Updates")).tag(TabEnum.updates.rawValue)
@@ -233,13 +233,6 @@ extension SettingsView {
 	@ViewBuilder
 	private func _data() -> some View {
 		Section {
-			NavigationLink(destination: CloudSourceManagerView()) {
-				HStack(spacing: 12) {
-					WSIconTile(systemImage: "cloud.fill", color: .cyan)
-					Text("远端软件源")
-				}
-			}
-
 			NavigationLink(destination: CertificatesView()) {
 				HStack(spacing: 12) {
 					WSIconTile(systemImage: "checkmark.seal.fill", color: .green)

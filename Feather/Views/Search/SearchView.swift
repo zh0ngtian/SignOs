@@ -112,7 +112,7 @@ extension SearchView {
 			WSSectionTitle(title: "Your Sources")
 
 			if _sources.isEmpty {
-				Text("Add a source in Discover to search it here.")
+				Text("Add a source in Sources to search it here.")
 					.font(.subheadline)
 					.foregroundStyle(.secondary)
 			} else {
