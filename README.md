@@ -99,8 +99,11 @@ Project workflow and post-test delivery requirements are in [AGENTS.md](AGENTS.m
 
 ### GitHub Actions 构建检查
 
-[工作流](.github/workflows/ios-build.yml) 在 `main` push、面向 `main` 的 PR 和
-手动触发以及 `v*` 标签 push 时运行。使用 `macos-26` 与 Xcode 26+，递归检出子模块，运行
+[工作流](.github/workflows/ios-build.yml) 在涉及客户端的 `main` push 和面向 `main` 的 PR
+时自动运行，另保留手动构建和 `v*` 标签发布入口。自动触发路径覆盖 `Feather/`、Xcode
+工程与配置、本地 Swift 包源码与清单、子模块引用与配置、`Makefile`、许可证资源配置、Swift 回归及
+客户端构建和下载管理器回归脚本；纯服务、文档、规则及其他非客户端改动跳过构建。
+路径过滤不影响标签发布或手动构建。使用 `macos-26` 与 Xcode 26+，递归检出子模块，运行
 `OneViewPhase`、`SourceRepositoryIdentity`、`SourceSubscriptionIdentity` 和
 `SourceMigrationReadiness` 回归及 `GitHubReleaseRegression.py` 发布产物校验回归，
 以及下载管理器的 iOS 模拟器回归，再构建 iOS Release 设备包并检查 IPA 完整性、
@@ -130,8 +133,9 @@ python3 scripts/test_download_manager_simulator.py <SIMULATOR_UDID>
 得到的地址，输出字节数、耗时、吞吐量和 URLSession 分段指标。跳转地址只用于本次
 诊断，不保存签名 URL，也不作为软件源的长期地址。测试结束会移除临时 App 和文件。
 
-常规交付流程为：完成本地必要检查、提交与 push、核对远端提交，并等待
-**该提交**的 `iOS Build Check / iOS Release build` 成功。只触发工作流不算完成。
+常规交付流程为：完成本地必要检查、提交与 push、核对远端提交。涉及客户端时，须等待
+**该提交**的 `iOS Build Check / iOS Release build` 成功；只触发工作流不算完成。
+不涉及客户端时，仅完成受影响部分的检查，无须执行、手动触发或等待客户端构建。
 普通提交和手动构建不创建 GitHub Release。流水线不改版本或构建号；
 标签发布使用下一节的标准流程，本机 OTA 仅在明确要求发包时执行。
 

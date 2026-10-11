@@ -4,8 +4,44 @@ on:
   push:
     branches: [main]
     tags: ['v*']
+    # Client source, dependencies, regressions, and build inputs only.
+    # Tag pushes and workflow_dispatch remain explicit build/release entry points.
+    paths:
+      - 'Feather/**'
+      - 'Feather.xcodeproj/**'
+      - 'Feather.xcworkspace/**'
+      - 'Feather.xcconfig'
+      - 'AltSourceKit/Package.swift'
+      - 'AltSourceKit/Sources/**'
+      - 'NimbleKit/Package.swift'
+      - 'NimbleKit/Sources/**'
+      - 'Zsign'
+      - 'IDeviceKitten'
+      - '.gitmodules'
+      - 'Makefile'
+      - 'license_plist.yml'
+      - 'Tests/**.swift'
+      - 'scripts/check_ios_build.sh'
+      - 'scripts/test_download_manager_simulator.py'
   pull_request:
     branches: [main]
+    paths:
+      - 'Feather/**'
+      - 'Feather.xcodeproj/**'
+      - 'Feather.xcworkspace/**'
+      - 'Feather.xcconfig'
+      - 'AltSourceKit/Package.swift'
+      - 'AltSourceKit/Sources/**'
+      - 'NimbleKit/Package.swift'
+      - 'NimbleKit/Sources/**'
+      - 'Zsign'
+      - 'IDeviceKitten'
+      - '.gitmodules'
+      - 'Makefile'
+      - 'license_plist.yml'
+      - 'Tests/**.swift'
+      - 'scripts/check_ios_build.sh'
+      - 'scripts/test_download_manager_simulator.py'
   workflow_dispatch:
 
 permissions:
