@@ -90,9 +90,13 @@ struct DownloadManagerSimulatorRegression {
         try await wait("continued progress") { first.bytesDownloaded > before }
 
         originalTask.suspend()
-        precondition(originalTask.state == .suspended)
+        try await wait("task suspension") { originalTask.state == .suspended }
+        let suspendedBytes = first.bytesDownloaded
         manager.resumeDownload(first)
-        precondition(first.task === originalTask && originalTask.state == .running)
+        precondition(first.task === originalTask)
+        try await wait("resumed transfer") {
+            originalTask.state == .running && first.bytesDownloaded > suspendedBytes
+        }
         manager.cancelDownload(first)
         precondition(manager.downloads.isEmpty)
         try await wait("cancellation") { originalTask.state == .completed }
