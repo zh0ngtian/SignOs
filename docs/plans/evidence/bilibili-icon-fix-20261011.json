@@ -1,0 +1,142 @@
+{
+  "verifiedAt": "2026-10-11T13:38:46.852508+00:00",
+  "workerVersionId": "617b5880-9663-4353-b5ea-ba72003b845d",
+  "sourceURL": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json",
+  "health": {
+    "service": "signos-source-aggregator",
+    "version": 1,
+    "sourceId": "yao"
+  },
+  "entryId": "dbaf3ff3-71e6-4d56-9e76-0475f0b38142",
+  "before": {
+    "status": "failed",
+    "error": {
+      "code": "ICON_EXTRACTION_FAILED",
+      "message": "无法从 IPA 提取主应用图标，已保留原版本，请检查图标格式",
+      "retryable": false,
+      "details": "ICON_LIMIT"
+    }
+  },
+  "after": {
+    "status": "succeeded",
+    "error": null,
+    "metadata": {
+      "name": "哔哩哔哩",
+      "bundleIdentifier": "com.bilibili.inter",
+      "version": "3.20.1",
+      "buildVersion": "82300200",
+      "minOSVersion": "12.0"
+    },
+    "inspection": {
+      "metadata": {
+        "name": "哔哩哔哩",
+        "bundleIdentifier": "com.bilibili.inter",
+        "version": "3.20.1",
+        "buildVersion": "82300200",
+        "minOSVersion": "12.0"
+      },
+      "entry": "Payload/bili-inter.app/Info.plist",
+      "plistFormat": "xml",
+      "compression": 8,
+      "compressedBytes": 3123,
+      "uncompressedBytes": 11725,
+      "crc32": "0dff24c3",
+      "zip64": false,
+      "entryCount": 775,
+      "centralDirectoryBytes": 87426,
+      "requests": [
+        {
+          "range": "bytes=-65557",
+          "bytes": 65557,
+          "status": 206
+        },
+        {
+          "range": "bytes=182995534-183082959",
+          "bytes": 87426,
+          "status": 206
+        },
+        {
+          "range": "bytes=171878242-171878271",
+          "bytes": 30,
+          "status": 206
+        },
+        {
+          "range": "bytes=171878272-171878304",
+          "bytes": 33,
+          "status": 206
+        },
+        {
+          "range": "bytes=171878305-171881427",
+          "bytes": 3123,
+          "status": 206
+        },
+        {
+          "range": "bytes=552374-552403",
+          "bytes": 30,
+          "status": 206
+        },
+        {
+          "range": "bytes=552404-552434",
+          "bytes": 31,
+          "status": 206
+        },
+        {
+          "range": "bytes=552435-558790",
+          "bytes": 6356,
+          "status": 206
+        }
+      ],
+      "requestCount": 8,
+      "downloadedBytes": 162586,
+      "fullBytes": 183082982,
+      "originalURL": "https://github.com/zh0ngtian/ipa-archive/releases/download/bilibili-inter-v3.20.1-b82300200/Bilibili_3.20.1_82300200.ipa",
+      "finalHost": "release-assets.githubusercontent.com",
+      "strongETag": "\"0x8DF275339DB3767\"",
+      "elapsedMs": 3590,
+      "iconExtractionVersion": 1,
+      "icon": {
+        "sha256": "961d523ba13786320438733624d2a08b1499e6323382e9a2b79c61fe5bb54642",
+        "width": 120,
+        "height": 120,
+        "entry": "Payload/bili-inter.app/icon.png"
+      }
+    },
+    "sha256": "a4d0e65408747085659bef0070837aadbf5ea2713e0d672fe0bf845b52153110",
+    "historyCount": 0,
+    "inspectedAt": "2026-10-11T06:47:23.527Z"
+  },
+  "publicDocuments": [
+    {
+      "path": "/sources/yao.json",
+      "version": "3.20.1",
+      "buildVersion": "82300200",
+      "iconURL": "https://signos-source-aggregator.305301890.workers.dev/app-icons/961d523ba13786320438733624d2a08b1499e6323382e9a2b79c61fe5bb54642.png",
+      "sha256": "a4d0e65408747085659bef0070837aadbf5ea2713e0d672fe0bf845b52153110"
+    },
+    {
+      "path": "/sources/yao.json?legacy=1",
+      "version": "3.20.1",
+      "buildVersion": "82300200",
+      "iconURL": "https://signos-source-aggregator.305301890.workers.dev/app-icons/961d523ba13786320438733624d2a08b1499e6323382e9a2b79c61fe5bb54642.png",
+      "sha256": "a4d0e65408747085659bef0070837aadbf5ea2713e0d672fe0bf845b52153110"
+    }
+  ],
+  "icon": {
+    "bytes": 5768,
+    "contentType": "image/png",
+    "sha256Verified": true,
+    "headVerified": true,
+    "conditionalGETVerified": true
+  },
+  "sameIPAAndMetadata": true,
+  "historyPreserved": true,
+  "regressionsPassed": 33,
+  "deviceVerification": {
+    "observedAt": "2026-10-11T13:39:07Z",
+    "app": "com.signos.app",
+    "screen": "哔哩哔哩",
+    "statusText": "同步成功",
+    "screenshot": "packages/bilibili-icon-fix-20261011/device-sync-succeeded.jpg",
+    "method": "Existing installed SignOs; one retry followed by pull-to-refresh"
+  }
+}

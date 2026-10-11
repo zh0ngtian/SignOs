@@ -65,8 +65,12 @@ export function normalizeIconPNG(bytes) {
   }
   if (!ended || !width || !parts.length || (color === 3 && (!palette || palette.length % 3))) fail();
   const channels = color === 6 ? 4 : color === 2 ? 3 : 1, row = width * channels;
-  const raw = (cgbi ? inflateRawSync : inflateSync)(join(parts), { maxOutputLength: (row + 1) * height });
-  if (raw.length !== (row + 1) * height) fail();
+  const expectedBytes = (row + 1) * height;
+  // workerd's synchronous zlib buffer can grow by a full chunk before EOF,
+  // even when the stream fits the declared pixel count. Allow one bounded
+  // 64 KiB chunk of headroom, then enforce the exact scanline length below.
+  const raw = (cgbi ? inflateRawSync : inflateSync)(join(parts), { maxOutputLength: expectedBytes + 64 * 1024 });
+  if (raw.length !== expectedBytes) fail();
   const decoded = Buffer.alloc(row * height);
   const paeth = (a, b, c) => { const p = a + b - c, x = Math.abs(p - a), y = Math.abs(p - b), z = Math.abs(p - c); return x <= y && x <= z ? a : y <= z ? b : c; };
   for (let y = 0; y < height; y++) {

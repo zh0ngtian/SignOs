@@ -6,6 +6,7 @@ import { publicURL, repository, glob, subscription } from '../src/urls.mjs';
 import { readFileSync } from 'node:fs';
 import { lzfseDecoder } from '../src/lzfse.mjs';
 import { normalizeIconPNG } from '../src/png.mjs';
+import { errorData } from '../src/errors.mjs';
 const decoderModule = new WebAssembly.Module(readFileSync(new URL('../vendor/lzfse/decoder.wasm', import.meta.url)));
 const options = { makeLZFSE: () => lzfseDecoder(decoderModule) };
 
@@ -28,7 +29,10 @@ export function rangeTransport(fixture) {
 for (const fixture of fixtures) {
   test(`Range parser: ${fixture.id}`, async () => {
     const transport = rangeTransport(fixture);
-    if (fixture.error) await assert.rejects(parseIPA('https://fixtures.example/app.ipa', transport, options), e => e.code === fixture.error);
+    if (fixture.error) await assert.rejects(parseIPA('https://fixtures.example/app.ipa', transport, options), e => {
+      if (fixture.id === 'icon-broken-car-limit') assert.equal(errorData(e).details, 'PNG: INVALID_ICON_PNG; CAR: ICON_LIMIT');
+      return e.code === fixture.error;
+    });
     else {
       const result = await parseIPA('https://fixtures.example/app.ipa', transport, options);
       assert.deepEqual(result.metadata, fixture.expected);

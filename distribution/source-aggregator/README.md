@@ -60,6 +60,10 @@ Range 支持 ZIP64、binary/XML plist、Store/Deflate、最大 ZIP 注释和中�
 
 图标转换为最长 256 像素、至多 96 KiB 的标准 PNG，保存在 Durable Object，以 `/app-icons/<PNG-SHA256>.png` 提供公开 GET/HEAD 和条件缓存。提取图标优先于旧展示配置；应用图标不会改动软件源自身的 App Store 图标。已存在订阅在下一次同步补齐提取结果；同一 IPA 的补齐不增加历史版本、不丢失已验证全包 SHA-256。首次图标解析失败不公开，更新失败保留原版本并报告 `ICON_EXTRACTION_FAILED`；无需旧源迁移或本机提取服务。
 
+PNG/CgBI 解压在预期扫描行长度之外保留 64 KiB 的有界缓冲余量，兼容 Workers 同步 zlib 的缓冲增长；解压后仍严格校验实际长度，拒绝多余像素数据。图标失败的 `details` 分别保留 PNG 和 CAR 原因，避免 CAR 限额覆盖最初的 PNG 错误。`npm test` 包含真实 workerd 运行时的多 IDAT、120/256 像素 PNG/CgBI 与超长输出回归。
+
+2026-10-11 已部署并核验哔哩哔哩 3.20.1（82300200）恢复同步成功，直接提取 `icon.png`，原 IPA SHA-256 与历史保持不变；普通/兼容清单、HTTPS 图标 GET/HEAD/条件缓存及手机同步状态均通过。部署版本与当次结果见 [验收记录](../../docs/plans/evidence/bilibili-icon-fix-20261011.json)。
+
 独立 PNG 的 ZIP 压缩输入限制为 2 MiB、解压后 4 MiB；CAR 分别为 8 MiB、16 MiB。位图最大 2048×2048。IPA 主图标超过限额或所有候选编码均不支持时会明确失败。回归覆盖独立 PNG、CgBI、CAR 逻辑图标选择、分块 LZFSE、损坏输入、首次公开、HTTPS 图标路由、更新失败保留，以及不变 IPA 的图标补齐。
 
 任务每次 Alarm 处理一个 IPA，最多三次临时故障重试。订阅修改会使旧修订任务失效。首次失败不公开；更新失败保留旧版本。每个订阅最多保存当前版本和 20 个历史版本。暂停不会删除已发布数据。

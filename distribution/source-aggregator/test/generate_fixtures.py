@@ -6,12 +6,15 @@ expected={'name':info['CFBundleDisplayName'],'bundleIdentifier':info['CFBundleId
 class Streaming(io.BytesIO):
  def seekable(self):return False
  def seek(self,*args):raise io.UnsupportedOperation('not seekable')
-def png(cgbi=False):
+def png(cgbi=False,size=4,split=False,extra=0):
  def chunk(tag,data):return struct.pack('>I',len(data))+tag+data+struct.pack('>I',zlib.crc32(tag+data))
- pixels=(b'\0'+(b'\x00\x00\xff\xff' if cgbi else b'\xff\x00\x00\xff')*4)*4
- compressed=zlib.compress(pixels)
- if cgbi:compressed=compressed[2:-4]
- return b'\x89PNG\r\n\x1a\n'+(chunk(b'CgBI',b'\x40\xa0\x60\x82') if cgbi else b'')+chunk(b'IHDR',struct.pack('>IIBBBBB',4,4,8,6,0,0,0))+chunk(b'IDAT',compressed)+chunk(b'IEND',b'')
+ pixels=(b'\0'+(b'\x00\x00\xff\xff' if cgbi else b'\xff\x00\x00\xff')*size)*size+b'x'*extra
+ compressor=zlib.compressobj(wbits=-15 if cgbi else 15)
+ if split:
+  middle=(size*4+1)*(size//2)
+  parts=[compressor.compress(pixels[:middle])+compressor.flush(zlib.Z_FULL_FLUSH),compressor.compress(pixels[middle:])+compressor.flush()]
+ else:parts=[compressor.compress(pixels)+compressor.flush()]
+ return b'\x89PNG\r\n\x1a\n'+(chunk(b'CgBI',b'\x40\xa0\x60\x82') if cgbi else b'')+chunk(b'IHDR',struct.pack('>IIBBBBB',size,size,8,6,0,0,0))+b''.join(chunk(b'IDAT',part) for part in parts)+chunk(b'IEND',b'')
 def car(chunked=True,cycle=False):
  blocks=[b''];variables={}
  def addblock(data):blocks.append(data);return len(blocks)-1
@@ -39,7 +42,7 @@ def car(chunked=True,cycle=False):
  index=struct.pack('>I',len(blocks))+b''.join(struct.pack('>II',*pair) for pair in offsets)
  var=struct.pack('>I',len(variables))+b''.join(struct.pack('>IB',bid,len(name))+name.encode() for name,bid in variables.items())
  return b'BOMStore'+struct.pack('>IIIIII',1,len(blocks),32+len(body),len(index),32+len(body)+len(index),len(var))+body+index+var
-def make(fmt=plistlib.FMT_BINARY,compress=zipfile.ZIP_DEFLATED,comment=b'',large=False,descriptor=False,multiple=False,missing=False,icon=None):
+def make(fmt=plistlib.FMT_BINARY,compress=zipfile.ZIP_DEFLATED,comment=b'',large=False,descriptor=False,multiple=False,missing=False,icon=None,car_limit=False):
  b=Streaming() if descriptor else io.BytesIO()
  plist=dict(info)
  if icon:
@@ -51,12 +54,20 @@ def make(fmt=plistlib.FMT_BINARY,compress=zipfile.ZIP_DEFLATED,comment=b'',large
    z.writestr('Payload/Fixture.app/WrongIcon.png',png())
    if icon.startswith('car'):z.writestr('Payload/Fixture.app/Assets.car',car(chunked=icon!='car-stored',cycle=icon=='car-cycle'))
    elif icon!='missing':z.writestr('Payload/Fixture.app/PrimaryIcon@3x.png',b'broken' if icon=='broken' else png(cgbi=icon=='cgbi'))
+   if car_limit:z.writestr('Payload/Fixture.app/Assets.car',b'oversized')
   z.writestr('Payload/Fixture.app/PlugIns/Extension.appex/Info.plist',plistlib.dumps({'CFBundleIdentifier':'com.example.extension'}))
   if multiple:z.writestr('Payload/Other.app/Info.plist',plistlib.dumps(info,fmt=fmt))
   if large:
    for i in range(1600):z.writestr(f'Payload/Fixture.app/Resources/empty-{i:05d}.txt',b'')
   z.comment=comment
- return b.getvalue()
+ blob=bytearray(b.getvalue())
+ if car_limit:
+  at=blob.find(b'PK\x01\x02')
+  while blob[at:at+4]==b'PK\x01\x02':
+   nl,el,cl=struct.unpack_from('<HHH',blob,at+28)
+   if blob[at+46:at+46+nl].endswith(b'/Assets.car'):struct.pack_into('<I',blob,at+20,8*1024*1024+1)
+   at+=46+nl+el+cl
+ return bytes(blob)
 def aszip64(blob):
  e=blob.rfind(b'PK\x05\x06');count,cdsize,cdoff=struct.unpack_from('<HII',blob,e+10)
  cd=bytearray(blob[cdoff:e]);nameLen,extraLen=struct.unpack_from('<HH',cd,28)
@@ -93,6 +104,11 @@ add('icon-car-stored',make(icon='car-stored'))
 add('icon-car-lzfse',make(icon='car-lzfse'))
 add('icon-car-cycle',make(icon='car-cycle'),'ICON_EXTRACTION_FAILED')
 add('icon-broken',make(icon='broken'),'ICON_EXTRACTION_FAILED')
+add('icon-broken-car-limit',make(icon='broken',car_limit=True),'ICON_EXTRACTION_FAILED')
 add('icon-missing',make(icon='missing'),'ICON_EXTRACTION_FAILED')
 (root/'fixtures.mjs').write_text('export default '+json.dumps(fixtures,ensure_ascii=False)+';\n')
 print('Generated',len(fixtures),'ZIP/plist/protocol fixtures.')
+(root/'png-fixtures.mjs').write_text('export default '+json.dumps([
+ {'id':f'{"cgbi" if cgbi else "png"}-{size}', 'base64':base64.b64encode(png(cgbi,size,split=True)).decode(),'size':size}
+ for cgbi in (False,True) for size in (120,256)
+]+[{'id':'cgbi-extra-output','base64':base64.b64encode(png(True,120,split=True,extra=1)).decode(),'error':True}])+';\n')

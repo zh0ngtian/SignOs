@@ -155,11 +155,14 @@ export async function parseIPA(url,transport=fetch,options={}) {
   const prefix=main.name.slice(0,-'Info.plist'.length),rootFiles=files.filter(f=>f.name.startsWith(prefix));
   const pngs=rootFiles.filter(f=>f.name.endsWith('.png')&&iconFiles.some(n=>{const base=n.replace(/\.png$/i,'');return new RegExp('^'+base.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?:@[123]x)?(?:~(?:iphone|ipad))?\\.png$','i').test(f.name.slice(prefix.length));}));
   pngs.sort((a,b)=>b.uncompressed-a.uncompressed);
-  const car=rootFiles.find(f=>f.name===prefix+'Assets.car');let lastError;
+  const car=rootFiles.find(f=>f.name===prefix+'Assets.car');let pngError,carError;
   const iconFailure=e=>{if(e instanceof SourceError||['TimeoutError','AbortError'].includes(e.name)||['OBJECT_CHANGED','TRUNCATED_RANGE','RANGE_UNSUPPORTED','BAD_CONTENT_RANGE','ENCODED_RANGE'].includes(e.code))throw e;return e;};
-  for(const f of pngs.slice(0,8))try{icon={...normalizeIconPNG(await readEntry(f,2*1024*1024,4*1024*1024,'ICON_LIMIT')),entry:f.name};break;}catch(e){lastError=iconFailure(e);}
-  if(!icon&&car)try{icon={...extractCARIcon(await readEntry(car,8*1024*1024,16*1024*1024,'ICON_LIMIT'),iconNames.length?iconNames:['AppIcon'],options.makeLZFSE),entry:car.name};}catch(e){lastError=iconFailure(e);}
-  if(!icon&&(iconNames.length||iconFiles.length||car))fail('ICON_EXTRACTION_FAILED',lastError?.code||lastError?.message||'Primary icon is missing');
+  for(const f of pngs.slice(0,8))try{icon={...normalizeIconPNG(await readEntry(f,2*1024*1024,4*1024*1024,'ICON_LIMIT')),entry:f.name};break;}catch(e){const reason=iconFailure(e);pngError??=reason;}
+  if(!icon&&car)try{icon={...extractCARIcon(await readEntry(car,8*1024*1024,16*1024*1024,'ICON_LIMIT'),iconNames.length?iconNames:['AppIcon'],options.makeLZFSE),entry:car.name};}catch(e){carError=iconFailure(e);}
+  if(!icon&&(iconNames.length||iconFiles.length||car))fail('ICON_EXTRACTION_FAILED',[
+   pngError&&`PNG: ${String(pngError.code||pngError.message).slice(0,256)}`,
+   carError&&`CAR: ${String(carError.code||carError.message).slice(0,256)}`,
+  ].filter(Boolean).join('; ')||'Primary icon is missing');
  }
  return {metadata,icon,entry:main.name,plistFormat:binary?'binary':'xml',compression:main.method,compressedBytes:main.compressed,uncompressedBytes:main.uncompressed,crc32:crc.toString(16).padStart(8,'0'),zip64,entryCount:count,centralDirectoryBytes:cdSize,requests,requestCount:requests.length,downloadedBytes:requests.reduce((n,r)=>n+r.bytes,0),fullBytes:total,originalURL:url,finalHost:new URL(resolved).hostname,strongETag:etag,elapsedMs:Date.now()-started};
 }
