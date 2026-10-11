@@ -125,7 +125,10 @@ struct UpdatesView: View {
 	private func _availableUpdates() -> some View {
 		VStack(alignment: .leading, spacing: WSSpacing.md) {
 			WSSectionHeader(title: "Available Updates")
-			WSSectionTitle(title: "", actionTitle: "Update All") { _downloadAll(_sortedUpdates) }
+			HStack {
+				Spacer()
+				WSSearchCapsuleButton(title: "Update All") { _downloadAll(_sortedUpdates) }
+			}
 
 			VStack(spacing: WSSpacing.sm + 2) {
 				ForEach(_sortedUpdates, id: \.id) { update in
