@@ -63,6 +63,7 @@ final class FixtureProtocol: URLProtocol {
     static var onStart: (() -> Void)?
     static var waitForCancellation = false
     static var requests: [URLRequest] = []
+    static var response: ((URLRequest) -> (Data, Int))?
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
     override func startLoading() {
@@ -73,9 +74,10 @@ final class FixtureProtocol: URLProtocol {
             client!.urlProtocol(self, didFailWithError: error)
             return
         }
-        client!.urlProtocol(self, didReceive: HTTPURLResponse(url: request.url!, statusCode: Self.status,
+        let (data, status) = Self.response?(request) ?? (Self.data, Self.status)
+        client!.urlProtocol(self, didReceive: HTTPURLResponse(url: request.url!, statusCode: status,
                     httpVersion: "HTTP/1.1", headerFields: ["Content-Type": "application/json"])!, cacheStoragePolicy: .notAllowed)
-        client!.urlProtocol(self, didLoad: Self.data)
+        client!.urlProtocol(self, didLoad: data)
         client!.urlProtocolDidFinishLoading(self)
     }
     override func stopLoading() {}
@@ -130,7 +132,13 @@ struct UpdateManagerRegression {
         try fixture([app(version: "1.1.4")])
         let requestsBeforeSync = FixtureProtocol.requests.count
         var synchronized = false
-        let syncCompleted = await manager.checkForUpdates(sources: [source, secondSource], localApps: [local]) { repositories in
+        var remoteSynchronized = false
+        let syncCompleted = await manager.checkForUpdates(sources: [source, secondSource], localApps: [local], synchronizeSources: {
+            precondition(FixtureProtocol.requests.count == requestsBeforeSync, "Remote synchronization must finish before downloading feeds")
+            remoteSynchronized = true
+            return []
+        }) { repositories in
+            precondition(remoteSynchronized)
             precondition(repositories.count == 2, "Synchronize every subscribed source, including sources without installed apps")
             precondition(FixtureProtocol.requests.count == requestsBeforeSync + 2, "Download each source only once")
             precondition(manager.updates["museum"]?.remoteVersion == "1.1.3", "Publish sources before comparing app versions")
@@ -145,9 +153,9 @@ struct UpdateManagerRegression {
         let pendingUpdates = manager.updates
         let checkedDate = manager.lastCheckedDate
         FixtureProtocol.error = URLError(.cancelled)
-        let cancelled = await manager.checkForUpdates(sources: [source], localApps: [local]) { _ in
+        let cancelled = await manager.checkForUpdates(sources: [source], localApps: [local], onSourcesSynchronized: { _ in
             preconditionFailure("Cancellation must not publish a partial source synchronization")
-        }
+        })
         precondition(!cancelled && !manager.isChecking)
         precondition(manager.updates == pendingUpdates, "Cancellation must retain pending updates")
         precondition(manager.lastCheckedDate == checkedDate, "Cancellation must not count as a completed check")
@@ -215,6 +223,61 @@ struct UpdateManagerRegression {
         await manager.checkForUpdates(sources: [], localApps: [local])
         precondition(manager.checkIssues.contains { $0.contains("linked repository") }, "A removed source must still be reported")
         checkpoint("HTTP/JSON failures and retry passed")
+        let beforePreflightCancellation = FixtureProtocol.requests.count
+        let cancelledPreflight = await manager.checkForUpdates(sources: [source], localApps: [local], synchronizeSources: {
+            throw CancellationError()
+        })
+        precondition(!cancelledPreflight && FixtureProtocol.requests.count == beforePreflightCancellation)
+        precondition(manager.checkIssues.last?.contains("Tap Check") == true)
+
+        let remoteStore = CloudSourceStore(session: URLSession(configuration: configuration))
+        var catalogRequests = 0
+        var syncRequests = 0
+        func catalog(status: String, failed: Bool = false) -> Data {
+            try! JSONSerialization.data(withJSONObject: [
+                "revision": 1, "settings": ["id": "yao", "identifier": officialID, "name": "Official", "description": "Fixture"],
+                "entries": [["id": "entry", "revision": 1, "config": ["kind": "github", "paused": false],
+                             "published": true, "history": [], "status": status,
+                             "error": failed ? ["code": "upstream", "message": "Upstream unavailable"] as Any : NSNull()],
+                            ["id": "paused", "revision": 1, "config": ["kind": "github", "paused": true],
+                             "published": true, "history": [], "status": "queued"]]
+            ])
+        }
+        FixtureProtocol.response = { request in
+            precondition(request.value(forHTTPHeaderField: "Authorization") == "Bearer fixture-token")
+            precondition(request.cachePolicy == .reloadIgnoringLocalCacheData, "Synchronization must poll fresh catalog data")
+            if request.url!.path == "/api/entries/entry/sync" {
+                precondition(request.httpMethod == "POST")
+                syncRequests += 1
+                return (Data("{}".utf8), 202)
+            }
+            precondition(request.url!.path == "/api/catalog")
+            catalogRequests += 1
+            return (catalog(status: catalogRequests == 2 ? "queued" : "succeeded"), 200)
+        }
+        let remoteIssues = try await remoteStore.synchronizeAndWait(address: "https://example.com", token: "fixture-token", expectedIdentifier: officialID)
+        precondition(remoteIssues.isEmpty && syncRequests == 1 && catalogRequests == 3 && !remoteStore.isBusy)
+        FixtureProtocol.response = { _ in (catalog(status: "failed", failed: true), 200) }
+        let failures = try await remoteStore.synchronizeAndWait(address: "https://example.com", token: "fixture-token", expectedIdentifier: officialID)
+        precondition(failures == ["新订阅: Upstream unavailable"])
+        let requestsBeforeMismatch = FixtureProtocol.requests.count
+        do {
+            _ = try await remoteStore.synchronizeAndWait(address: "https://example.com", token: "fixture-token", expectedIdentifier: "another.source")
+            preconditionFailure("Mismatched source must not synchronize")
+        } catch {
+            precondition(FixtureProtocol.requests.count == requestsBeforeMismatch + 1 && !remoteStore.isBusy)
+        }
+        FixtureProtocol.error = URLError(.cancelled)
+        do {
+            _ = try await remoteStore.synchronizeAndWait(address: "https://example.com", token: "fixture-token", expectedIdentifier: officialID)
+            preconditionFailure("Remote cancellation must propagate")
+        } catch {
+            precondition((error as? URLError)?.code == .cancelled && !remoteStore.isBusy)
+        }
+        FixtureProtocol.error = nil
+        FixtureProtocol.response = nil
+        checkpoint("remote synchronization waits for parsing, reports failures, rejects mismatched sources and propagates cancellation")
+
         print("UpdateManagerRegression passed: migrated legacy record, durable local version, variants, holds/skips, cancellation, HTTP/JSON failures, removed source and retry")
     }
 }

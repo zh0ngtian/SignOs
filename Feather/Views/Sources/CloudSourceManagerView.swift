@@ -13,6 +13,9 @@ struct CloudSourceBackupDocument: FileDocument {
 }
 
 struct CloudSourceManagerView: View {
+    var source: AltSource? = nil
+    var managementAddress: String? = nil
+    private var effectiveAddress: String { managementAddress ?? address }
     @AppStorage("SignOs.cloudSourceAddress") private var address = CloudSourceEndpoint.defaultURL
     @State private var store = CloudSourceStore()
     @State private var token = ""
@@ -54,25 +57,31 @@ struct CloudSourceManagerView: View {
                 }
             } else {
                 Section {
-                    TextField("服务 HTTPS 地址", text: $address)
-                        .textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL)
-                        .accessibilityIdentifier("cloud-source-address")
+                    if let managementAddress {
+                        LabeledContent("服务 HTTPS 地址") { Text(managementAddress).font(.caption).textSelection(.enabled) }
+                    } else {
+                        TextField("服务 HTTPS 地址", text: $address)
+                            .textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL)
+                            .accessibilityIdentifier("cloud-source-address")
+                    }
                     SecureField("管理 Token", text: $token)
                         .textInputAutocapitalization(.never).autocorrectionDisabled()
                         .accessibilityIdentifier("cloud-source-token")
-                    Button("连接") { Task { await store.connect(address: address, token: token) } }
+                    Button("连接") { Task { await store.connect(address: effectiveAddress, token: token, expectedIdentifier: source?.identifier) } }
                         .disabled(store.isBusy || token.isEmpty)
                         .accessibilityIdentifier("cloud-source-connect")
                 } header: { Text("连接远端软件源") } footer: {
                     Text("输入管理 Token 后，可以添加订阅和查看同步结果。")
                 }
             }
+            if let source { SourceManagementSection(source: source, viewModel: SourcesViewModel.shared) }
             if let error = store.errorMessage {
                 Section { Label(error, systemImage: "exclamationmark.circle").foregroundStyle(.orange).textSelection(.enabled) }
             }
             if store.isBusy { Section { ProgressView("正在连接软件源…") } }
         }
-        .navigationTitle("远端软件源")
+        .navigationTitle(source?.name ?? store.snapshot?.settings.name ?? "远端软件源")
+        .toolbar(.visible, for: .navigationBar)
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { await store.refresh() }
         .sheet(isPresented: $isAdding) { NavigationStack { CloudSourceSubscriptionForm(store: store) } }
@@ -106,9 +115,9 @@ struct CloudSourceManagerView: View {
             }
         }
         .task {
-            if let endpoint = try? CloudSourceEndpoint.baseURL(address), let saved = CloudSourceCredentials.read(for: endpoint) {
+            if let endpoint = try? CloudSourceEndpoint.baseURL(effectiveAddress), let saved = CloudSourceCredentials.read(for: endpoint) {
                 token = saved
-                await store.connect(address: address, token: saved)
+                await store.connect(address: effectiveAddress, token: saved, expectedIdentifier: source?.identifier)
             }
             while !Task.isCancelled {
                 do { try await Task.sleep(for: .seconds(2)) } catch { return }
@@ -122,7 +131,7 @@ struct CloudSourceManagerView: View {
             if snapshot.entries.isEmpty { Text("添加 GitHub 仓库或 IPA 下载地址。").foregroundStyle(.secondary) }
             ForEach(snapshot.entries) { entry in
                 NavigationLink(destination: CloudSourceEntryView(store: store, entryID: entry.id)) {
-                    CloudSourceEntryRow(entry: entry)
+                    CloudSourceEntryRow(entry: entry, endpoint: store.endpoint)
                 }
             }
             Button { isAdding = true } label: { Label("添加订阅", systemImage: "plus.circle.fill") }
@@ -179,15 +188,19 @@ private struct CloudSourceSettingsView: View {
 
 private struct CloudSourceEntryRow: View {
     let entry: CloudSourceEntry
+    let endpoint: URL?
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack {
-                Text(entry.title).font(.headline).lineLimit(1)
-                Spacer()
-                if entry.isWorking { ProgressView() }
+        HStack(spacing: 12) {
+            WSAppIcon(url: entry.iconURL(relativeTo: endpoint), size: 48, cornerRadius: 11)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(entry.title).font(.headline).lineLimit(2)
+                Text(entry.versionText).font(.subheadline).foregroundStyle(.secondary)
+                Text(entry.statusText).font(.caption).foregroundStyle(entry.error == nil ? Color.secondary : Color.orange)
+                if let error = entry.error { Text(error.message).font(.caption).foregroundStyle(.secondary) }
             }
-            Text(entry.statusText).font(.caption).foregroundStyle(entry.error == nil ? Color.secondary : Color.orange)
-            if let error = entry.error { Text(error.message).font(.caption).foregroundStyle(.secondary) }
+            Spacer(minLength: 0)
+            if entry.isWorking { ProgressView().accessibilityLabel("正在同步") }
         }
         .padding(.vertical, 3)
     }

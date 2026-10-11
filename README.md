@@ -57,8 +57,9 @@ contributors for their work, this wouldn't exist without them.
 - Existing dylibs and frameworks management
 
 ### The Store Experience
-- Sources tab with source cards, an all-apps entry, add/import/export, per-source
-  update controls and removal, and remote source management
+- Sources tab with source icons, app counts, last refresh times and per-source sync buttons;
+  tap a source to manage it or browse its apps. Remote subscription projects show app icons,
+  versions and build numbers. Add/import/export and per-source automatic updates remain available
 - Search across every source with recent searches
 - Library with filters and quick actions
 - Updates tab with app updates and recent activity; tap CHECK or pull down to synchronize every subscribed source, then check for updates using the same fresh data
@@ -342,6 +343,9 @@ Updates reports source fetch, missing association and ambiguous subscription
 failures as an incomplete check; it does not show or notify “All Apps Up to Date”
 for an incomplete check. CHECK synchronizes all subscribed sources with uncached HTTP 200
 responses, publishes the source browsing cache, then compares versions from that same snapshot.
+For sources with saved management credentials, CHECK first starts remote synchronization and
+clears GitHub release caches and waits for parsing to finish; remote failures remain visible
+as an incomplete check.
 Cancelled checks retain pending updates and leave the source cache and completed-check date
 unchanged; they do not start automatic downloads and offer CHECK to retry.
 Source fetch failures report their actual error (including HTTP status) without treating the source as removed.

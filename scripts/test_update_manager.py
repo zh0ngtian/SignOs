@@ -38,6 +38,8 @@ def main():
                         *[str(ROOT / source) for source in [
                             "Feather/Utilities/SourceRepositoryIdentity.swift", "Feather/Utilities/SourceSubscriptionIdentity.swift",
                             "Feather/Backend/Storage/Storage+SourceMetadata.swift", "Feather/Backend/Observable/UpdateManager.swift",
+                            "Feather/Backend/CloudSource/CloudSourceModels.swift", "Feather/Backend/CloudSource/CloudSourceStore.swift",
+                            "Feather/Backend/CloudSource/CloudSourceCredentials.swift",
                             "Tests/UpdateManagerRegression.swift"]], "-o", str(binary)], check=True, env=env)
         bundle_id = "com.signos.update-test-" + uuid.uuid4().hex
         (app / "Info.plist").write_bytes(plistlib.dumps({

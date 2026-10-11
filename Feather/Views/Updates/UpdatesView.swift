@@ -54,7 +54,7 @@ struct UpdatesView: View {
 						Spacer()
 						if _isChecking { ProgressView() }
 						WSActionButton(title: "Check", isDisabled: _isChecking, minimumHeight: 44) {
-							Task { await autoUpdateManager.checkNow(notifyWhenClean: false) }
+							Task { await autoUpdateManager.checkNow(notifyWhenClean: false, syncManagedSources: true) }
 						}
 						.accessibilityIdentifier("updates.check")
 					}
@@ -101,7 +101,7 @@ struct UpdatesView: View {
 			.background(WSSurface.background)
 			.toolbar(.hidden, for: .navigationBar)
 			.refreshable {
-				await autoUpdateManager.checkNow(notifyWhenClean: false)
+				await autoUpdateManager.checkNow(notifyWhenClean: false, syncManagedSources: true)
 			}
 		}
 	}

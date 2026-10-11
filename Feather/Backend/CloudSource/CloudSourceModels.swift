@@ -34,6 +34,15 @@ struct CloudSourceInspection: Codable {
     let downloadedBytes: Int64
     let crc32: String
     let plistFormat: String
+    let icon: CloudSourceIcon?
+}
+
+struct CloudSourceIcon: Codable {
+    let sha256: String
+}
+
+struct CloudSourcePresentation: Codable {
+    let iconURL: String?
 }
 
 struct CloudSourceVersion: Codable {
@@ -42,6 +51,7 @@ struct CloudSourceVersion: Codable {
     let date: String
     let inspectedAt: String
     let inspection: CloudSourceInspection
+    let iconURL: String?
 }
 
 struct CloudSourceFailure: Codable {
@@ -60,6 +70,21 @@ struct CloudSourceEntry: Codable, Identifiable {
     let status: String
     let error: CloudSourceFailure?
     let lastSuccessAt: String?
+    let presentation: CloudSourcePresentation?
+
+    func iconURL(relativeTo endpoint: URL?) -> URL? {
+        if let sha = current?.inspection.icon?.sha256, sha.count == 64,
+           sha.allSatisfy({ "0123456789abcdef".contains($0) }), let endpoint {
+            return endpoint.appendingPathComponent("app-icons/\(sha).png")
+        }
+        return (presentation?.iconURL ?? current?.iconURL).flatMap(URL.init(string:))
+    }
+
+    var versionText: String {
+        guard let metadata = current?.metadata else { return "版本待解析" }
+        if let build = metadata.buildVersion, !build.isEmpty { return "\(metadata.version) (\(build))" }
+        return metadata.version
+    }
 
     var title: String { current?.metadata.name ?? config.repository ?? config.url ?? "新订阅" }
     var isWorking: Bool { ["queued", "parsing", "retrying"].contains(status) }
@@ -105,6 +130,20 @@ struct CloudSourceCandidate: Codable, Identifiable {
 
 enum CloudSourceEndpoint {
     static let defaultURL = "https://signos-source-aggregator.305301890.workers.dev"
+
+    /// Only aggregator feed paths expose the source-specific management API.
+    static func managementURL(for sourceURL: URL?) -> URL? {
+        guard let sourceURL, sourceURL.scheme?.lowercased() == "https", sourceURL.host != nil,
+              sourceURL.user == nil, sourceURL.password == nil else { return nil }
+        let path = sourceURL.path
+        guard path == "/source.json" || path == "/appstore" ||
+              (path.hasPrefix("/sources/") && path.hasSuffix(".json") && sourceURL.pathComponents.count == 3) else { return nil }
+        var components = URLComponents(url: sourceURL, resolvingAgainstBaseURL: false)
+        components?.path = ""
+        components?.query = nil
+        components?.fragment = nil
+        return components?.url
+    }
 
     static func baseURL(_ value: String) throws -> URL {
         guard let url = URL(string: value.trimmingCharacters(in: .whitespacesAndNewlines)),

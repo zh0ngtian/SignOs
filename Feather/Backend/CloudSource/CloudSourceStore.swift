@@ -8,16 +8,21 @@ final class CloudSourceStore {
     var errorMessage: String?
     private(set) var endpoint: URL?
     @ObservationIgnored private var token = ""
+    @ObservationIgnored private let session: URLSession
+    @ObservationIgnored private var expectedIdentifier: String?
+
+    init(session: URLSession = .shared) { self.session = session }
 
     var sourceURL: URL? {
         guard let endpoint, let id = snapshot?.settings.id else { return nil }
         return endpoint.appendingPathComponent("sources/\(id).json")
     }
 
-    func connect(address: String, token: String) async {
+    func connect(address: String, token: String, expectedIdentifier: String? = nil) async {
         await perform {
             let endpoint = try CloudSourceEndpoint.baseURL(address)
             self.endpoint = endpoint
+            self.expectedIdentifier = expectedIdentifier
             self.token = token.trimmingCharacters(in: .whitespacesAndNewlines)
             try await self.load()
             try CloudSourceCredentials.save(self.token, for: endpoint)
@@ -29,6 +34,7 @@ final class CloudSourceStore {
         snapshot = nil
         token = ""
         endpoint = nil
+        expectedIdentifier = nil
     }
 
     func refresh() async { await perform { try await self.load() } }
@@ -62,6 +68,35 @@ final class CloudSourceStore {
             _ = try await self.request("POST", entry.map { "/api/entries/\($0.id)/sync" } ?? "/api/sync", body: [:])
             try await self.load()
         }
+    }
+
+    /// Manual update checks wait for remote parsing before downloading the public feed.
+    func synchronizeAndWait(address: String, token: String, expectedIdentifier: String?) async throws -> [String] {
+        guard !isBusy else { throw URLError(.resourceUnavailable) }
+        isBusy = true
+        defer { isBusy = false }
+        endpoint = try CloudSourceEndpoint.baseURL(address)
+        self.token = token
+        self.expectedIdentifier = expectedIdentifier
+        try await load()
+        // Per-entry synchronization clears GitHub release caches; the bulk endpoint only schedules jobs.
+        for entry in snapshot?.entries ?? [] where !entry.config.paused {
+            try Task.checkCancellation()
+            _ = try await request("POST", "/api/entries/\(entry.id)/sync", body: [:])
+        }
+        try await load()
+        let deadline = Date().addingTimeInterval(60)
+        while snapshot?.entries.contains(where: { !$0.config.paused && $0.isWorking }) == true {
+            guard Date() < deadline else {
+                throw NSError(domain: "CloudSource", code: 3, userInfo: [NSLocalizedDescriptionKey: "远端同步尚未完成，请稍后点击 CHECK 重试。"])
+            }
+            try await Task.sleep(for: .seconds(2))
+            try await load()
+        }
+        try Task.checkCancellation()
+        return snapshot?.entries.filter { !$0.config.paused && $0.status == "failed" }.map {
+            "\($0.title): \($0.error?.message ?? $0.statusText)"
+        } ?? []
     }
 
     func delete(_ entry: CloudSourceEntry) async {
@@ -102,7 +137,12 @@ final class CloudSourceStore {
 
     private func load() async throws {
         let data = try await request("GET", "/api/catalog")
-        snapshot = try JSONDecoder().decode(CloudSourceSnapshot.self, from: data)
+        let loaded = try JSONDecoder().decode(CloudSourceSnapshot.self, from: data)
+        guard expectedIdentifier == nil || loaded.settings.identifier == expectedIdentifier else {
+            snapshot = nil
+            throw NSError(domain: "CloudSource", code: 2, userInfo: [NSLocalizedDescriptionKey: "管理服务返回的软件源与当前订阅不一致。"])
+        }
+        snapshot = loaded
     }
 
     private func object<T: Encodable>(_ value: T) throws -> Any {
@@ -111,7 +151,7 @@ final class CloudSourceStore {
 
     private func request(_ method: String, _ path: String, body: [String: Any]? = nil) async throws -> Data {
         guard let endpoint else { throw URLError(.badURL) }
-        var request = URLRequest(url: endpoint.appendingPathComponent(String(path.dropFirst())))
+        var request = URLRequest(url: endpoint.appendingPathComponent(String(path.dropFirst())), cachePolicy: .reloadIgnoringLocalCacheData)
         request.httpMethod = method
         request.setValue("SignOs-App/1", forHTTPHeaderField: "User-Agent")
         request.timeoutInterval = 30
@@ -120,7 +160,7 @@ final class CloudSourceStore {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
         }
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
         guard (200..<300).contains(http.statusCode) else {
             struct Failure: Decodable { let error: CloudSourceFailure }

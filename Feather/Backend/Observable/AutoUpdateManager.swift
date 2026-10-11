@@ -149,17 +149,22 @@ final class AutoUpdateManager: ObservableObject {
 	// MARK: - Checking
 
 	@discardableResult
-	func checkNow(notifyWhenClean: Bool = true, silent: Bool = false) async -> Int {
+	func checkNow(notifyWhenClean: Bool = true, silent: Bool = false, syncManagedSources: Bool = false) async -> Int {
 		guard !isAutoChecking else { return UpdateManager.shared.updates.count }
 		isAutoChecking = true
 		defer {
 			isAutoChecking = false
 		}
 
+		let sources = _fetchSources()
 		let completed = await UpdateManager.shared.checkForUpdates(
-			sources: _fetchSources(),
+			sources: sources,
 			localApps: _fetchSignedApps().map { $0 as AppInfoPresentable }
 				+ _fetchImportedApps().map { $0 as AppInfoPresentable },
+			synchronizeSources: {
+				if syncManagedSources { return try await SourceSynchronization.synchronizeManagedSources(sources) }
+				return []
+			},
 			onSourcesSynchronized: { SourcesViewModel.shared.applySynchronizedRepositories($0) }
 		)
 		guard completed else { return UpdateManager.shared.updates.count }

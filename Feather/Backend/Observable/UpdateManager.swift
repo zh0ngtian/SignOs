@@ -57,6 +57,7 @@ final class UpdateManager: ObservableObject {
 	func checkForUpdates(
 		sources: [AltSource],
 		localApps: [AppInfoPresentable],
+		synchronizeSources: @MainActor () async throws -> [String] = { [] },
 		onSourcesSynchronized: @MainActor ([(AltSource, ASRepository)]) -> Void = { _ in }
 	) async -> Bool {
 		guard !isChecking else { return false }
@@ -64,12 +65,13 @@ final class UpdateManager: ObservableObject {
 		isChecking = true
 		defer { isChecking = false }
 		do {
+			let synchronizationIssues = try await synchronizeSources()
 			let result = try await _fetchRepositories(from: sources)
 			try Task.checkCancellation()
 			// Publish the freshly synchronized sources before comparing installed apps.
 			// Both screens consume the same response; checking never downloads it again.
 			onSourcesSynchronized(result.repositories)
-			checkIssues = result.issues
+			checkIssues = synchronizationIssues + result.issues
 			updates = _applySkips(_findUpdates(
 				repositories: result.repositories, localApps: localApps, failedSources: result.failedSources
 			))
