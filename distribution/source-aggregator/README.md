@@ -24,6 +24,15 @@ python3 scripts/cloud_source.py status
 
 最新包迁移使用 `python3 scripts/migrate_cloud_source.py --plan` 和对应实际命令，每个应用只读 `versions[0]`，不导入原历史记录。本次 SignOs 由新正式发布提供，迁移命令加 `--skip-bundle com.signos.app`。图片和展示信息保留，元信息始终由 Range 解析产生。
 
+博物女神的持续订阅已于 2026-10-11 从迁移归档切换到公开仓库
+`zh0ngtian/DailyMusuem`：tag 前缀 `build-`，附件精确匹配
+`MuseumMuse-unsigned.ipa`，包含预发布，保持启用。现有每小时 Cron 继续检查
+该仓库的新 Release；原订阅 ID、旧版兼容标记与 1.1.2 历史包保留。
+当次已核验 1.1.3（9）的公开下载、完整 SHA-256 和普通/兼容软件源入口，见
+[验收记录](../../docs/plans/evidence/museum-release-tracking-20261011.json)。
+`migrate_cloud_source.py` 是原始迁移工具，仍使用归档规则；重跑旧源迁移时应加
+`--skip-bundle tech.zh0ngtian.MuseumMuse`，避免另外创建归档订阅。
+
 用户明确要求双渠道发包时，先按项目的 OTA 流程发布正式签名包，再用 `scripts/publish_signos.py --ipa <同一签名包> --release-json <OTA凭证> --plan` 预检后执行实际发布。工具公开归档到 GitHub，再核对 Cloudflare 的版本、构建号、URL、大小和全包 SHA-256；GitHub 完整 GET 也必须匹配 OTA 凭证。常规交付仍采用 GitHub 构建检查，不自动发布 App。
 
 | 接口 | 功能 |

@@ -232,3 +232,9 @@ UTM 的中央目录超出尾部读取范围，测试成功触发补读。两个�
 - 实现提交 `00aeea2ce1959142a8ed2f4b649b06f37ebccc24` 的 [iOS Build Check](https://github.com/zh0ngtian/SignOs/actions/runs/38123876714) 成功。双渠道、固定入口与兼容入口的验收记录见 [生产发布证据](evidence/dual-channel-publication-20261011.json)。
 
 新实例的无签名备份恢复会重新解析配置；同一持久实例的签名备份可恢复已验证历史。被编辑的备份不能作为手填元信息入口。最多 200 个订阅、每项 20 个历史版本；发布前检查目录数据容量，超限保留旧版本。
+
+### 博物女神持续订阅（2026-10-11）
+
+- 原归档订阅只跟踪 `zh0ngtian/ipa-archive` 的 `museum-muse/` 正式 Release，因此原项目新发布的 1.1.3 未被收录。用户将原仓库设为公开后，已将现有订阅改为 `zh0ngtian/DailyMusuem`，tag 前缀 `build-`、附件 `MuseumMuse-unsigned.ipa`、包含预发布且不暂停；继续使用每小时 Cron。
+- 现有订阅 ID 与旧版兼容标记保留，1.1.2（8）移入历史。已自动解析并公开 1.1.3（9），核对匿名完整下载与 GitHub 附件 SHA-256，以及 `/sources/yao.json`、`?legacy=1`、`/source.json` 和 `/appstore` 的版本、下载地址与校验和。
+- 本次只修改线上订阅配置与记录，无客户端或服务代码变更；未验证真机覆盖安装。配置与接口验收见 [持续收录证据](evidence/museum-release-tracking-20261011.json)。
