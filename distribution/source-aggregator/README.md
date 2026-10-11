@@ -20,6 +20,10 @@ python3 scripts/cloud_source.py status
 
 GitHub 订阅按 Release 发布时间从新到旧查找，在 tag 前缀、预发布及 IPA 文件名匹配规则内选择最新含匹配 IPA 的 Release。只有 APK、没有附件或 IPA 文件名不匹配的版本会跳过；选定版本包含多个匹配 IPA 时仍要求选择或收紧规则，不会退到更旧版本。扫描最多 10 页、每页 100 条；超出扫描或响应限额仍明确报错。
 
+直接 IPA 地址订阅首次成功解析后，地址未变的手动同步、重试和每小时自动同步只检查文件是否可访问：优先 `HEAD`，服务器返回 405/501 时改用 `GET Range: bytes=0-0`，收到响应后立即取消正文，兼容忽略 Range 的文件服务器。不会比较 ETag 或文件大小来重新解析，现有版本、图标、SHA-256 和历史保持不变；文件失效时报告失败并保留已发布包，临时故障沿用重试机制。首次订阅或当前包地址与配置地址不同，仍完整解析元信息与图标。同一地址的内容替换不会自动更新源中的版本信息。
+
+2026-10-11 已部署此行为，40 项服务回归通过；线上立即同步后，哔哩哔哩检查成功且原解析记录、当前包和历史完整保留，其余仓库同步也成功。真实 HTTPS 清单、IPA HEAD 与单字节 Range 下载的结果见 [验收记录](../../docs/plans/evidence/url-availability-sync-20261011.json)。
+
 软件源使用 iOS 27 App Store 图标；公开清单中的图标 URL 带资源版本，客户端刷新源时会更新已保存的图标 URL。资源出处及更新方式见 [assets/README.md](assets/README.md)。
 
 旧客户端使用 `/sources/yao.json?legacy=1`，只返回标记为默认的原有应用变体，避免同 Bundle ID 的签名/未签名包被混用。旧家中 HTTPS 入口在迁移验收后以 302 指向这份兼容清单，旧文件留存用于回退。
@@ -70,7 +74,7 @@ Range 支持 ZIP64、binary/XML plist、Store/Deflate、最大 ZIP 注释和中�
 
 首次解析与后续更新直接从同一 IPA 提取主应用图标，优先读取 plist 指定的独立 PNG，支持 iOS CgBI；否则读取主应用的 `Assets.car`。CAR 按逻辑主图标名称选择正常 iPhone 变体，支持 ARGB/GA8 的未压缩、gzip、LZFSE 和 KCBC 分块，解码器与构建方式见 [vendor/lzfse/README.md](vendor/lzfse/README.md)。不会把扩展、备用图标或无关大图当作应用图标。
 
-图标转换为最长 256 像素、至多 96 KiB 的标准 PNG，保存在 Durable Object，以 `/app-icons/<PNG-SHA256>.png` 提供公开 GET/HEAD 和条件缓存。提取图标优先于旧展示配置；应用图标不会改动软件源自身的 App Store 图标。已存在订阅在下一次同步补齐提取结果；同一 IPA 的补齐不增加历史版本、不丢失已验证全包 SHA-256。首次图标解析失败不公开，更新失败保留原版本并报告 `ICON_EXTRACTION_FAILED`；无需旧源迁移或本机提取服务。
+图标转换为最长 256 像素、至多 96 KiB 的标准 PNG，保存在 Durable Object，以 `/app-icons/<PNG-SHA256>.png` 提供公开 GET/HEAD 和条件缓存。提取图标优先于旧展示配置；应用图标不会改动软件源自身的 App Store 图标。已存在 GitHub 订阅在下一次同步补齐提取结果；同一 IPA 的补齐不增加历史版本、不丢失已验证全包 SHA-256。直接 IPA 地址未变时只检查可访问性，不补解析图标。首次图标解析失败不公开，更新失败保留原版本并报告 `ICON_EXTRACTION_FAILED`；无需旧源迁移或本机提取服务。
 
 PNG/CgBI 解压在预期扫描行长度之外保留 64 KiB 的有界缓冲余量，兼容 Workers 同步 zlib 的缓冲增长；解压后仍严格校验实际长度，拒绝多余像素数据。图标失败的 `details` 分别保留 PNG 和 CAR 原因，避免 CAR 限额覆盖最初的 PNG 错误。`npm test` 包含真实 workerd 运行时的多 IDAT、120/256 像素 PNG/CgBI 与超长输出回归。
 

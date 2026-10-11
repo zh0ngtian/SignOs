@@ -9,6 +9,8 @@ test('Durable catalog publishes only parsed apps, preserves old versions on fail
   const bytes = Buffer.from(fixtures.find(x => x.id === 'icon-car-lzfse').base64, 'base64');
   const brokenIcon = Buffer.from(fixtures.find(x => x.id === 'icon-broken').base64, 'base64');
   let apiCalls = 0;
+  const ipaRequests = [];
+  let probeStatus = 200;
   const token = 'test-management-token-with-at-least-32-characters';
   const bundle = await build({ entryPoints: [new URL('../src/index.mjs', import.meta.url).pathname], bundle: true, write: false, format: 'esm', platform: 'node', external: ['cloudflare:workers'], loader: { '.png': 'binary' }, plugins: [{ name: 'wasm', setup(build) { build.onResolve({ filter: /decoder\.wasm$/ }, () => ({ path: './decoder.wasm', external: true })); } }] });
   const mf = new Miniflare(convertV4MiniflareOptions({
@@ -33,6 +35,8 @@ test('Durable catalog publishes only parsed apps, preserves old versions on fail
           { id: 2, name: 'App-SE.ipa', size: bytes.length, browser_download_url: 'https://fixtures.example/App-SE.ipa', updated_at: '2026-10-11T00:00:00Z' },
         ] }], { headers: { ETag: '"release"' } });
       }
+      ipaRequests.push({ url: request.url, method: request.method, range: request.headers.get('Range') });
+      if (request.method === 'HEAD') return new Response(null, { status: probeStatus, headers: { ETag: '"changed-without-changing-url"', 'Content-Length': '999999' } });
       if (url.pathname === '/bad.ipa') return new Response('missing', { status: 404 });
       const body = url.pathname === '/bad-icon.ipa' ? brokenIcon : bytes;
       const range = request.headers.get('Range'), suffix = /^bytes=-(\d+)$/.exec(range), exact = /^bytes=(\d+)-(\d+)$/.exec(range);
@@ -87,6 +91,29 @@ test('Durable catalog publishes only parsed apps, preserves old versions on fail
     assert.equal(legacy.apps[0].appID, id);
     assert.equal(legacy.apps[0].iconURL, source.apps[0].iconURL, 'extracted icons take precedence over migrated presentation URLs');
     assert.equal(legacy.sourceURL, 'https://source.example/sources/test.json?legacy=1');
+    const original = (await call('/api/catalog')).data.entries.find(e => e.id === id);
+    const checkUnchanged = async () => {
+      const entry = (await call('/api/catalog')).data.entries.find(e => e.id === id);
+      assert.deepEqual(entry.current, original.current, 'availability checks preserve metadata, icon and inspection even if headers change');
+      assert.deepEqual(entry.history, original.history);
+      assert.deepEqual((await call('/source.json')).data.apps, legacy.apps, 'failed and successful availability checks preserve the public app');
+    };
+    ipaRequests.length = 0;
+    await call('/api/sync', 'POST', {});
+    await waitFor(id, 'succeeded');
+    assert.deepEqual(ipaRequests, [{ url: 'https://fixtures.example/App.ipa', method: 'HEAD', range: null }], 'bulk sync uses only HEAD for unchanged URL subscriptions');
+    await checkUnchanged();
+    probeStatus = 404; ipaRequests.length = 0;
+    await call(`/api/entries/${id}/sync`, 'POST', {});
+    const missing = await waitFor(id, 'failed');
+    assert.equal(missing.entries.find(e => e.id === id).error.code, 'DOWNLOAD_INACCESSIBLE');
+    assert.equal(ipaRequests.length, 1);
+    await checkUnchanged();
+    probeStatus = 200; ipaRequests.length = 0;
+    await call(`/api/entries/${id}/sync`, 'POST', {});
+    await waitFor(id, 'succeeded');
+    assert.deepEqual(ipaRequests.map(r => r.method), ['HEAD']);
+    await checkUnchanged();
     const discovery = await call('/api/discover', 'POST', { config: { kind: 'github', repository: 'owner/repo' } });
     assert.equal(discovery.data.candidates.length, 2);
     assert.ok(discovery.data.candidates.every(candidate => candidate.tag === 'v1'), 'discover skips the newer Android-only release');
@@ -105,7 +132,16 @@ test('Durable catalog publishes only parsed apps, preserves old versions on fail
     const broken = await waitFor(id, 'failed');
     assert.equal(broken.entries.find(e => e.id === id).error.code, 'DOWNLOAD_INACCESSIBLE');
     assert.equal((await call('/source.json')).data.apps[0].downloadURL, 'https://fixtures.example/App.ipa');
-    assert.equal((await call('/api/entries', 'POST', { revision: broken.revision, config: { kind: 'url', url: 'https://fixtures.example/App.ipa' }, metadata: { name: 'fake' } })).data.error.code, 'MANUAL_METADATA_DISABLED');
+    const latest = (await call('/api/catalog')).data;
+    ipaRequests.length = 0;
+    await call(`/api/entries/${id}`, 'PATCH', { revision: latest.revision, config: { kind: 'url', url: 'https://fixtures.example/changed.ipa' } });
+    const changed = await waitFor(id, 'succeeded');
+    const changedEntry = changed.entries.find(e => e.id === id);
+    assert.equal(changedEntry.current.downloadURL, 'https://fixtures.example/changed.ipa');
+    assert.ok(changedEntry.current.inspection.requests.length > 1, 'a new URL still performs full metadata and icon parsing');
+    assert.equal(changedEntry.history.length, 1);
+    assert.ok(ipaRequests.every(r => r.method === 'GET' && r.range), 'new URL parsing uses Range GET, not the availability path');
+    assert.equal((await call('/api/entries', 'POST', { revision: changed.revision, config: { kind: 'url', url: 'https://fixtures.example/App.ipa' }, metadata: { name: 'fake' } })).data.error.code, 'MANUAL_METADATA_DISABLED');
     const backup = (await call('/api/export')).data;
     assert.equal(JSON.stringify(backup).includes(token), false);
     const beforeRestore = (await call('/api/catalog')).data;

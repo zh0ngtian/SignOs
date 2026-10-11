@@ -1,0 +1,90 @@
+{
+  "verifiedAt": "2026-10-11T14:56:48.107178+00:00",
+  "deployedCodeVersion": "ecf3565e-00d6-4e2a-a754-35395269bc93",
+  "activeVersionAfterSecretUpdate": "3d1fb0ab-ff57-4eba-98af-43321488e903",
+  "deploymentId": "828cc303-2b7d-452e-a05c-049b25029f14",
+  "testCommand": "npm test",
+  "testCount": 40,
+  "allTestsPassed": true,
+  "serviceOnlyChange": true,
+  "clientBuildRequired": false,
+  "syncEndpoint": "/api/sync",
+  "allSubscriptionStatuses": [
+    {
+      "name": "Codex Mobile",
+      "status": "succeeded"
+    },
+    {
+      "name": "哔哩哔哩",
+      "status": "succeeded"
+    },
+    {
+      "name": "MuseumMuse",
+      "status": "succeeded"
+    },
+    {
+      "name": "SignOs",
+      "status": "succeeded"
+    },
+    {
+      "name": "Bangumi",
+      "status": "succeeded"
+    }
+  ],
+  "urlSubscription": {
+    "entryId": "dbaf3ff3-71e6-4d56-9e76-0475f0b38142",
+    "url": "https://github.com/zh0ngtian/ipa-archive/releases/download/bilibili-inter-v3.20.1-b82300200/Bilibili_3.20.1_82300200.ipa",
+    "version": "3.20.1",
+    "buildVersion": "82300200",
+    "sha256": "a4d0e65408747085659bef0070837aadbf5ea2713e0d672fe0bf845b52153110",
+    "currentRecordPreserved": true,
+    "inspectionPreserved": true,
+    "historyPreserved": true,
+    "configPreserved": true,
+    "beforeLastSuccessAt": "2026-10-11T14:51:40.777Z",
+    "afterLastSuccessAt": "2026-10-11T14:56:03.384Z",
+    "httpsHead": {
+      "status": 200,
+      "finalHost": "release-assets.githubusercontent.com",
+      "contentLength": 183082982
+    },
+    "httpsRangeDownload": {
+      "status": 206,
+      "contentRange": "bytes 0-0/183082982",
+      "receivedBytes": 1
+    }
+  },
+  "publicEndpoints": [
+    {
+      "url": "https://signos-source-aggregator.305301890.workers.dev/health",
+      "status": 200
+    },
+    {
+      "url": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json",
+      "status": 200
+    },
+    {
+      "url": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json?legacy=1",
+      "status": 200
+    },
+    {
+      "url": "https://signos-source-aggregator.305301890.workers.dev/source.json",
+      "status": 200
+    },
+    {
+      "url": "https://signos-source-aggregator.305301890.workers.dev/appstore",
+      "status": 200
+    }
+  ],
+  "regressionCoverage": [
+    "first URL parsing",
+    "unchanged URL uses only HEAD even when ETag and size change",
+    "missing file preserves published record",
+    "successful retry",
+    "changed URL parses metadata and icon",
+    "HEAD unsupported fallback and cancellation when Range is ignored",
+    "safe and bounded redirects",
+    "temporary error retryability",
+    "GitHub icon backfill preserved"
+  ]
+}

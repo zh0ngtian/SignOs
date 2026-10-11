@@ -1,5 +1,6 @@
 import { DurableObject } from 'cloudflare:workers';
 import { parseIPA } from './ipa.mjs';
+import { checkIPAExists } from './availability.mjs';
 import { SourceError, errorData, json } from './errors.mjs';
 import { subscription, publicURL } from './urls.mjs';
 import { releaseCandidates, chooseCandidate } from './releases.mjs';
@@ -287,7 +288,10 @@ export class Catalog extends DurableObject {
       const candidate = config.kind === 'github' ? chooseCandidate(await releaseCandidates(config, this.env, this.ctx.storage)) : { url: config.url, notes: '', publishedAt: null };
       const fingerprint = config.kind === 'github' ? `${candidate.releaseId}:${candidate.id}:${candidate.updatedAt}:${candidate.size}` : null;
       let inspection;
-      if (entry.current?.fingerprint === fingerprint && fingerprint && entry.current.downloadURL === candidate.url && entry.current.inspection.iconExtractionVersion === ICON_EXTRACTION_VERSION) inspection = entry.current.inspection;
+      if (config.kind === 'url' && entry.current?.downloadURL === candidate.url) {
+        await checkIPAExists(candidate.url);
+        inspection = entry.current.inspection;
+      } else if (entry.current?.fingerprint === fingerprint && fingerprint && entry.current.downloadURL === candidate.url && entry.current.inspection.iconExtractionVersion === ICON_EXTRACTION_VERSION) inspection = entry.current.inspection;
       else inspection = await this.inspectIPA(candidate.url);
       // Network awaits can interleave with edits or deletion. Publish only to the same revision.
       const live = this.data.entries.find(e => e.id === job.entryId);
