@@ -272,7 +272,7 @@ Fully Local still requires its trusted CA. A missing CA caused the observed
 CA downloads temporarily placed on Cloudflare were removed at the user's request;
 the private local CA materials remain intact.
 
-### Local Ad Hoc OTA release (on request)
+### Local Ad Hoc OTA release
 
 `make iphoneos` produces a device build with a temporary ad-hoc code signature;
 it still needs distribution signing before OTA installation. The local release
@@ -289,10 +289,14 @@ and its actual version/build number; run `--plan` before publishing. The publish
 verifies signing, stages versioned resources, checks HTTPS downloads, and then
 switches the fixed `current` entry.
 
-明确要求 OTA 发包时使用私有配置发布正式签名 IPA，并保证构建号递增。
 任何涉及 App 的改动都须通过上文的 GitHub Actions 构建检查，并按标签发布新版到 GitHub Release。
+用户已持续授权每次 App 发布同时更新 OTA：使用同一已验证构建产物和现有私有配置发布正式
+Ad Hoc 签名 IPA，保持两者版本一致、构建号递增，无须逐次询问。GitHub Release 和 OTA
+均验收成功才算交付完成，最终回复须附上可点击的固定 OTA 安装页链接和实际版本、构建号。
+固定安装页为 `https://192.168.123.79:8769/channels/signos/current/install.html`；
+每次交付前从私有配置和在线探针核对当前地址及版本。
 
-本次用户明确要求双渠道正式发包：同一 OTA 签名包通过
+2026-10-11 用户曾明确要求双渠道正式发包：同一 OTA 签名包通过
 `scripts/publish_signos.py` 归档到 GitHub，并加入 Cloudflare 软件源；发布前执行 `--plan`，
 两端完整下载 SHA-256 必须相同。软件源管理、最新包迁移与兼容入口见
 [Cloudflare 软件源](distribution/source-aggregator/README.md)。该按需操作独立于每次 App 改动必须完成的 GitHub Release 发布。
