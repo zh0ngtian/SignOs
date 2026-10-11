@@ -144,6 +144,8 @@ extension ASRepository {
 		public var uuid = UUID()
 		
 		public var id: String?
+		public var sourceEntryIdentifier: String?
+		public var legacyDefault: Bool?
 		public var name: String?
 
 		public var subtitle: String?
@@ -212,6 +214,8 @@ extension ASRepository {
 		public init(from decoder: any Decoder) throws {
 			let container = try decoder.container(keyedBy: CodingKeys.self)
 			self.id = try container.decodeIfPresent(String.self, forKey: .id)
+			self.sourceEntryIdentifier = try container.decodeIfPresent(String.self, forKey: .sourceEntryIdentifier)
+			self.legacyDefault = try container.decodeIfPresent(Bool.self, forKey: .legacyDefault)
 			self.name = try container.decodeIfPresent(String.self, forKey: .name)
 
 			self.subtitle = try container.decodeIfPresent(
@@ -345,6 +349,8 @@ extension ASRepository {
 
 		public enum CodingKeys: String, CodingKey {
 			case id = "bundleIdentifier"
+			case sourceEntryIdentifier = "appID"
+			case legacyDefault
 			case name, subtitle, description
 			case developer = "developerName"
 			case versions, version, versionDate, date, versionDescription, downloadURL,
@@ -388,7 +394,8 @@ extension ASRepository {
 		
 		// "UNIQUE" hahaha
 		public var currentUniqueId: String {
-			"\(id ?? uuid.uuidString).\(downloadURL?.absoluteString ?? uuid.uuidString)"
+			if let sourceEntryIdentifier { return "subscription.\(sourceEntryIdentifier)" }
+			return "\(id ?? uuid.uuidString).\(downloadURL?.absoluteString ?? uuid.uuidString)"
 		}
 
 		public struct Version: Decodable, Hashable, Identifiable, Comparable, Sendable {

@@ -24,6 +24,11 @@ export class Catalog extends DurableObject {
     });
   }
 
+  checkCapacity(entry, current, history) {
+    const entries = this.data.entries.map(e => e.id === entry.id ? { ...e, current, history } : e);
+    if (new TextEncoder().encode(JSON.stringify({ ...this.data, entries })).length > 1500 * 1024) throw new SourceError('CATALOG_LIMIT', '软件源配置与版本记录超过容量限制，已保留原版本');
+  }
+
   async save() {
     const active = this.data.jobs.filter(j => !terminal.has(j.status));
     const recent = this.data.jobs.filter(j => terminal.has(j.status) && Date.now() - Date.parse(j.finishedAt) < 7 * 86400000).slice(-100);
@@ -212,8 +217,10 @@ export class Catalog extends DurableObject {
           ids.add(e.id);
           // Never trust edited backup metadata or URLs as a way to bypass the parser.
           const existing = this.data.entries.find(x => x.id === e.id);
-          return { id: e.id, revision: (existing?.revision ?? 0) + 1, config: subscription(e.config), published: trusted ? !!e.published : existing?.published ?? false, current: trusted ? e.current : existing?.current ?? null, history: trusted ? e.history : existing?.history ?? [], presentation: trusted ? e.presentation : existing?.presentation, status: 'pending', error: null, createdAt: existing?.createdAt ?? now() };
+          return { id: e.id, revision: (existing?.revision ?? this.data.revision) + 1, config: subscription(e.config), published: trusted ? !!e.published : existing?.published ?? false, current: trusted ? e.current : existing?.current ?? null, history: trusted ? e.history : existing?.history ?? [], presentation: trusted ? e.presentation : existing?.presentation, status: 'pending', error: null, createdAt: existing?.createdAt ?? now() };
         });
+        if (typeof backup.settings.name !== 'string' || !backup.settings.name.trim() || backup.settings.name.length > 100 || typeof backup.settings.description !== 'string' || backup.settings.description.length > 2000) throw new SourceError('INVALID_BACKUP', '备份的软件源名称或简介无效');
+        Object.assign(this.data.settings, { name: backup.settings.name, description: backup.settings.description });
         this.data.entries = entries; this.data.revision++; await this.save(); await this.tick();
         return json({ revision: this.data.revision, restored: entries.length });
       }
@@ -239,7 +246,11 @@ export class Catalog extends DurableObject {
         if (!live || live.revision !== job.entryRevision) Object.assign(job, { status: 'superseded', finishedAt: now() });
         else {
           if (inspection.metadata.bundleIdentifier !== live.current?.metadata.bundleIdentifier) throw new SourceError('BUNDLE_ID_CHANGED', '历史 IPA 的 Bundle ID 与应用不符');
-          if (!live.history.some(v => v.downloadURL === job.version.downloadURL)) live.history.push({ metadata: inspection.metadata, inspection, downloadURL: job.version.downloadURL, date: job.version.date, sha256, inspectedAt: now(), notes: '' });
+          if (!live.history.some(v => v.downloadURL === job.version.downloadURL)) {
+            const version = { metadata: inspection.metadata, inspection, downloadURL: job.version.downloadURL, date: job.version.date, sha256, inspectedAt: now(), notes: '' };
+            this.checkCapacity(live, live.current, [...live.history, version]);
+            live.history.push(version);
+          }
           live.history.sort((a, b) => Date.parse(b.date) - Date.parse(a.date));
           live.history = live.history.slice(0, HISTORY_LIMIT);
           Object.assign(job, { status: 'succeeded', finishedAt: now() }); this.data.revision++;
@@ -262,6 +273,7 @@ export class Catalog extends DurableObject {
         const current = { metadata: inspection.metadata, inspection, downloadURL: candidate.url, date: candidate.publishedAt || now(), notes: candidate.notes, tag: candidate.tag || null, assetName: candidate.name || null, fingerprint, inspectedAt: now() };
         const same = live.current && live.current.downloadURL === current.downloadURL && live.current.inspection.strongETag === inspection.strongETag && JSON.stringify(live.current.metadata) === JSON.stringify(current.metadata);
         if (!same) {
+          this.checkCapacity(live, current, live.current ? [live.current, ...live.history].slice(0, HISTORY_LIMIT) : live.history);
           if (live.current) live.history = [live.current, ...live.history].slice(0, HISTORY_LIMIT);
           live.current = current;
         }

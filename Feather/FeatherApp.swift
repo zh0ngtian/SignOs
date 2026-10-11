@@ -47,6 +47,7 @@ struct FeatherApp: App {
 				WSLockView(onUnlock: { _isLocked = false })
 			}
 			.onAppear {
+				storage.migrateOfficialCloudSource()
 				if let style = UIUserInterfaceStyle(rawValue: UserDefaults.standard.integer(forKey: "Feather.userInterfaceStyle")) {
 					UIApplication.topViewController()?.view.window?.overrideUserInterfaceStyle = style
 				}

@@ -48,6 +48,7 @@ final class UpdateManager: ObservableObject {
 		}
 		return updates.values.contains {
 			$0.bundleIdentifier == identifier &&
+			($0.sourceProvenance.sourceAppIdentifier == SourceSubscriptionIdentity.key(bundleIdentifier: identifier, subscriptionID: app.sourceEntryIdentifier) || app.sourceEntryIdentifier == nil) &&
 			$0.remoteVersion == version &&
 			_matchesStoredRepository(storedSourceURL: $0.sourceURL, sourceURL: sourceURL)
 		}
@@ -234,9 +235,14 @@ final class UpdateManager: ObservableObject {
 					continue
 				}
 				
-				guard let remoteApp = repository.apps.first(where: { $0.id == sourceAppIdentifier }) else {
+				guard let remoteIndex = SourceSubscriptionIdentity.matchIndex(
+					storedKey: sourceAppIdentifier,
+					candidates: repository.apps.map { ($0.id ?? "", $0.sourceEntryIdentifier) },
+					legacyPreferredIndex: repository.apps.firstIndex { $0.id == sourceAppIdentifier && $0.legacyDefault == true }
+				) else {
 					continue
 				}
+				let remoteApp = repository.apps[remoteIndex]
 				
 				guard let remoteVersion = remoteApp.currentVersion, !remoteVersion.isEmpty else {
 					continue
@@ -264,7 +270,7 @@ final class UpdateManager: ObservableObject {
 					localVersion: sourceAppVersion ?? localApp.version,
 					remoteVersion: remoteVersion,
 					appName: remoteApp.currentName,
-					bundleIdentifier: sourceAppIdentifier,
+					bundleIdentifier: remoteApp.id ?? "",
 					downloadURL: downloadURL,
 					sourceURL: sourceURL,
 					sourceProvenance: provenance,

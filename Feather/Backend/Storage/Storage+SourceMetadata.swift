@@ -51,7 +51,7 @@ extension SourceAppProvenance {
 		self.sourceRepositoryURL = sourceURL
 		self.sourceRepositoryIdentifier = repository.id
 		self.sourceRepositoryName = repository.name
-		self.sourceAppIdentifier = appIdentifier
+		self.sourceAppIdentifier = SourceSubscriptionIdentity.key(bundleIdentifier: appIdentifier, subscriptionID: app.sourceEntryIdentifier)
 		self.sourceAppName = app.currentName
 		let appVersion = version?.version ?? app.currentVersion
 		let appVersionDate = version?.date?.date ?? app.currentDate?.date

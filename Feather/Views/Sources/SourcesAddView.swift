@@ -59,6 +59,11 @@ struct SourcesAddView: View {
 	var body: some View {
 		NBNavigationView(.localized("Add Source"), displayMode: .inline) {
 			Form {
+				Section {
+					NavigationLink(destination: CloudSourceManagerView()) {
+						Label("管理远端软件源", systemImage: "cloud.fill")
+					}
+				}
 				NBSection(.localized("Source URL")) {
 					TextField(.localized("Enter Source URL"), text: $_sourceURL)
 						.keyboardType(.URL)

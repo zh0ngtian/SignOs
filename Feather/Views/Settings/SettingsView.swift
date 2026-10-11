@@ -233,6 +233,13 @@ extension SettingsView {
 	@ViewBuilder
 	private func _data() -> some View {
 		Section {
+			NavigationLink(destination: CloudSourceManagerView()) {
+				HStack(spacing: 12) {
+					WSIconTile(systemImage: "cloud.fill", color: .cyan)
+					Text("远端软件源")
+				}
+			}
+
 			NavigationLink(destination: CertificatesView()) {
 				HStack(spacing: 12) {
 					WSIconTile(systemImage: "checkmark.seal.fill", color: .green)
