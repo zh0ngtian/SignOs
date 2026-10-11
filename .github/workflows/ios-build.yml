@@ -3,6 +3,7 @@ name: iOS Build Check
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -12,7 +13,7 @@ permissions:
 
 concurrency:
   group: ios-build-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
   build:
@@ -37,6 +38,9 @@ jobs:
           test "$XCODE_MAJOR" -ge 26
           xcodebuild -showsdks | grep iphoneos
 
+      - name: Run release tooling regressions
+        run: python3 Tests/GitHubReleaseRegression.py
+
       - name: Run Swift regressions
         run: |
           set -euo pipefail
@@ -50,6 +54,7 @@ jobs:
       - name: Build and inspect iOS IPA
         env:
           BUILD_OUTPUT: ${{ runner.temp }}/signos-ios-build
+          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
         run: bash scripts/check_ios_build.sh "$BUILD_OUTPUT"
 
       - name: Upload build artifact
@@ -72,3 +77,40 @@ jobs:
             ${{ runner.temp }}/signos-ios-build/Build.xcresult
           if-no-files-found: ignore
           retention-days: 7
+
+  release:
+    name: Publish GitHub Release
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout release tooling
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Download verified IPA
+        uses: actions/download-artifact@v4
+        with:
+          name: SignOs-ci-${{ github.sha }}
+          path: release
+
+      - name: Verify release assets and prepare notes
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: python3 scripts/prepare_github_release.py release "$RELEASE_TAG" "$GITHUB_SHA"
+
+      - name: Publish IPA and checksums
+        uses: softprops/action-gh-release@v2
+        with:
+          name: SignOs ${{ github.ref_name }}
+          body_path: release/release-notes.md
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            release/SignOs.ipa
+            release/build-metadata.json
+            release/SHA256SUMS

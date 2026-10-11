@@ -80,10 +80,10 @@ contributors for their work, this wouldn't exist without them.
 
 ## Install
 
-Download an existing `SignOs.ipa` from [Releases](../../releases/latest) and sign
+Download `SignOs.ipa` from [Releases](../../releases/latest) and sign
 it with SideStore, Sideloadly, AltStore, TrollStore or SignOs itself. New commits
 are verified by [iOS Build Check](../../actions/workflows/ios-build.yml).
-Its IPA artifacts require separate distribution signing before installation.
+Its IPA artifacts and GitHub Release packages require separate signing before installation.
 `app-repo.json` describes the upstream public 1.0.0 channel and is not updated
 by this build-check workflow.
 
@@ -100,9 +100,9 @@ Project workflow and post-test delivery requirements are in [AGENTS.md](AGENTS.m
 ### GitHub Actions 构建检查
 
 [工作流](.github/workflows/ios-build.yml) 在 `main` push、面向 `main` 的 PR 和
-手动触发时运行。使用 `macos-26` 与 Xcode 26+，递归检出子模块，运行
+手动触发以及 `v*` 标签 push 时运行。使用 `macos-26` 与 Xcode 26+，递归检出子模块，运行
 `OneViewPhase`、`SourceRepositoryIdentity`、`SourceSubscriptionIdentity` 和
-`SourceMigrationReadiness` 回归，
+`SourceMigrationReadiness` 回归及 `GitHubReleaseRegression.py` 发布产物校验回归，
 再构建 iOS Release 设备包并检查 IPA 完整性、Bundle ID、版本和 SHA-256。
 
 流水线不依赖私有 `TLS_DIR` 或分发签名材料。产物 `SignOs-ci-<commit>` 包含
@@ -119,7 +119,36 @@ bash scripts/check_ios_build.sh "$(mktemp -d /tmp/signos-ios-build.XXXXXX)"
 
 常规交付流程为：完成本地必要检查、提交与 push、核对远端提交，并等待
 **该提交**的 `iOS Build Check / iOS Release build` 成功。只触发工作流不算完成。
-流水线不改版本或构建号，也不创建 GitHub Release；本机 OTA 仅在明确要求发包时执行。
+普通提交和手动构建不创建 GitHub Release。流水线不改版本或构建号；
+标签发布使用下一节的标准流程，本机 OTA 仅在明确要求发包时执行。
+
+### GitHub Release 标准发布流程
+
+发布标签使用 `vX.Y.Z`，例如 `v1.0.11`。准备发布时，先将 `Feather.xcconfig`
+中的 `FEATHER_PROJECT_VERSION` 更新为 `X.Y.Z`，并按需要更新 Xcode 工程中的
+`CURRENT_PROJECT_VERSION`；新安装包的构建号应高于之前发出的包。提交并 push 到
+`main`，等待该提交的 `iOS Build Check` 成功，再为这个已验证的提交打标签：
+
+```sh
+# 将版本与完整提交 SHA 替换为本次发布值
+git tag -a v1.0.11 <verified-commit-sha> -m "SignOs 1.0.11"
+git push origin v1.0.11
+```
+
+标签 push 会重新执行回归与 iOS Release 构建。只有构建成功、标签版本与
+IPA 版本一致，且下载产物的提交、身份、大小和校验和通过检查，
+`Publish GitHub Release` 才会发布以下长期下载文件：
+
+- `SignOs.ipa`：未经过分发签名的 iOS 包，安装前需自行签名。
+- `build-metadata.json`：提交、版本、构建号、最低 iOS 版本和 IPA SHA-256。
+- `SHA256SUMS`：IPA 和元数据的 SHA-256；下载后运行 `shasum -a 256 -c SHA256SUMS` 验证。
+
+Release 说明包含安装要求和自动生成的变更记录。发布使用仓库自带的
+`GITHUB_TOKEN`，无须私有签名或 TLS 配置。等待标签对应的整个工作流成功，
+再核对 Release 附件及包内版本；失败时修复后重跑对应工作流，不移动已发布标签。
+此流程不更新 `app-repo.json` 或 OTA/Cloudflare 渠道。使用 `GITHUB_TOKEN`
+创建的 Release 不会再触发旧 `Update Repository` 工作流，见
+[GitHub 的工作流触发规则](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)。
 
 After pulling a change to `.gitmodules`, run `git submodule sync --recursive`
 before updating submodules. Zsign is pinned to the project-maintained fork for
@@ -208,8 +237,8 @@ and its actual version/build number; run `--plan` before publishing. The publish
 verifies signing, stages versioned resources, checks HTTPS downloads, and then
 switches the fixed `current` entry.
 
-仅在明确要求 OTA 发包时递增构建号，并使用私有配置发布正式签名 IPA。
-常规客户端交付使用上文的 GitHub Actions 构建检查。
+明确要求 OTA 发包时使用私有配置发布正式签名 IPA，并保证构建号递增。
+常规客户端改动使用上文的 GitHub Actions 构建检查；公开版本按标签发布到 GitHub Release。
 
 本次用户明确要求双渠道正式发包：同一 OTA 签名包通过
 `scripts/publish_signos.py` 归档到 GitHub，并加入 Cloudflare 软件源；发布前执行 `--plan`，

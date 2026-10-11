@@ -62,3 +62,5 @@ Submodule changes require an explicit commit-reference update in this repository
 - If you want to add a page or suggest edits, make an issue with your proposed changes.
 
 Before delivery, push the change and confirm that `iOS Build Check / iOS Release build` succeeds for the same commit. The workflow runs on main pushes and PRs; its IPA artifacts require separate signing for installation.
+
+Public releases follow the [tagged GitHub Release process](README.md#github-release-标准发布流程): prepare the version and build number, verify the commit, then push a `vX.Y.Z` tag. The same checks run before publishing the IPA, build metadata and SHA-256 checksums. Main pushes and manual builds do not publish a release.

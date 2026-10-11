@@ -2,6 +2,11 @@
 # Build a device IPA for CI checks without distribution signing or private TLS.
 set -euo pipefail
 
+if [[ -n ${RELEASE_TAG:-} ]] && [[ ! $RELEASE_TAG =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+  echo 'Release tags must use vX.Y.Z (for example, v1.0.11).' >&2
+  exit 1
+fi
+
 REPO_ROOT=$(cd "$(dirname "$0")/.." && pwd)
 BUILD_OUTPUT=${1:?Usage: bash scripts/check_ios_build.sh /path/to/empty-output-directory}
 mkdir -p "$BUILD_OUTPUT"
@@ -46,6 +51,9 @@ with zipfile.ZipFile(ipa) as archive:
             raise SystemExit(f'Unexpected private distribution resource: {name}')
 if info['CFBundleIdentifier'] != 'com.signos.app':
     raise SystemExit('Unexpected bundle identifier')
+if tag := os.environ.get('RELEASE_TAG'):
+    if info['CFBundleShortVersionString'] != tag[1:]:
+        raise SystemExit('Release tag does not match IPA version; update Feather.xcconfig before tagging')
 metadata = {
     'commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
     'bundleIdentifier': info['CFBundleIdentifier'],
