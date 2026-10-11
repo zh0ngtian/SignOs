@@ -51,6 +51,13 @@ jobs:
             rm "$BINARY"
           done
 
+      - name: Run download manager simulator regression
+        run: |
+          set -euo pipefail
+          SIMULATOR_ID=$(xcrun simctl list devices available -j | python3 -c 'import json, sys; print(next(d["udid"] for ds in json.load(sys.stdin)["devices"].values() for d in ds if d["name"].startswith("iPhone")))')
+          xcrun simctl bootstatus "$SIMULATOR_ID" -b
+          python3 scripts/test_download_manager_simulator.py "$SIMULATOR_ID"
+
       - name: Build and inspect iOS IPA
         env:
           BUILD_OUTPUT: ${{ runner.temp }}/signos-ios-build

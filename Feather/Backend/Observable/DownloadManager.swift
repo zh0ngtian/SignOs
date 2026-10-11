@@ -93,9 +93,9 @@ class DownloadManager: NSObject, ObservableObject {
 
 		let task = _session.downloadTask(with: url)
 		download.task = task
-		task.resume()
 
 		downloads.append(download)
+		task.resume()
 
 		#if !targetEnvironment(macCatalyst)
 		if #available(iOS 26.0, *) {
@@ -123,16 +123,25 @@ class DownloadManager: NSObject, ObservableObject {
 	}
 
 	func resumeDownload(_ download: Download) {
+		// Reuse live tasks so repeated requests cannot orphan an active transfer.
+		if let task = download.task {
+			switch task.state {
+			case .running, .canceling:
+				return
+			case .suspended:
+				task.resume()
+				return
+			case .completed:
+				// A completed transfer may still be unpacking/importing.
+				guard download.resumeData != nil else { return }
+			@unknown default:
+				return
+			}
+		}
+
 		if let resumeData = download.resumeData {
 			let task = _session.downloadTask(withResumeData: resumeData)
-			download.task = task
-			task.resume()
-
-			#if !targetEnvironment(macCatalyst)
-			_updateBackgroundAudioState()
-			#endif
-		} else if let url = download.task?.originalRequest?.url {
-			let task = _session.downloadTask(with: url)
+			download.resumeData = nil
 			download.task = task
 			task.resume()
 

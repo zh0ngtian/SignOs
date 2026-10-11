@@ -103,7 +103,8 @@ Project workflow and post-test delivery requirements are in [AGENTS.md](AGENTS.m
 手动触发以及 `v*` 标签 push 时运行。使用 `macos-26` 与 Xcode 26+，递归检出子模块，运行
 `OneViewPhase`、`SourceRepositoryIdentity`、`SourceSubscriptionIdentity` 和
 `SourceMigrationReadiness` 回归及 `GitHubReleaseRegression.py` 发布产物校验回归，
-再构建 iOS Release 设备包并检查 IPA 完整性、Bundle ID、版本和 SHA-256。
+以及下载管理器的 iOS 模拟器回归，再构建 iOS Release 设备包并检查 IPA 完整性、
+Bundle ID、版本和 SHA-256。
 
 流水线不依赖私有 `TLS_DIR` 或分发签名材料。产物 `SignOs-ci-<commit>` 包含
 `SignOs.ipa` 与 `build-metadata.json`，保留 14 天；构建日志与 Xcode result bundle
@@ -116,6 +117,18 @@ git submodule sync --recursive
 git submodule update --init --recursive
 bash scripts/check_ios_build.sh "$(mktemp -d /tmp/signos-ios-build.XXXXXX)"
 ```
+
+下载管理器回归使用生产 `DownloadManager.swift` 和本地限速 HTTP 服务，验证重复调用
+只产生一个传输、暂停恢复复用原任务、取消行为及下载完成后的导入等待。签名、导入和
+后台任务集成使用测试替身，不更改已安装的 SignOs 数据。在已启动的模拟器运行：
+
+```sh
+python3 scripts/test_download_manager_simulator.py <SIMULATOR_UDID>
+```
+
+追加 `--benchmark <HTTPS_IPA_URL>` 可顺序完整下载四次，交替测试原始入口和本次跳转
+得到的地址，输出字节数、耗时、吞吐量和 URLSession 分段指标。跳转地址只用于本次
+诊断，不保存签名 URL，也不作为软件源的长期地址。测试结束会移除临时 App 和文件。
 
 常规交付流程为：完成本地必要检查、提交与 push、核对远端提交，并等待
 **该提交**的 `iOS Build Check / iOS Release build` 成功。只触发工作流不算完成。
