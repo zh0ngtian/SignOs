@@ -1,4 +1,8 @@
 import { inflateRawSync } from 'node:zlib';
+import { crc32 } from './crc.mjs';
+import { normalizeIconPNG } from './png.mjs';
+import { extractCARIcon } from './car.mjs';
+export { crc32 } from './crc.mjs';
 import { publicURL } from './urls.mjs';
 import { SourceError } from './errors.mjs';
 export class ParseError extends Error { constructor(code, detail) { super(detail || code); this.code = code; } }
@@ -6,10 +10,6 @@ const fail = (code, detail) => { throw new ParseError(code, detail); };
 const view = a => new DataView(a.buffer, a.byteOffset, a.byteLength);
 const text = a => new TextDecoder('utf-8', {fatal:true}).decode(a);
 const safe = n => { if (!Number.isSafeInteger(n) || n < 0) fail('UNSAFE_OFFSET'); return n; };
-const crcTable = new Uint32Array(256);
-for (let i=0;i<256;i++) { let c=i; for(let j=0;j<8;j++) c=(c&1)?0xedb88320^(c>>>1):c>>>1; crcTable[i]=c>>>0; }
-export function crc32(a) { let c=0xffffffff; for(let i=0;i<a.length;i++) c=crcTable[(c^a[i])&255]^(c>>>8); return (c^0xffffffff)>>>0; }
-
 // Read root keys and only the scalar fields we publish. Unrelated nested values
 // must not consume parser CPU or fail metadata extraction.
 function binaryPlist(a) {
@@ -27,8 +27,18 @@ function binaryPlist(a) {
  };
  const p=offset(top);if(a[p]>>4!==13)fail('BAD_BINARY_PLIST');const {n,data}=length(p);
  if(n>10000||data+2*n*rs>table)fail('BAD_BINARY_PLIST');
- const wanted=new Set(['CFBundleDisplayName','CFBundleName','CFBundleIdentifier','CFBundleShortVersionString','CFBundleVersion','MinimumOSVersion']),out=Object.create(null);
- for(let i=0;i<n;i++){const key=scalar(uint(data+i*rs,rs));if(typeof key!=='string')fail('BAD_BINARY_PLIST');if(wanted.has(key)){if(Object.hasOwn(out,key))fail('BAD_BINARY_PLIST');out[key]=scalar(uint(data+(n+i)*rs,rs));}}
+ const iconKeys=new Set(['CFBundleIcons','CFBundleIcons~ipad','CFBundleIconFiles','CFBundleIconFile']);
+ const nested=(id,ancestors=new Set())=>{
+  if(ancestors.size>=8||ancestors.has(id))fail('BAD_BINARY_PLIST');
+  const chain=new Set(ancestors);chain.add(id);const p=offset(id),kind=a[p]>>4;
+  if(kind===5||kind===6)return scalar(id);
+  if(kind!==10&&kind!==13)return null;
+  const {n,data}=length(p);if(n>128||data+n*rs*(kind===13?2:1)>table)fail('BAD_BINARY_PLIST');
+  if(kind===10)return Array.from({length:n},(_,i)=>nested(uint(data+i*rs,rs),chain));
+  const out=Object.create(null);for(let i=0;i<n;i++){const key=scalar(uint(data+i*rs,rs));if(typeof key!=='string'||Object.hasOwn(out,key))fail('BAD_BINARY_PLIST');if(['CFBundlePrimaryIcon','CFBundleIconName','CFBundleIconFiles'].includes(key))out[key]=nested(uint(data+(n+i)*rs,rs),chain);}return out;
+ };
+ const wanted=new Set(['CFBundleDisplayName','CFBundleName','CFBundleIdentifier','CFBundleShortVersionString','CFBundleVersion','MinimumOSVersion',...iconKeys]),out=Object.create(null);
+ for(let i=0;i<n;i++){const key=scalar(uint(data+i*rs,rs));if(typeof key!=='string')fail('BAD_BINARY_PLIST');if(wanted.has(key)){if(Object.hasOwn(out,key))fail('BAD_BINARY_PLIST');const id=uint(data+(n+i)*rs,rs);out[key]=iconKeys.has(key)?nested(id):scalar(id);}}
  return out;
 }
 
@@ -63,7 +73,7 @@ async function limitedBody(response,max) {
  const out=new Uint8Array(size);let at=0;for(const p of parts){out.set(p,at);at+=p.length;}return out;
 }
 
-export async function parseIPA(url,transport=fetch) {
+export async function parseIPA(url,transport=fetch,options={}) {
  url=publicURL(url); const started=Date.now();let resolved=url,total=null,etag=null;const requests=[];
  async function range(spec,maximum) {
   let target=resolved,response;const headers={'Range':spec,'Accept-Encoding':'identity'};if(etag)headers['If-Range']=etag;
@@ -101,35 +111,55 @@ export async function parseIPA(url,transport=fetch) {
  let cd;
  if(cdOffset>=tail.lo&&cdOffset+cdSize<=total)cd=tail.a.subarray(cdOffset-tail.lo,cdOffset-tail.lo+cdSize);
  else cd=(await range(`bytes=${cdOffset}-${cdOffset+cdSize-1}`,cdSize)).a;
- const cv=view(cd);let at=0,main=null,seen=0;
+ const cv=view(cd);let at=0,main=null,seen=0;const files=[];
  while(at<cd.length){
   if(at+46>cd.length||cv.getUint32(at,true)!==0x02014b50)fail('BAD_DIRECTORY');
   const flags=cv.getUint16(at+8,true),method=cv.getUint16(at+10,true),crc=cv.getUint32(at+16,true),nl=cv.getUint16(at+28,true),el=cv.getUint16(at+30,true),cl=cv.getUint16(at+32,true);let compressed=cv.getUint32(at+20,true),uncompressed=cv.getUint32(at+24,true),offset=cv.getUint32(at+42,true),disk=cv.getUint16(at+34,true);
   const next=at+46+nl+el+cl;if(next>cd.length)fail('BAD_DIRECTORY');
   const name=text(cd.subarray(at+46,at+46+nl));
-  if(/^Payload\/[^/]+\.app\/Info\.plist$/.test(name)){
-   if(main)fail('MULTIPLE_MAIN_APPS');if(flags&1)fail('ENCRYPTED_UNSUPPORTED');
+  const isMain=/^Payload\/[^/]+\.app\/Info\.plist$/.test(name);
+  if(isMain||/^Payload\/[^/]+\.app\/(?:[^/]+\.png|Assets\.car)$/.test(name)){
+   if(isMain&&main)fail('MULTIPLE_MAIN_APPS');
    if(compressed===0xffffffff||uncompressed===0xffffffff||offset===0xffffffff||disk===65535){
     let q=at+46+nl,end=q+el,found=false;while(q+4<=end){const tag=cv.getUint16(q,true),n=cv.getUint16(q+2,true);q+=4;if(q+n>end)fail('BAD_ZIP64');if(tag===1){let b=q;const read64=()=>{if(b+8>q+n)fail('BAD_ZIP64');const x=safe(Number(cv.getBigUint64(b,true)));b+=8;return x;};if(uncompressed===0xffffffff)uncompressed=read64();if(compressed===0xffffffff)compressed=read64();if(offset===0xffffffff)offset=read64();if(disk===65535){if(b+4>q+n)fail('BAD_ZIP64');disk=cv.getUint32(b,true);}found=true;break;}q+=n;}if(!found)fail('BAD_ZIP64');
    }
-   if(disk)fail('MULTIDISK_UNSUPPORTED');if(![0,8].includes(method))fail('COMPRESSION_UNSUPPORTED');if(compressed<1||compressed>131072||uncompressed>524288)fail('PLIST_LIMIT');
-   main={name,flags,method,crc,compressed,uncompressed,offset};
+   if(disk)fail('MULTIDISK_UNSUPPORTED');
+   const entry={name,flags,method,crc,compressed,uncompressed,offset};if(isMain)main=entry;else files.push(entry);
   }
   seen++;at=next;
  }
  if(seen!==count)fail('BAD_DIRECTORY');if(!main)fail('MAIN_PLIST_NOT_FOUND');
- const local=(await range(`bytes=${main.offset}-${main.offset+29}`,30)).a,lv=view(local);
- if(lv.getUint32(0,true)!==0x04034b50||lv.getUint16(8,true)!==main.method||lv.getUint16(6,true)!==main.flags)fail('BAD_LOCAL_HEADER');
- const nameLen=lv.getUint16(26,true),extraLen=lv.getUint16(28,true);
- const localName=(await range(`bytes=${main.offset+30}-${main.offset+29+nameLen}`,nameLen)).a;
- if(text(localName)!==main.name)fail('BAD_LOCAL_HEADER');
- const dataStart=main.offset+30+nameLen+extraLen;if(dataStart+main.compressed>cdOffset)fail('BAD_LOCAL_HEADER');
- const compressed=(await range(`bytes=${dataStart}-${dataStart+main.compressed-1}`,main.compressed)).a;
- let blob;try{blob=main.method===0?compressed:new Uint8Array(inflateRawSync(compressed,{maxOutputLength:524288}));}catch{fail('DECOMPRESSION_FAILED');}
- if(blob.length!==main.uncompressed)fail('PLIST_SIZE_MISMATCH');const crc=crc32(blob);if(crc!==main.crc)fail('CRC_MISMATCH');
+ async function readEntry(entry,compressedLimit,outputLimit,limitCode){
+  if(entry.flags&1)fail('ENCRYPTED_UNSUPPORTED');if(![0,8].includes(entry.method))fail('COMPRESSION_UNSUPPORTED');
+  if(entry.compressed<1||entry.compressed>compressedLimit||entry.uncompressed>outputLimit)fail(limitCode);
+  const local=(await range(`bytes=${entry.offset}-${entry.offset+29}`,30)).a,lv=view(local);
+  if(lv.getUint32(0,true)!==0x04034b50||lv.getUint16(8,true)!==entry.method||lv.getUint16(6,true)!==entry.flags)fail('BAD_LOCAL_HEADER');
+  const nameLen=lv.getUint16(26,true),extraLen=lv.getUint16(28,true);
+  const localName=(await range(`bytes=${entry.offset+30}-${entry.offset+29+nameLen}`,nameLen)).a;
+  if(text(localName)!==entry.name)fail('BAD_LOCAL_HEADER');
+  const dataStart=entry.offset+30+nameLen+extraLen;if(dataStart+entry.compressed>cdOffset)fail('BAD_LOCAL_HEADER');
+  const compressed=(await range(`bytes=${dataStart}-${dataStart+entry.compressed-1}`,entry.compressed)).a;
+  let blob;try{blob=entry.method===0?compressed:new Uint8Array(inflateRawSync(compressed,{maxOutputLength:outputLimit}));}catch{fail('DECOMPRESSION_FAILED');}
+  if(blob.length!==entry.uncompressed)fail('ENTRY_SIZE_MISMATCH');if(crc32(blob)!==entry.crc)fail('CRC_MISMATCH');return blob;
+ }
+ const blob=await readEntry(main,131072,524288,'PLIST_LIMIT'),crc=crc32(blob);
  const binary=blob.length>=8&&text(blob.subarray(0,8))==='bplist00';const info=binary?binaryPlist(blob):xmlPlist(blob);
  const string=(key,required=false)=>{const x=info?.[key];if(x===undefined&&!required)return null;if(typeof x!=='string'||!x.trim()||x.length>1024)fail('INVALID_METADATA',key);return x;};
  const metadata={name:string('CFBundleDisplayName')||string('CFBundleName'),bundleIdentifier:string('CFBundleIdentifier',true),version:string('CFBundleShortVersionString',true),buildVersion:string('CFBundleVersion'),minOSVersion:string('MinimumOSVersion')};
  if(!metadata.name)fail('INVALID_METADATA','CFBundleDisplayName / CFBundleName');
- return {metadata,entry:main.name,plistFormat:binary?'binary':'xml',compression:main.method,compressedBytes:main.compressed,uncompressedBytes:main.uncompressed,crc32:crc.toString(16).padStart(8,'0'),zip64,entryCount:count,centralDirectoryBytes:cdSize,requests,requestCount:requests.length,downloadedBytes:requests.reduce((n,r)=>n+r.bytes,0),fullBytes:total,originalURL:url,finalHost:new URL(resolved).hostname,strongETag:etag,elapsedMs:Date.now()-started};
+ let icon=null;
+ if(options.extractIcon!==false){
+  const primary=info.CFBundleIcons?.CFBundlePrimaryIcon??info['CFBundleIcons~ipad']?.CFBundlePrimaryIcon;
+  const iconNames=[primary?.CFBundleIconName].filter(x=>typeof x==='string'&&x.length<=200);
+  const iconFiles=[...(Array.isArray(primary?.CFBundleIconFiles)?primary.CFBundleIconFiles:[]),...(Array.isArray(info.CFBundleIconFiles)?info.CFBundleIconFiles:[]),info.CFBundleIconFile].filter(x=>typeof x==='string'&&x.length<=200&&!x.includes('/')&&!x.includes('..'));
+  const prefix=main.name.slice(0,-'Info.plist'.length),rootFiles=files.filter(f=>f.name.startsWith(prefix));
+  const pngs=rootFiles.filter(f=>f.name.endsWith('.png')&&iconFiles.some(n=>{const base=n.replace(/\.png$/i,'');return new RegExp('^'+base.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?:@[123]x)?(?:~(?:iphone|ipad))?\\.png$','i').test(f.name.slice(prefix.length));}));
+  pngs.sort((a,b)=>b.uncompressed-a.uncompressed);
+  const car=rootFiles.find(f=>f.name===prefix+'Assets.car');let lastError;
+  const iconFailure=e=>{if(e instanceof SourceError||['TimeoutError','AbortError'].includes(e.name)||['OBJECT_CHANGED','TRUNCATED_RANGE','RANGE_UNSUPPORTED','BAD_CONTENT_RANGE','ENCODED_RANGE'].includes(e.code))throw e;return e;};
+  for(const f of pngs.slice(0,8))try{icon={...normalizeIconPNG(await readEntry(f,2*1024*1024,4*1024*1024,'ICON_LIMIT')),entry:f.name};break;}catch(e){lastError=iconFailure(e);}
+  if(!icon&&car)try{icon={...extractCARIcon(await readEntry(car,8*1024*1024,16*1024*1024,'ICON_LIMIT'),iconNames.length?iconNames:['AppIcon'],options.makeLZFSE),entry:car.name};}catch(e){lastError=iconFailure(e);}
+  if(!icon&&(iconNames.length||iconFiles.length||car))fail('ICON_EXTRACTION_FAILED',lastError?.code||lastError?.message||'Primary icon is missing');
+ }
+ return {metadata,icon,entry:main.name,plistFormat:binary?'binary':'xml',compression:main.method,compressedBytes:main.compressed,uncompressedBytes:main.uncompressed,crc32:crc.toString(16).padStart(8,'0'),zip64,entryCount:count,centralDirectoryBytes:cdSize,requests,requestCount:requests.length,downloadedBytes:requests.reduce((n,r)=>n+r.bytes,0),fullBytes:total,originalURL:url,finalHost:new URL(resolved).hostname,strongETag:etag,elapsedMs:Date.now()-started};
 }

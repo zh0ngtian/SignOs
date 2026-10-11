@@ -1,0 +1,39 @@
+{
+  "verifiedAt": "2026-10-11T09:25:12.777530+00:00",
+  "workerVersionId": "44ffc4cf-2fdf-45bb-802d-04b3ae86d6c2",
+  "sourceURL": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json",
+  "workerHealth": {
+    "service": "signos-source-aggregator",
+    "version": 1,
+    "sourceId": "yao"
+  },
+  "entryId": "bdf9cfa5-6c34-49ca-82fb-31a85ad9e6da",
+  "downloadURL": "https://github.com/zh0ngtian/codex-mobile/releases/download/v0.2.151/CodexMobile-v0.2.151-unsigned.ipa",
+  "version": "0.2.151",
+  "icon": {
+    "sha256": "da2e4f20220e5f0b7b2219d2753034fb3724d6377d92f41be35e0b20aa057a4d",
+    "width": 180,
+    "height": 180,
+    "entry": "Payload/PakePlus.app/Assets.car",
+    "rendition": "AppIcon-60.0x60.0@3x.png"
+  },
+  "iconURL": "https://signos-source-aggregator.305301890.workers.dev/app-icons/da2e4f20220e5f0b7b2219d2753034fb3724d6377d92f41be35e0b20aa057a4d.png",
+  "iconBytes": 30773,
+  "headers": {
+    "Content-Type": "image/png",
+    "Content-Length": "30773",
+    "Cache-Control": "public, max-age=31536000, immutable",
+    "ETag": "\"da2e4f20220e5f0b7b2219d2753034fb3724d6377d92f41be35e0b20aa057a4d\""
+  },
+  "extractedFromIPA": true,
+  "matchesIndependentExtractionPixels": true,
+  "publicPNGSHA256Verified": true,
+  "presentation": null,
+  "rangeRequests": 7,
+  "bytesRead": 1948968,
+  "fullIPABytes": 3761966,
+  "workerExtractionMs": 1641,
+  "headVerified": true,
+  "conditionalGETVerified": true,
+  "regressionsPassed": 27
+}

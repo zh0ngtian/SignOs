@@ -3,11 +3,14 @@ import { parseIPA } from './ipa.mjs';
 import { SourceError, errorData, json } from './errors.mjs';
 import { subscription, publicURL } from './urls.mjs';
 import { releaseCandidates, chooseCandidate } from './releases.mjs';
+import decoderModule from '../vendor/lzfse/decoder.wasm';
+import { lzfseDecoder } from './lzfse.mjs';
 
 const canonical = value => Array.isArray(value) ? value.map(canonical) : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).filter(k => value[k] !== undefined).sort().map(k => [k, canonical(value[k])])) : value;
 const now = () => new Date().toISOString();
 const HISTORY_LIMIT = 20;
 const terminal = new Set(['succeeded', 'failed', 'superseded']);
+const ICON_EXTRACTION_VERSION = 1;
 const tokenHash = async token => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token)))].map(x => x.toString(16).padStart(2, '0')).join('');
 
 export class Catalog extends DurableObject {
@@ -91,6 +94,18 @@ export class Catalog extends DurableObject {
     for (const entry of this.data.entries) await this.schedule(entry);
   }
 
+  async inspectIPA(url, extractIcon = true) {
+    const result = await parseIPA(url, fetch, { extractIcon, makeLZFSE: () => lzfseDecoder(decoderModule) });
+    const { icon, ...inspection } = result;
+    if (extractIcon) inspection.iconExtractionVersion = ICON_EXTRACTION_VERSION;
+    if (icon) {
+      const sha256 = [...new Uint8Array(await crypto.subtle.digest('SHA-256', icon.png))].map(x => x.toString(16).padStart(2, '0')).join('');
+      await this.ctx.storage.put(`icon:${sha256}`, icon.png);
+      inspection.icon = { sha256, width: icon.width, height: icon.height, entry: icon.entry, ...(icon.rendition ? { rendition: icon.rendition } : {}) };
+    }
+    return inspection;
+  }
+
   publicDocument(origin, legacyOnly = false) {
     const settings = this.data.settings;
     const iconURL = `${origin}/icon.png?v=app-store-ios27-84960d13`;
@@ -107,7 +122,7 @@ export class Catalog extends DurableObject {
           name: current.metadata.name, bundleIdentifier: current.metadata.bundleIdentifier,
           // Independent subscription identity preserves variants with the same Bundle ID.
           appID: entry.id, legacyDefault: entry.presentation?.legacyDefault === true, developerName: entry.presentation?.developerName || (entry.config.kind === 'github' ? entry.config.repository.split('/')[0] : '原始 IPA 发布者'),
-          localizedDescription: entry.presentation?.description || '', iconURL: entry.presentation?.iconURL || current.iconURL || iconURL,
+          localizedDescription: entry.presentation?.description || '', iconURL: current.inspection.icon ? `${origin}/app-icons/${current.inspection.icon.sha256}.png` : entry.presentation?.iconURL || current.iconURL || iconURL,
           ...version(current), versionDate: current.date, versionDescription: current.notes || '',
           versions: [current, ...entry.history].slice(0, HISTORY_LIMIT + 1).map(version),
         };
@@ -118,6 +133,15 @@ export class Catalog extends DurableObject {
   async fetch(request) {
     try {
       const url = new URL(request.url), path = url.pathname, method = request.method;
+      const icon = /^\/app-icons\/([a-f0-9]{64})\.png$/.exec(path);
+      if (icon && ['GET', 'HEAD'].includes(method)) {
+        const published = this.data.entries.some(e => e.published && [e.current, ...e.history].some(v => v?.inspection?.icon?.sha256 === icon[1]));
+        const png = published ? await this.ctx.storage.get(`icon:${icon[1]}`) : null;
+        if (!png) return json({ error: { code: 'NOT_FOUND', message: '图标不存在' } }, 404);
+        const headers = { 'Content-Type': 'image/png', 'Content-Length': String(png.byteLength), 'Cache-Control': 'public, max-age=31536000, immutable', ETag: `"${icon[1]}"`, 'X-Content-Type-Options': 'nosniff' };
+        if (request.headers.get('If-None-Match')?.split(',').some(x => x.trim() === headers.ETag || x.trim() === '*')) return new Response(null, { status: 304, headers });
+        return new Response(method === 'HEAD' ? null : png, { headers });
+      }
       if (['/source.json', '/appstore', `/sources/${this.data.settings.id}.json`].includes(path) && ['GET', 'HEAD'].includes(method)) {
         const document = this.publicDocument(url.origin, url.searchParams.get('legacy') === '1');
         const raw = JSON.stringify(document), etag = `"${await tokenHash(raw)}"`;
@@ -241,7 +265,7 @@ export class Catalog extends DurableObject {
     await this.ctx.storage.setAlarm(job.nextAt);
     try {
       if (job.kind === 'history') {
-        const inspection = await parseIPA(job.version.downloadURL);
+        const inspection = await this.inspectIPA(job.version.downloadURL, false);
         const sha256 = await this.githubDigest(job.version.downloadURL, job.version.sha256, inspection.fullBytes);
         const live = this.data.entries.find(e => e.id === job.entryId);
         if (!live || live.revision !== job.entryRevision) Object.assign(job, { status: 'superseded', finishedAt: now() });
@@ -263,8 +287,8 @@ export class Catalog extends DurableObject {
       const candidate = config.kind === 'github' ? chooseCandidate(await releaseCandidates(config, this.env, this.ctx.storage)) : { url: config.url, notes: '', publishedAt: null };
       const fingerprint = config.kind === 'github' ? `${candidate.releaseId}:${candidate.id}:${candidate.updatedAt}:${candidate.size}` : null;
       let inspection;
-      if (entry.current?.fingerprint === fingerprint && fingerprint && entry.current.downloadURL === candidate.url) inspection = entry.current.inspection;
-      else inspection = await parseIPA(candidate.url);
+      if (entry.current?.fingerprint === fingerprint && fingerprint && entry.current.downloadURL === candidate.url && entry.current.inspection.iconExtractionVersion === ICON_EXTRACTION_VERSION) inspection = entry.current.inspection;
+      else inspection = await this.inspectIPA(candidate.url);
       // Network awaits can interleave with edits or deletion. Publish only to the same revision.
       const live = this.data.entries.find(e => e.id === job.entryId);
       if (!live || live.revision !== job.entryRevision || live.config.paused) {
@@ -277,6 +301,10 @@ export class Catalog extends DurableObject {
           this.checkCapacity(live, current, live.current ? [live.current, ...live.history].slice(0, HISTORY_LIMIT) : live.history);
           if (live.current) live.history = [live.current, ...live.history].slice(0, HISTORY_LIMIT);
           live.current = current;
+        } else {
+          // Backfill unchanged IPAs without duplicating a version or dropping
+          // a previously attested full-file digest.
+          live.current.inspection = inspection;
         }
         live.lastSuccessAt = now(); live.error = null; live.status = live.published ? 'succeeded' : 'ready';
         Object.assign(job, { status: 'succeeded', finishedAt: now() });

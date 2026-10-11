@@ -1,6 +1,6 @@
 # Cloudflare IPA 软件源
 
-免费 Worker + SQLite Durable Object 保存订阅、版本及任务；Cron 每小时检查一次。IPA 只从原始 URL 读取 Range 片段，用户下载直达原站。客户端最低 iOS 17。
+免费 Worker + SQLite Durable Object 保存订阅、版本、提取的应用图标及任务；Cron 每小时检查一次。IPA 只从原始 URL 读取 Range 片段，用户下载直达原站。客户端最低 iOS 17。
 
 ```sh
 cd distribution/source-aggregator
@@ -44,5 +44,11 @@ python3 scripts/cloud_source.py status
 备份含完整性签名，不含 Token。在同一持久实例恢复时保留已验证版本、历史和 ID；文件被修改会拒绝恢复。全新存储实例不能验证旧签名时，仅恢复配置和 ID，重新解析后确认发布；历史版本可通过 `history` 接口重新校验导入。应用名称、Bundle ID、版本等不允许手填。
 
 Range 支持 ZIP64、binary/XML plist、Store/Deflate、最大 ZIP 注释和中央目录补读；限制中央目录 4 MiB、plist 解压 512 KiB。忽略 Range 的响应会立即取消。CRC-32 只证明 plist 完整性；公开全包 SHA-256 必须与 GitHub Release 附件的 `digest`、大小一致。
+
+首次解析与后续更新直接从同一 IPA 提取主应用图标，优先读取 plist 指定的独立 PNG，支持 iOS CgBI；否则读取主应用的 `Assets.car`。CAR 按逻辑主图标名称选择正常 iPhone 变体，支持 ARGB/GA8 的未压缩、gzip、LZFSE 和 KCBC 分块，解码器与构建方式见 [vendor/lzfse/README.md](vendor/lzfse/README.md)。不会把扩展、备用图标或无关大图当作应用图标。
+
+图标转换为最长 256 像素、至多 96 KiB 的标准 PNG，保存在 Durable Object，以 `/app-icons/<PNG-SHA256>.png` 提供公开 GET/HEAD 和条件缓存。提取图标优先于旧展示配置；应用图标不会改动软件源自身的 App Store 图标。已存在订阅在下一次同步补齐提取结果；同一 IPA 的补齐不增加历史版本、不丢失已验证全包 SHA-256。首次图标解析失败不公开，更新失败保留原版本并报告 `ICON_EXTRACTION_FAILED`；无需旧源迁移或本机提取服务。
+
+独立 PNG 的 ZIP 压缩输入限制为 2 MiB、解压后 4 MiB；CAR 分别为 8 MiB、16 MiB。位图最大 2048×2048。IPA 主图标超过限额或所有候选编码均不支持时会明确失败。回归覆盖独立 PNG、CgBI、CAR 逻辑图标选择、分块 LZFSE、损坏输入、首次公开、HTTPS 图标路由、更新失败保留，以及不变 IPA 的图标补齐。
 
 任务每次 Alarm 处理一个 IPA，最多三次临时故障重试。订阅修改会使旧修订任务失效。首次失败不公开；更新失败保留旧版本。每个订阅最多保存当前版本和 20 个历史版本。暂停不会删除已发布数据。

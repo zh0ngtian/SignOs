@@ -3,14 +3,20 @@ import assert from 'node:assert/strict';
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
 import fixtures from './fixtures.mjs';
 import { build } from 'esbuild';
+import { readFileSync } from 'node:fs';
 
 test('Durable catalog publishes only parsed apps, preserves old versions on failure, and enforces auth/revisions', async () => {
-  const bytes = Buffer.from(fixtures.find(x => x.id === 'binary-deflate').base64, 'base64');
+  const bytes = Buffer.from(fixtures.find(x => x.id === 'icon-car-lzfse').base64, 'base64');
+  const brokenIcon = Buffer.from(fixtures.find(x => x.id === 'icon-broken').base64, 'base64');
   let apiCalls = 0;
   const token = 'test-management-token-with-at-least-32-characters';
-  const bundle = await build({ entryPoints: [new URL('../src/index.mjs', import.meta.url).pathname], bundle: true, write: false, format: 'esm', platform: 'node', external: ['cloudflare:workers'], loader: { '.png': 'binary' } });
+  const bundle = await build({ entryPoints: [new URL('../src/index.mjs', import.meta.url).pathname], bundle: true, write: false, format: 'esm', platform: 'node', external: ['cloudflare:workers'], loader: { '.png': 'binary' }, plugins: [{ name: 'wasm', setup(build) { build.onResolve({ filter: /decoder\.wasm$/ }, () => ({ path: './decoder.wasm', external: true })); } }] });
   const mf = new Miniflare(convertV4MiniflareOptions({
-    modules: true, script: bundle.outputFiles[0].text,
+    modulesRoot: '/worker',
+    modules: [
+      { type: 'ESModule', path: '/worker/index.mjs', contents: bundle.outputFiles[0].text },
+      { type: 'CompiledWasm', path: '/worker/decoder.wasm', contents: readFileSync(new URL('../vendor/lzfse/decoder.wasm', import.meta.url)) },
+    ],
     compatibilityDate: '2026-05-22', compatibilityFlags: ['nodejs_compat'],
     durableObjects: { CATALOG: { className: 'Catalog', useSQLite: true } },
     bindings: { ADMIN_TOKEN: token, SOURCE_ID: 'test', SOURCE_NAME: 'Test Source', SOURCE_IDENTIFIER: 'com.example.source' },
@@ -24,10 +30,11 @@ test('Durable catalog publishes only parsed apps, preserves old versions on fail
         ] }], { headers: { ETag: '"release"' } });
       }
       if (url.pathname === '/bad.ipa') return new Response('missing', { status: 404 });
+      const body = url.pathname === '/bad-icon.ipa' ? brokenIcon : bytes;
       const range = request.headers.get('Range'), suffix = /^bytes=-(\d+)$/.exec(range), exact = /^bytes=(\d+)-(\d+)$/.exec(range);
-      const start = suffix ? Math.max(0, bytes.length - Number(suffix[1])) : Number(exact[1]);
-      const end = suffix ? bytes.length - 1 : Number(exact[2]);
-      return new Response(bytes.subarray(start, end + 1), { status: 206, headers: { 'Content-Range': `bytes ${start}-${end}/${bytes.length}`, ETag: '"fixture"' } });
+      const start = suffix ? Math.max(0, body.length - Number(suffix[1])) : Number(exact[1]);
+      const end = suffix ? body.length - 1 : Number(exact[2]);
+      return new Response(body.subarray(start, end + 1), { status: 206, headers: { 'Content-Range': `bytes ${start}-${end}/${body.length}`, ETag: '"fixture"' } });
     },
   }));
   const call = async (path, method = 'GET', body, secret = token) => {
@@ -52,11 +59,20 @@ test('Durable catalog publishes only parsed apps, preserves old versions on fail
     assert.equal((await call('/source.json')).data.apps.length, 0);
     const ready = await waitFor(id, 'ready');
     assert.equal(ready.entries[0].current.metadata.name, '验证 & Range');
+    const iconHash = ready.entries[0].current.inspection.icon.sha256;
+    assert.equal((await mf.dispatchFetch(`https://source.example/app-icons/${iconHash}.png`)).status, 404, 'unconfirmed apps must not expose their icons');
     assert.equal((await call(`/api/entries/${id}/confirm`, 'POST', { revision: 0 })).status, 409);
     assert.equal((await call(`/api/entries/${id}/confirm`, 'POST', { revision: ready.revision })).status, 200);
     const source = (await call('/source.json')).data;
     assert.equal(source.apps[0].downloadURL, 'https://fixtures.example/App.ipa');
     assert.equal(source.apps[0].bundleIdentifier, 'com.example.range');
+    assert.equal(source.apps[0].iconURL, `https://source.example/app-icons/${iconHash}.png`);
+    const icon = await mf.dispatchFetch(source.apps[0].iconURL);
+    assert.equal(icon.headers.get('Content-Type'), 'image/png');
+    assert.deepEqual([...new Uint8Array(await icon.arrayBuffer()).slice(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+    const head = await mf.dispatchFetch(source.apps[0].iconURL, { method: 'HEAD' });
+    assert.equal(head.status, 200); assert.equal((await head.arrayBuffer()).byteLength, 0);
+    assert.equal((await mf.dispatchFetch(source.apps[0].iconURL, { headers: { 'If-None-Match': head.headers.get('ETag') } })).status, 304);
     assert.equal((await call('/source.json?legacy=1')).data.apps.length, 0, 'unselected variants must not enter the old-client source');
     await call(`/api/entries/${id}/presentation`, 'POST', {
       revision: (await call('/api/catalog')).data.revision, developerName: 'Test', description: '',
@@ -65,6 +81,7 @@ test('Durable catalog publishes only parsed apps, preserves old versions on fail
     const legacy = (await call('/source.json?legacy=1')).data;
     assert.equal(legacy.apps.length, 1);
     assert.equal(legacy.apps[0].appID, id);
+    assert.equal(legacy.apps[0].iconURL, source.apps[0].iconURL, 'extracted icons take precedence over migrated presentation URLs');
     assert.equal(legacy.sourceURL, 'https://source.example/sources/test.json?legacy=1');
     const discovery = await call('/api/discover', 'POST', { config: { kind: 'github', repository: 'owner/repo' } });
     assert.equal(discovery.data.candidates.length, 2);
@@ -74,7 +91,11 @@ test('Durable catalog publishes only parsed apps, preserves old versions on fail
     assert.equal(failed.entries.find(e => e.id === ambiguous.data.entry.id).error.code, 'ASSET_AMBIGUOUS');
     assert.equal(apiCalls, 1, 'subscriptions share a release cache');
     assert.equal((await call('/source.json')).data.apps.length, 1);
-    const edited = await call(`/api/entries/${id}`, 'PATCH', { revision: failed.revision, config: { kind: 'url', url: 'https://fixtures.example/bad.ipa' } });
+    await call(`/api/entries/${id}`, 'PATCH', { revision: failed.revision, config: { kind: 'url', url: 'https://fixtures.example/bad-icon.ipa' } });
+    const iconFailure = await waitFor(id, 'failed');
+    assert.equal(iconFailure.entries.find(e => e.id === id).error.code, 'ICON_EXTRACTION_FAILED');
+    assert.equal((await call('/source.json')).data.apps[0].iconURL, source.apps[0].iconURL, 'a corrupt new icon must preserve the previous public version');
+    const edited = await call(`/api/entries/${id}`, 'PATCH', { revision: iconFailure.revision, config: { kind: 'url', url: 'https://fixtures.example/bad.ipa' } });
     assert.equal(edited.status, 200);
     const broken = await waitFor(id, 'failed');
     assert.equal(broken.entries.find(e => e.id === id).error.code, 'DOWNLOAD_INACCESSIBLE');

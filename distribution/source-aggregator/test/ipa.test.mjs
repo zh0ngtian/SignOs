@@ -3,6 +3,11 @@ import assert from 'node:assert/strict';
 import fixtures from './fixtures.mjs';
 import { parseIPA } from '../src/ipa.mjs';
 import { publicURL, repository, glob, subscription } from '../src/urls.mjs';
+import { readFileSync } from 'node:fs';
+import { lzfseDecoder } from '../src/lzfse.mjs';
+import { normalizeIconPNG } from '../src/png.mjs';
+const decoderModule = new WebAssembly.Module(readFileSync(new URL('../vendor/lzfse/decoder.wasm', import.meta.url)));
+const options = { makeLZFSE: () => lzfseDecoder(decoderModule) };
 
 export function rangeTransport(fixture) {
   const bytes = Buffer.from(fixture.base64, 'base64'); let requests = 0;
@@ -23,13 +28,23 @@ export function rangeTransport(fixture) {
 for (const fixture of fixtures) {
   test(`Range parser: ${fixture.id}`, async () => {
     const transport = rangeTransport(fixture);
-    if (fixture.error) await assert.rejects(parseIPA('https://fixtures.example/app.ipa', transport), e => e.code === fixture.error);
+    if (fixture.error) await assert.rejects(parseIPA('https://fixtures.example/app.ipa', transport, options), e => e.code === fixture.error);
     else {
-      const result = await parseIPA('https://fixtures.example/app.ipa', transport);
+      const result = await parseIPA('https://fixtures.example/app.ipa', transport, options);
       assert.deepEqual(result.metadata, fixture.expected);
       assert.equal(result.fullBytes, Buffer.from(fixture.base64, 'base64').length);
       assert.equal(result.downloadedBytes, result.requests.reduce((n, r) => n + r.bytes, 0));
       assert.equal(result.zip64, fixture.id === 'zip64');
+      if (fixture.id.startsWith('icon-')) {
+        assert.equal(result.icon.width, 4);
+        assert.equal(result.icon.height, 4);
+        const normalized = normalizeIconPNG(result.icon.png);
+        assert.deepEqual(normalized.png, result.icon.png);
+        const expected = fixtures.find(f => f.id === 'icon-png');
+        const primary = await parseIPA('https://fixtures.example/app.ipa', rangeTransport(expected), options);
+        assert.deepEqual(result.icon.png, primary.icon.png, 'CAR logical primary and CgBI channels must match the red PNG');
+        assert.match(result.icon.entry, fixture.id.includes('car') ? /Assets\.car$/ : /PrimaryIcon@3x\.png$/);
+      } else assert.equal(result.icon, null);
     }
   });
 }
