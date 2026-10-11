@@ -135,7 +135,7 @@ bash scripts/check_ios_build.sh "$(mktemp -d /tmp/signos-ios-build.XXXXXX)"
 下载管理器的 iOS 模拟器回归；需要时在 Actions 页面选择分支并点击 Run workflow，或运行：
 
 ```sh
-gh workflow run ios-regression.yml --ref main
+gh workflow run ios-regression.yml --repo zh0ngtian/SignOs --ref main
 ```
 
 该手动入口不替代改动所需的本地功能验收，也不包含依赖真机或私有配置的 OTA 验收。
