@@ -20,6 +20,7 @@ struct WSActionButton: View {
 	var systemImage: String? = nil
 	var style: Style = .capsule
 	var isDisabled: Bool = false
+	var minimumHeight: CGFloat = 30
 	let action: () -> Void
 
 	@State private var _isPressed = false
@@ -45,7 +46,7 @@ struct WSActionButton: View {
 			_label
 				.foregroundStyle(_foreground)
 				.padding(.horizontal, 14)
-				.frame(minWidth: 68, minHeight: 30)
+				.frame(minWidth: 68, minHeight: minimumHeight)
 		}
 		.buttonStyle(.plain)
 		.background(_background)

@@ -50,6 +50,14 @@ struct UpdatesView: View {
 			ScrollView {
 				VStack(alignment: .leading, spacing: WSSpacing.sectionGap) {
 					WSHeroHeader(eyebrow: "SignOs", title: "Updates")
+					HStack {
+						Spacer()
+						if _isChecking { ProgressView() }
+						WSActionButton(title: "Check", isDisabled: _isChecking, minimumHeight: 44) {
+							Task { await autoUpdateManager.checkNow(notifyWhenClean: false) }
+						}
+						.accessibilityIdentifier("updates.check")
+					}
 
 					if !_sortedUpdates.isEmpty {
 						_availableUpdates()

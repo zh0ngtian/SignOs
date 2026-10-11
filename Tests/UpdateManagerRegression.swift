@@ -20,7 +20,11 @@ struct LocalApp: AppInfoPresentable {
     var source: URL? = URL(string: "https://yao-app-source.305301890.workers.dev/source.json")!
     var isSigned = true
 }
-struct AltSource { let sourceURL: URL?; var name: String? = "Official" }
+struct AltSource {
+    let sourceURL: URL?
+    var name: String? = "Official"
+    var identifier: String? = "tech.zh0ngtian.yao-app-source"
+}
 
 @objc(AppSourceMetadata)
 final class AppSourceMetadata: NSManagedObject {
@@ -55,11 +59,20 @@ final class Storage {
 final class FixtureProtocol: URLProtocol {
     static var data = Data()
     static var status = 200
+    static var error: URLError?
+    static var onStart: (() -> Void)?
+    static var waitForCancellation = false
     static var requests: [URLRequest] = []
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
     override func startLoading() {
         Self.requests.append(request)
+        Self.onStart?()
+        if Self.waitForCancellation { return }
+        if let error = Self.error {
+            client!.urlProtocol(self, didFailWithError: error)
+            return
+        }
         client!.urlProtocol(self, didReceive: HTTPURLResponse(url: request.url!, statusCode: Self.status,
                     httpVersion: "HTTP/1.1", headerFields: ["Content-Type": "application/json"])!, cacheStoragePolicy: .notAllowed)
         client!.urlProtocol(self, didLoad: Self.data)
@@ -113,7 +126,55 @@ struct UpdateManagerRegression {
         checkpoint("repeat legacy check completed")
         precondition(manager.updates["museum"]?.remoteVersion == "1.1.3", "Repeat checks must retain the update after repair")
 
+        let secondSource = AltSource(sourceURL: URL(string: "https://example.com/second-source.json")!)
+        try fixture([app(version: "1.1.4")])
+        let requestsBeforeSync = FixtureProtocol.requests.count
+        var synchronized = false
+        let syncCompleted = await manager.checkForUpdates(sources: [source, secondSource], localApps: [local]) { repositories in
+            precondition(repositories.count == 2, "Synchronize every subscribed source, including sources without installed apps")
+            precondition(FixtureProtocol.requests.count == requestsBeforeSync + 2, "Download each source only once")
+            precondition(manager.updates["museum"]?.remoteVersion == "1.1.3", "Publish sources before comparing app versions")
+            synchronized = true
+        }
+        precondition(syncCompleted && synchronized && manager.updates["museum"]?.remoteVersion == "1.1.4")
+        try fixture([app()])
+        await manager.checkForUpdates(sources: [source], localApps: [local])
+        checkpoint("all-source synchronization before comparison with one request per source passed")
+
         checkpoint("repeat check and metadata repair passed")
+        let pendingUpdates = manager.updates
+        let checkedDate = manager.lastCheckedDate
+        FixtureProtocol.error = URLError(.cancelled)
+        let cancelled = await manager.checkForUpdates(sources: [source], localApps: [local]) { _ in
+            preconditionFailure("Cancellation must not publish a partial source synchronization")
+        }
+        precondition(!cancelled && !manager.isChecking)
+        precondition(manager.updates == pendingUpdates, "Cancellation must retain pending updates")
+        precondition(manager.lastCheckedDate == checkedDate, "Cancellation must not count as a completed check")
+        precondition(manager.checkIssues.count == 1 && manager.checkIssues[0].contains("Tap Check"))
+        precondition(!manager.checkIssues.contains { $0.contains("linked repository") })
+        FixtureProtocol.error = nil
+        let retryCompleted = await manager.checkForUpdates(sources: [source], localApps: [local])
+        precondition(retryCompleted)
+        precondition(manager.checkIssues.isEmpty, "Retry must clear cancellation")
+
+        let retryDate = manager.lastCheckedDate
+        FixtureProtocol.waitForCancellation = true
+        var checkingTask: Task<Bool, Never>?
+        FixtureProtocol.onStart = { checkingTask?.cancel() }
+        checkingTask = Task { await manager.checkForUpdates(sources: [source, source], localApps: [local]) }
+        let requestsBeforeCancellation = FixtureProtocol.requests.count
+        let taskCompleted = await checkingTask!.value
+        precondition(!taskCompleted && !manager.isChecking)
+        precondition(manager.updates == pendingUpdates && manager.lastCheckedDate == retryDate)
+        precondition(FixtureProtocol.requests.count == requestsBeforeCancellation + 1, "Cancelled checks must stop before fetching subsequent sources")
+        precondition(!manager.checkIssues.contains { $0.contains("linked repository") })
+        FixtureProtocol.onStart = nil
+        FixtureProtocol.waitForCancellation = false
+        await manager.checkForUpdates(sources: [source], localApps: [local])
+        precondition(manager.checkIssues.isEmpty && manager.updates == pendingUpdates)
+        checkpoint("URLSession cancellation, in-flight task cancellation and retry passed")
+
         manager.setHeld(true, for: bundle)
         await manager.checkForUpdates(sources: [source], localApps: [local])
         precondition(manager.updates.isEmpty && manager.checkIssues.isEmpty)
@@ -141,15 +202,19 @@ struct UpdateManagerRegression {
         FixtureProtocol.status = 503
         await manager.checkForUpdates(sources: [source], localApps: [local])
         precondition(manager.updates.isEmpty && !manager.checkIssues.isEmpty, "HTTP failures cannot claim a clean check")
+        precondition(manager.checkIssues == ["Official: HTTP 503"], "A fetch failure must not claim the linked source was removed: \(manager.checkIssues)")
         FixtureProtocol.status = 200
         FixtureProtocol.data = Data("{broken json".utf8)
         await manager.checkForUpdates(sources: [source], localApps: [local])
         precondition(manager.updates.isEmpty && !manager.checkIssues.isEmpty)
+        precondition(!manager.checkIssues.contains { $0.contains("linked repository") })
         try fixture([app(version: "1.1.2")])
         await manager.checkForUpdates(sources: [source], localApps: [local])
         precondition(manager.updates.isEmpty && manager.checkIssues.isEmpty, "Successful retry must clear failures")
         precondition(Storage.shared.sourceMetadata(for: "museum")?.sourceAppVersion == "1.1.2")
+        await manager.checkForUpdates(sources: [], localApps: [local])
+        precondition(manager.checkIssues.contains { $0.contains("linked repository") }, "A removed source must still be reported")
         checkpoint("HTTP/JSON failures and retry passed")
-        print("UpdateManagerRegression passed: migrated legacy record, durable local version, variants, holds/skips, HTTP/JSON failures and retry")
+        print("UpdateManagerRegression passed: migrated legacy record, durable local version, variants, holds/skips, cancellation, HTTP/JSON failures, removed source and retry")
     }
 }

@@ -53,21 +53,34 @@ final class UpdateManager: ObservableObject {
 		}
 	}
 
+	@discardableResult
 	func checkForUpdates(
 		sources: [AltSource],
-		localApps: [AppInfoPresentable]
-	) async {
-		guard !isChecking else { return }
+		localApps: [AppInfoPresentable],
+		onSourcesSynchronized: @MainActor ([(AltSource, ASRepository)]) -> Void = { _ in }
+	) async -> Bool {
+		guard !isChecking else { return false }
 		
 		isChecking = true
-		checkIssues = []
-		defer {
-			isChecking = false
+		defer { isChecking = false }
+		do {
+			let result = try await _fetchRepositories(from: sources)
+			try Task.checkCancellation()
+			// Publish the freshly synchronized sources before comparing installed apps.
+			// Both screens consume the same response; checking never downloads it again.
+			onSourcesSynchronized(result.repositories)
+			checkIssues = result.issues
+			updates = _applySkips(_findUpdates(
+				repositories: result.repositories, localApps: localApps, failedSources: result.failedSources
+			))
 			lastCheckedDate = Date()
+			return true
+		} catch {
+			// A cancelled refresh is incomplete, not evidence that its sources were removed.
+			let issue = String(localized: "Update check was cancelled. Tap Check to retry.")
+			if !checkIssues.contains(issue) { checkIssues.append(issue) }
+			return false
 		}
-		
-		let repositories = await _fetchRepositories(from: sources)
-		updates = _applySkips(_findUpdates(repositories: repositories, localApps: localApps))
 	}
 
 	// MARK: - Skips & Holds
@@ -118,12 +131,17 @@ final class UpdateManager: ObservableObject {
 		}
 	}
 	
-	private func _fetchRepositories(from sources: [AltSource]) async -> [(AltSource, ASRepository)] {
+	private func _fetchRepositories(from sources: [AltSource]) async throws -> (
+		repositories: [(AltSource, ASRepository)], issues: [String], failedSources: [AltSource]
+	) {
 		var repositories: [(AltSource, ASRepository)] = []
+		var issues: [String] = []
+		var failedSources: [AltSource] = []
 		
 		for source in sources {
+			try Task.checkCancellation()
 			guard let url = source.sourceURL else {
-				checkIssues.append("\(source.name ?? "Repository"): source URL is missing.")
+				issues.append("\(source.name ?? "Repository"): source URL is missing.")
 				continue
 			}
 			
@@ -131,21 +149,31 @@ final class UpdateManager: ObservableObject {
 				var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 30)
 				request.setValue("SignOs-App/1", forHTTPHeaderField: "User-Agent")
 				let (data, response) = try await session.data(for: request)
-				guard let response = response as? HTTPURLResponse, response.statusCode == 200 else {
+				guard let response = response as? HTTPURLResponse else {
 					throw URLError(.badServerResponse)
+				}
+				guard response.statusCode == 200 else {
+					issues.append("\(source.name ?? url.host ?? url.absoluteString): HTTP \(response.statusCode)")
+					failedSources.append(source)
+					continue
 				}
 				let repository = try JSONDecoder().decode(ASRepository.self, from: data)
 				repositories.append((source, repository))
 			} catch {
-				checkIssues.append("\(source.name ?? url.host ?? url.absoluteString): \(error.localizedDescription)")
+				if Task.isCancelled || error is CancellationError || (error as? URLError)?.code == .cancelled {
+					throw CancellationError()
+				}
+				issues.append("\(source.name ?? url.host ?? url.absoluteString): \(error.localizedDescription)")
+				failedSources.append(source)
 			}
 		}
-		return repositories
+		return (repositories, issues, failedSources)
 	}
 	
 	private func _findUpdates(
 		repositories: [(AltSource, ASRepository)],
-		localApps: [AppInfoPresentable]
+		localApps: [AppInfoPresentable],
+		failedSources: [AltSource]
 	) -> [String: AppUpdate] {
 		var foundUpdates: [String: AppUpdate] = [:]
 		let metadataByUUID = Storage.shared.getSourceMetadata().reduce(into: [String: AppSourceMetadata]()) {
@@ -294,7 +322,14 @@ final class UpdateManager: ObservableObject {
 				)
 				break
 			}
-			if !matchedRepository {
+			let linkedSourceFailed = failedSources.contains { source in
+				guard let url = source.sourceURL else { return false }
+				return SourceRepositoryIdentity.matches(
+					storedURL: storedSourceURL, storedIdentifier: storedRepositoryIdentifier,
+					currentURL: url, currentIdentifier: source.identifier
+				)
+			}
+			if !matchedRepository && !linkedSourceFailed {
 				checkIssues.append("\(localApp.name ?? localUUID): linked repository is unavailable. Refresh or restore its source in Sources.")
 			}
 		}

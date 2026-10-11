@@ -9,6 +9,7 @@ import Foundation
 import AltSourceKit
 import SwiftUI
 import NimbleJSON
+import CoreData
 
 // MARK: - Class
 final class SourcesViewModel: ObservableObject {
@@ -20,7 +21,48 @@ final class SourcesViewModel: ObservableObject {
 	
 	var isFinished = true
 	@Published var sources: [AltSource: ASRepository] = [:]
+	@MainActor private var _revision = 0
+
+	/// Replace the browsing cache with the exact snapshot used by the update check.
+	@MainActor
+	func applySynchronizedRepositories(_ repositories: [(AltSource, ASRepository)]) {
+		_revision += 1
+		var refreshed: [AltSource: ASRepository] = [:]
+		var dates = UserDefaults.standard.dictionary(forKey: "SignOs.sourceRefreshDates") as? [String: Date] ?? [:]
+		var didUpdateIcon = false
+		for (source, repository) in repositories {
+			guard !source.isDeleted, source.managedObjectContext != nil else { continue }
+			refreshed[source] = repository
+			dates[source.identifier ?? ""] = Date()
+			if source.iconURL != repository.currentIconURL {
+				source.iconURL = repository.currentIconURL
+				didUpdateIcon = true
+			}
+		}
+		UserDefaults.standard.set(dates, forKey: "SignOs.sourceRefreshDates")
+		sources = refreshed
+		if didUpdateIcon { Storage.shared.saveContext() }
+	}
 	
+    /// Refresh only this subscription, retaining its last successful data on failure.
+    @MainActor
+    func refreshSource(_ source: AltSource) async throws {
+        guard let url = source.sourceURL else { throw URLError(.badURL) }
+        let revision = _revision
+        let request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 30)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
+        let repository = try JSONDecoder().decode(ASRepository.self, from: data)
+        try Task.checkCancellation()
+        guard _revision == revision, !source.isDeleted, source.managedObjectContext != nil else { return }
+        source.iconURL = repository.currentIconURL
+        Storage.shared.saveContext()
+        var dates = UserDefaults.standard.dictionary(forKey: "SignOs.sourceRefreshDates") as? [String: Date] ?? [:]
+        dates[source.identifier ?? ""] = Date()
+        UserDefaults.standard.set(dates, forKey: "SignOs.sourceRefreshDates")
+        sources[source] = repository
+    }
+
 	func fetchSources(_ sources: FetchedResults<AltSource>, refresh: Bool = false, batchSize: Int = 4) async {
 		guard isFinished else { return }
 		
@@ -32,8 +74,9 @@ final class SourcesViewModel: ObservableObject {
 		isFinished = false
 		defer { isFinished = true }
 		
-		await MainActor.run {
+		let revision = await MainActor.run {
 			self.sources = [:]
+			return self._revision
 		}
 		
 		let sourcesArray = Array(sources)
@@ -72,6 +115,8 @@ final class SourcesViewModel: ObservableObject {
 			}
 			
 			await MainActor.run {
+				// An update check may have synchronized newer data while this fetch was running.
+				guard self._revision == revision else { return }
 				var didUpdateIcon = false
 				for (source, repo) in batchResults {
 					guard !source.isDeleted, source.managedObjectContext != nil else { continue }
@@ -79,7 +124,10 @@ final class SourcesViewModel: ObservableObject {
 						source.iconURL = repo.currentIconURL
 						didUpdateIcon = true
 					}
-					self.sources[source] = repo
+					var dates = UserDefaults.standard.dictionary(forKey: "SignOs.sourceRefreshDates") as? [String: Date] ?? [:]
+                    dates[source.identifier ?? ""] = Date()
+                    UserDefaults.standard.set(dates, forKey: "SignOs.sourceRefreshDates")
+                    self.sources[source] = repo
 				}
 				if didUpdateIcon {
 					Storage.shared.saveContext()

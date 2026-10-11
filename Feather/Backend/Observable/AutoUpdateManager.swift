@@ -154,14 +154,16 @@ final class AutoUpdateManager: ObservableObject {
 		isAutoChecking = true
 		defer {
 			isAutoChecking = false
-			lastCheckDate = Date()
 		}
 
-		await UpdateManager.shared.checkForUpdates(
+		let completed = await UpdateManager.shared.checkForUpdates(
 			sources: _fetchSources(),
 			localApps: _fetchSignedApps().map { $0 as AppInfoPresentable }
-				+ _fetchImportedApps().map { $0 as AppInfoPresentable }
+				+ _fetchImportedApps().map { $0 as AppInfoPresentable },
+			onSourcesSynchronized: { SourcesViewModel.shared.applySynchronizedRepositories($0) }
 		)
+		guard completed else { return UpdateManager.shared.updates.count }
+		lastCheckDate = Date()
 
 		checkRenewals()
 

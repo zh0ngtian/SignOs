@@ -61,7 +61,7 @@ contributors for their work, this wouldn't exist without them.
   update controls and removal, and remote source management
 - Search across every source with recent searches
 - Library with filters and quick actions
-- Updates tab with app updates and recent activity; pull down to check for updates
+- Updates tab with app updates and recent activity; tap CHECK or pull down to synchronize every subscribed source, then check for updates using the same fresh data
 - Automatic update and signing preferences in Settings
 - OneView install — Get (or Update for a detected source update), download progress with speed, signing and Open on one screen
 - Rich app pages with screenshots, What's New, version history and permissions
@@ -340,11 +340,16 @@ URLs and official repository ID are accepted without stored identity.
 
 Updates reports source fetch, missing association and ambiguous subscription
 failures as an incomplete check; it does not show or notify “All Apps Up to Date”
-for an incomplete check. Checks reload source JSON and require HTTP 200.
+for an incomplete check. CHECK synchronizes all subscribed sources with uncached HTTP 200
+responses, publishes the source browsing cache, then compares versions from that same snapshot.
+Cancelled checks retain pending updates and leave the source cache and completed-check date
+unchanged; they do not start automatic downloads and offer CHECK to retry.
+Source fetch failures report their actual error (including HTTP status) without treating the source as removed.
 
 The production update manager and Core Data metadata writer regression covers
 the museum 1.1.2 → 1.1.3 case, repeated checks, subscription variants, holds/skips,
-HTTP/JSON failures and successful retry:
+all-source synchronization before comparison without duplicate requests, request/task
+cancellation, HTTP/JSON failures, removed sources and successful retry:
 
 ```sh
 python3 scripts/test_update_manager.py <SIMULATOR_UDID>

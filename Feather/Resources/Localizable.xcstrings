@@ -1,6 +1,29 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Update check was cancelled. Tap Check to retry.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update check was cancelled. Tap Check to retry."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新检查已取消，请点击 CHECK 重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新檢查已取消，請點擊 CHECK 重試。"
+          }
+        }
+      }
+    },
     "%lld Apps": {
       "comment": "Repository app count",
       "extractionState": "manual",
