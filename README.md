@@ -153,16 +153,17 @@ python3 scripts/test_download_manager_simulator.py <SIMULATOR_UDID>
 诊断，不保存签名 URL，也不作为软件源的长期地址。测试结束会移除临时 App 和文件。
 
 常规交付流程为：完成本地必要检查、提交与 push、核对远端提交。涉及客户端时，须等待
-**该提交**的 `iOS Build Check / iOS Release build` 成功；只触发工作流不算完成。
+**该提交**的 `iOS Build Check / iOS Release build` 成功，并按下节流程发布新版；任何涉及
+App 的改动都必须发布，不按类型、规模或是否改变用户可见功能区别处理，发布完成才算交付。
 不涉及客户端时，仅完成受影响部分的检查，无须执行、手动触发或等待客户端构建。
-普通提交和手动构建不创建 GitHub Release。流水线不改版本或构建号；
-标签发布使用下一节的标准流程，本机 OTA 仅在明确要求发包时执行。
+发布默认使用 GitHub Release，版本号和构建号由本次改动递增。普通提交和手动构建本身
+不创建 Release，因此客户端交付必须继续完成标签发布；本机 OTA 仅在明确要求发包时执行。
 
 ### GitHub Release 标准发布流程
 
 发布标签使用 `vX.Y.Z`，例如 `v1.0.11`。准备发布时，先将 `Feather.xcconfig`
 中的 `FEATHER_PROJECT_VERSION` 更新为 `X.Y.Z`，并按需要更新 Xcode 工程中的
-`CURRENT_PROJECT_VERSION`；新安装包的构建号应高于之前发出的包。提交并 push 到
+`CURRENT_PROJECT_VERSION`；每次 App 改动都发布新版本，版本号和构建号均须高于之前发出的包。提交并 push 到
 `main`，等待该提交的 `iOS Build Check` 成功，再为这个已验证的提交打标签：
 
 ```sh
@@ -280,12 +281,12 @@ verifies signing, stages versioned resources, checks HTTPS downloads, and then
 switches the fixed `current` entry.
 
 明确要求 OTA 发包时使用私有配置发布正式签名 IPA，并保证构建号递增。
-常规客户端改动使用上文的 GitHub Actions 构建检查；公开版本按标签发布到 GitHub Release。
+任何涉及 App 的改动都须通过上文的 GitHub Actions 构建检查，并按标签发布新版到 GitHub Release。
 
 本次用户明确要求双渠道正式发包：同一 OTA 签名包通过
 `scripts/publish_signos.py` 归档到 GitHub，并加入 Cloudflare 软件源；发布前执行 `--plan`，
 两端完整下载 SHA-256 必须相同。软件源管理、最新包迁移与兼容入口见
-[Cloudflare 软件源](distribution/source-aggregator/README.md)。该按需操作不改变常规构建检查规则。
+[Cloudflare 软件源](distribution/source-aggregator/README.md)。该按需操作独立于每次 App 改动必须完成的 GitHub Release 发布。
 
 The fixed release metadata endpoint is
 `https://192.168.123.79:8769/channels/signos/current/latest-ios.json`; its sibling
