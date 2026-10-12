@@ -368,6 +368,16 @@ GitHub Actions 构建和标签发布成功。Release 下载校验通过，同一
 真机覆盖安装与数据保留未在本次验证；
 实测记录见 [1.0.17 发布凭证](docs/plans/evidence/ota-publication-1.0.17-20261012.json)。
 
+2026-10-12 后续发布 1.0.18（19）：可用更新中的每个 App 卡片显示软件源当前版本的完整更新说明，
+保留多行内容和段落；缺失或仅空白时显示“暂无更新说明”。版本变化位于卡片底部，
+辅助大字体下更新按钮移到应用信息下方。生产卡片的 375pt 布局、深色模式及最大辅助字体验收通过，
+完整应用完成隔离的模拟器构建与启动，本地 iOS Release 构建通过。
+GitHub Actions 构建和标签发布成功，同一 CI 产物完成 Ad Hoc 签名与固定 OTA 更新；
+已核对 Release 附件、固定入口、manifest、包内版本和完整 IPA 下载。签名包为 14,869,358 字节，
+SHA-256 为 `ab263bb87817b2e0b9d39710fecc4b75441b982ac719099c4fec882bbcdf47fc`。
+真机覆盖安装与数据保留未在本次验证。
+实测记录见 [1.0.18 发布凭证](docs/plans/evidence/ota-publication-1.0.18-20261012.json)。
+
 The installed 1.0.0 release is this project's upgrade baseline. The private
 configuration now uses `compatibilityIpa` plus `compatibilityIpaSha256`, with
 `firstInstall` removed. Preserve that signed IPA and do not reuse another app's

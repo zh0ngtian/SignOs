@@ -1,0 +1,35 @@
+{
+  "version": "1.0.18",
+  "buildNumber": "19",
+  "bundleId": "com.signos.app",
+  "signed": true,
+  "size": 14869358,
+  "sha256": "ab263bb87817b2e0b9d39710fecc4b75441b982ac719099c4fec882bbcdf47fc",
+  "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+  "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.0.18/latest.ipa",
+  "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.0.18/manifest.plist",
+  "publishedAt": "2026-10-12T03:54:43.971879+00:00",
+  "sourceCommit": "722e30d4c0c28a326fcafe969cf83a5c39de2f38",
+  "unsignedIpaSha256": "82a3843be138886a7006aba5ccc10cfdc0f7e1693f2a53e2eaf45e25e43243a3",
+  "githubReleaseUrl": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.0.18",
+  "buildRun": 38200951668,
+  "releaseRun": 38201541034,
+  "fixedIpaUrl": "https://192.168.123.79:8769/channels/signos/current/latest.ipa",
+  "httpsFullDownloadVerified": true,
+  "localQA": {
+    "version": "1.0.18",
+    "buildNumber": "19",
+    "simulator": "iPhone 17e / iOS 26.5",
+    "checks": [
+      "Full Debug app builds with isolated simulator output and launches",
+      "Production available update card rendered at 375pt width in light and dark modes",
+      "Production card rendered with largest accessibility text size; button moves below app name",
+      "Multiline notes preserve paragraphs and show final line without truncation",
+      "Nil and whitespace-only descriptions show localized 暂无更新说明",
+      "Semantic foreground and surface colors follow light/dark appearance",
+      "Local iOS Release build compiled the update card successfully"
+    ],
+    "physicalUpgradeVerified": false,
+    "sourceCommit": "722e30d4c0c28a326fcafe969cf83a5c39de2f38"
+  }
+}
