@@ -54,6 +54,24 @@ class AdapterRecoveryTests(unittest.TestCase):
             with patch('signos_release_adapter.find_artifact',side_effect=ValueError('No retained IPA')):a.run_build()
             self.assertEqual([c for c in commands if 'rerun' in c],[['gh','run','rerun','10','-R','owner/repo']])
             self.assertEqual(attempts,[('main',2)])
+    def test_ci_artifact_download_uses_fresh_verified_attempt_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);a=self.adapter(root);a.repository='owner/repo';a.artifacts=root/'artifacts';a.artifacts.mkdir()
+            a.data['frozen'].update({'manifestSha256':'c'*64});commands=[]
+            def cmd(args):
+                commands.append(args)
+                target=Path(args[args.index('-D')+1]);target.mkdir(parents=True,exist_ok=True)
+                (target/'SignOs.ipa').write_bytes(b'ipa')
+                (target/'build-metadata.json').write_text(json.dumps({'buildNumber':'23','batchId':'batch','batchManifestSha256':'c'*64}))
+                (target/'release-batch.json').write_text('{}')
+            a.cmd=cmd
+            with patch('signos_release_adapter.find_artifact',return_value={'run_id':10}),patch('signos_release_adapter.prepare_release'):
+                first,_=a.ci_package();second,_=a.ci_package()
+            downloads=[command for command in commands if command[:3]==['gh','run','download']]
+            self.assertEqual(len(downloads),1)
+            self.assertNotIn('--clobber',downloads[0])
+            self.assertEqual(first.resolve(),second.resolve())
+            self.assertTrue((a.artifacts/'ci-current.json').exists())
     def test_published_tag_is_never_moved(self):
         with tempfile.TemporaryDirectory() as directory:
             a=self.adapter(Path(directory));commands=[]

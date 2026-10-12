@@ -14,6 +14,7 @@ import time
 import urllib.error
 import urllib.request
 import zipfile
+import uuid
 
 from find_release_artifact import find_artifact
 from prepare_github_release import prepare_release
@@ -141,16 +142,30 @@ class Adapter:
         raise RuntimeError('Timed out waiting for exact-commit CI; resume will inspect the existing run')
 
     def ci_package(self):
-        target=self.artifacts/'ci';target.mkdir(exist_ok=True)
-        ipa=target/'SignOs.ipa';metadata=target/'build-metadata.json'
-        if not ipa.exists() or not metadata.exists() or not (target/'release-batch.json').exists():
-            artifact=find_artifact(self.repository,self.frozen()['sha'])
-            self.cmd(['gh','run','download',str(artifact['run_id']),'-R',self.repository,'-n','SignOs-ci-'+self.frozen()['sha'],'-D',str(target),'--clobber'])
-        prepare_release(target,self.tag(),self.frozen()['sha'])
-        meta=json.loads(metadata.read_text())
-        if meta['buildNumber']!=self.frozen()['buildNumber']:raise ValueError('Frozen build number differs from CI artifact')
-        if meta.get('batchId')!=self.data['id'] or meta.get('batchManifestSha256')!=self.frozen()['manifestSha256']:
-            raise ValueError('CI artifact does not belong to this frozen batch')
+        def validate(target):
+            prepare_release(target,self.tag(),self.frozen()['sha'])
+            meta=json.loads((target/'build-metadata.json').read_text())
+            if meta['buildNumber']!=self.frozen()['buildNumber']:raise ValueError('Frozen build number differs from CI artifact')
+            if meta.get('batchId')!=self.data['id'] or meta.get('batchManifestSha256')!=self.frozen()['manifestSha256']:
+                raise ValueError('CI artifact does not belong to this frozen batch')
+            return meta
+
+        pointer=self.artifacts/'ci-current.json'
+        if pointer.exists():
+            try:
+                target=Path(json.loads(pointer.read_text())['path']).resolve()
+                target.relative_to(self.artifacts.resolve())
+                return target,validate(target)
+            except (KeyError,ValueError,OSError,json.JSONDecodeError,zipfile.BadZipFile):
+                pass
+
+        artifact=find_artifact(self.repository,self.frozen()['sha'])
+        target=self.artifacts/'ci-downloads'/f"{artifact['run_id']}-{uuid.uuid4().hex}"
+        target.mkdir(parents=True,exist_ok=False,mode=0o700)
+        self.cmd(['gh','run','download',str(artifact['run_id']),'-R',self.repository,'-n','SignOs-ci-'+self.frozen()['sha'],'-D',str(target)])
+        meta=validate(target)
+        atomic(pointer,{'path':str(target),'runId':artifact['run_id'],'sha':self.frozen()['sha'],
+                        'manifestSha256':self.frozen()['manifestSha256']})
         return target,meta
 
     def check_build(self):
