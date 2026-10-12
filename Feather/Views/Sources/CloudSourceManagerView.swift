@@ -1,16 +1,4 @@
 import SwiftUI
-import UniformTypeIdentifiers
-
-struct CloudSourceBackupDocument: FileDocument {
-    static var readableContentTypes: [UTType] { [.json] }
-    var data: Data
-    init(data: Data) { self.data = data }
-    init(configuration: ReadConfiguration) throws {
-        guard let data = configuration.file.regularFileContents else { throw CocoaError(.fileReadCorruptFile) }
-        self.data = data
-    }
-    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper { FileWrapper(regularFileWithContents: data) }
-}
 
 struct CloudSourceManagerView: View {
     var source: AltSource? = nil
@@ -20,13 +8,7 @@ struct CloudSourceManagerView: View {
     @State private var store = CloudSourceStore()
     @State private var token = ""
     @State private var isAdding = false
-    @State private var isImporting = false
-    @State private var isExporting = false
-    @State private var backup = CloudSourceBackupDocument(data: Data())
-    @State private var restoreData: Data?
-    @State private var isRestoring = false
     @State private var showsSettings = false
-    @State private var newToken: String?
     @State private var sourceAdded = false
 
     var body: some View {
@@ -45,16 +27,6 @@ struct CloudSourceManagerView: View {
                     Text("IPA 从原始地址直接下载。配置保存在远端，应用默认每小时检查一次更新。")
                 }
                 subscriptionSection(snapshot)
-                Section("配置备份") {
-                    Button("导出配置", action: exportConfiguration)
-                    Button("从文件恢复配置") { isImporting = true }
-                }
-                Section {
-                    Button("轮换管理 Token") { Task { newToken = await store.rotateToken() } }
-                    Button("断开管理连接", role: .destructive) { store.disconnect(); token = "" }
-                } header: { Text("管理访问") } footer: {
-                    Text("管理 Token 保存在钥匙串。断开管理连接后，已订阅的软件源仍可读取。")
-                }
             } else {
                 Section {
                     if let managementAddress {
@@ -80,40 +52,13 @@ struct CloudSourceManagerView: View {
             }
             if store.isBusy { Section { ProgressView("正在连接软件源…") } }
         }
-        .navigationTitle(source?.name ?? store.snapshot?.settings.name ?? "远端软件源")
+        .navigationTitle(source == nil ? "远端软件源" : "软件源设置")
         .toolbar(.visible, for: .navigationBar)
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { await store.refresh() }
         .sheet(isPresented: $isAdding) { NavigationStack { CloudSourceSubscriptionForm(store: store) } }
         .sheet(isPresented: $showsSettings) { NavigationStack { CloudSourceSettingsView(store: store) } }
-        .fileExporter(isPresented: $isExporting, document: backup, contentType: .json, defaultFilename: "SignOs-source-backup") { result in
-            if case .failure(let error) = result { store.errorMessage = error.localizedDescription }
-        }
-        .fileImporter(isPresented: $isImporting, allowedContentTypes: [.json]) { result in
-            do {
-                let url = try result.get()
-                let accessing = url.startAccessingSecurityScopedResource()
-                defer { if accessing { url.stopAccessingSecurityScopedResource() } }
-                let data = try Data(contentsOf: url)
-                guard data.count <= 1024 * 1024 else { throw CocoaError(.fileReadTooLarge) }
-                restoreData = data
-                isRestoring = true
-            } catch { store.errorMessage = error.localizedDescription }
-        }
-        .confirmationDialog("恢复会替换远端订阅配置，并重新解析应用", isPresented: $isRestoring, titleVisibility: .visible) {
-            Button("恢复配置", role: .destructive) { if let restoreData { Task { await store.restoreBackup(restoreData); self.restoreData = nil } } }
-        }
         .alert("已订阅软件源", isPresented: $sourceAdded) { Button("好", role: .cancel) {} }
-        .sheet(item: Binding(get: { newToken.map(TokenDisplay.init) }, set: { newToken = $0?.id })) { item in
-            NavigationStack {
-                Form {
-                    Section("新的管理 Token") { Text(item.id).textSelection(.enabled); ShareLink(item: item.id) { Label("保存 Token", systemImage: "square.and.arrow.up") } }
-                    Section { Text("本设备已保存新 Token，旧 Token 已失效。其他设备需使用新 Token 连接。") }
-                }
-                .navigationTitle("管理 Token")
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { newToken = nil } } }
-            }
-        }
         .task {
             if let endpoint = try? CloudSourceEndpoint.baseURL(effectiveAddress), let saved = CloudSourceCredentials.read(for: endpoint) {
                 token = saved
@@ -135,18 +80,6 @@ struct CloudSourceManagerView: View {
                 }
             }
             Button { isAdding = true } label: { Label("添加订阅", systemImage: "plus.circle.fill") }
-        }
-    }
-
-    private struct TokenDisplay: Identifiable { let id: String }
-
-    private func exportConfiguration() {
-        Task {
-            do {
-                let data = try await store.exportBackup()
-                backup = CloudSourceBackupDocument(data: data)
-                isExporting = true
-            } catch { store.errorMessage = error.localizedDescription }
         }
     }
 

@@ -15,11 +15,15 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
 	@Binding var sortOption: SourceAppsView.SortOption
 	@Binding var sortAscending: Bool
 	var onSelect: (SourceAppsView.SourceAppRoute) -> Void
+	var onRefresh: () async -> Void
 	
 	func makeUIView(context: Context) -> UITableView {
 		let tableView = UITableView(frame: .zero, style: .plain)
 		tableView.delegate = context.coordinator
 		tableView.dataSource = context.coordinator
+		let refreshControl = UIRefreshControl()
+		refreshControl.addTarget(context.coordinator, action: #selector(Coordinator.refresh(_:)), for: .valueChanged)
+		tableView.refreshControl = refreshControl
 		tableView.register(UITableViewCell.self, forCellReuseIdentifier: "AppCell")
 		tableView.register(UITableViewHeaderFooterView.self, forHeaderFooterViewReuseIdentifier: "SectionHeader")
 		
@@ -80,7 +84,8 @@ struct SourceAppsTableRepresentableView: UIViewRepresentable {
 			searchText: searchText,
 			sortOption: sortOption,
 			sortAscending: sortAscending,
-			onSelect: onSelect
+			onSelect: onSelect,
+			onRefresh: onRefresh
 		)
 	}
 }
@@ -92,6 +97,7 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 	var sortOption: SourceAppsView.SortOption
 	var sortAscending: Bool
 	let onSelect: (SourceAppsView.SourceAppRoute) -> Void
+	let onRefresh: () async -> Void
 	
 	private var _groupedAppsByNameFirstLetter: [String: [SourceAppEntry]] = [:]
 	private var _groupedAppsByDate: [String: [SourceAppEntry]] = [:]
@@ -125,13 +131,15 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 		searchText: String,
 		sortOption: SourceAppsView.SortOption,
 		sortAscending: Bool,
-		onSelect: @escaping (SourceAppsView.SourceAppRoute) -> Void
+		onSelect: @escaping (SourceAppsView.SourceAppRoute) -> Void,
+		onRefresh: @escaping () async -> Void
 	) {
 		self.sourceContexts = sourceContexts
 		self.searchText = searchText
 		self.sortOption = sortOption
 		self.sortAscending = sortAscending
 		self.onSelect = onSelect
+		self.onRefresh = onRefresh
 		super.init()
 		
 		if sortOption != .default {
@@ -139,6 +147,13 @@ extension SourceAppsTableRepresentableView { class Coordinator: NSObject, UITabl
 		}
 	}
 	
+	@objc func refresh(_ control: UIRefreshControl) {
+		Task { @MainActor in
+			await onRefresh()
+			control.endRefreshing()
+		}
+	}
+
 	private func _calculateSortedApps() -> [SourceAppEntry] {
 		let filtered = _allAppsWithSource.filter {
 			searchText.isEmpty ||

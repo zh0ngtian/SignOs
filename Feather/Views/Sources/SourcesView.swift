@@ -43,7 +43,7 @@ struct SourcesView: View {
     }
 
     private func sourceCard(_ source: AltSource) -> some View {
-        NavigationLink { managementPage(source) } label: {
+        NavigationLink { SourceAppsView(object: [source], viewModel: viewModel) } label: {
             HStack(spacing: WSSpacing.lg) {
                 WSAppIcon(url: source.iconURL, size: 48, cornerRadius: 11)
                     .accessibilityHidden(true)
@@ -62,18 +62,9 @@ struct SourcesView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityHint("打开软件源管理页面")
+        .accessibilityHint("浏览此软件源的全部应用")
         .padding(WSSpacing.lg)
         .background(WSRadius.continuous(WSRadius.xl).fill(WSSurface.card))
-    }
-
-    @ViewBuilder
-    private func managementPage(_ source: AltSource) -> some View {
-        if let endpoint = CloudSourceEndpoint.managementURL(for: source.sourceURL) {
-            CloudSourceManagerView(source: source, managementAddress: endpoint.absoluteString)
-        } else {
-            SourceManagementView(source: source, viewModel: viewModel)
-        }
     }
 
     private func caption(_ source: AltSource) -> String {
@@ -92,7 +83,7 @@ struct SourceManagementView: View {
     @ObservedObject var viewModel: SourcesViewModel
     var body: some View {
         Form { SourceManagementSection(source: source, viewModel: viewModel) }
-            .navigationTitle(source.name ?? .localized("Source"))
+            .navigationTitle("软件源设置")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.visible, for: .navigationBar)
     }
@@ -103,20 +94,11 @@ struct SourceManagementSection: View {
     @ObservedObject var viewModel: SourcesViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var confirmsRemoval = false
-    @State private var autoEnabled = true
 
     var body: some View {
-        Section("本机订阅") {
-            NavigationLink { SourceAppsView(object: [source], viewModel: viewModel) } label: {
-                Label("浏览应用", systemImage: "square.grid.2x2")
-            }
-            if let url = source.sourceURL { ShareLink(item: url) { Label("分享软件源地址", systemImage: "link") } }
-            Toggle("自动更新", isOn: $autoEnabled)
-                .onChange(of: autoEnabled) { _, value in AutoUpdateManager.shared.setSourceAutoUpdate(value, for: source) }
+        Section {
             Button("移除软件源", role: .destructive) { confirmsRemoval = true }
-        }
-        .onAppear {
-            autoEnabled = (UserDefaults.standard.dictionary(forKey: "SignOs.sourceAutoUpdate") as? [String: Bool])?[source.identifier ?? ""] ?? true
+                .accessibilityIdentifier("source-remove")
         }
         .confirmationDialog("移除软件源？", isPresented: $confirmsRemoval, titleVisibility: .visible) {
             Button("移除软件源", role: .destructive) { Storage.shared.deleteSource(for: source); dismiss() }

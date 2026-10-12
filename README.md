@@ -59,9 +59,10 @@ contributors for their work, this wouldn't exist without them.
 - Existing dylibs and frameworks management
 
 ### The Store Experience
-- Sources tab with source icons, app counts, last refresh times and per-source sync buttons;
-  tap a source to manage it or browse its apps. Remote subscription projects show app icons,
-  versions and build numbers. Add/import/export and per-source automatic updates remain available
+- Sources tab with source icons, app counts and last refresh times; tap a source to browse
+  all its apps with Install/Update capsule buttons, search, sorting and pull-to-refresh.
+  The top-right settings button opens source settings with remote subscription management
+  and source removal; configuration backup, management access and local subscription sections are omitted
 - Search across every source with recent searches (tab currently hidden; implementation retained)
 - Library with filters and quick actions
 - Updates tab with app updates and recent activity; tap Check or pull down to synchronize every subscribed source, then check for updates using the same fresh data

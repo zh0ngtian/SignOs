@@ -56,11 +56,13 @@ struct OneViewTracker {
 
 // MARK: - Inline Get button (lists & carousels)
 struct WSOneViewGetButton: View {
+	let idleTitle: String
 	let sourceURL: URL?
 	let source: ASRepository?
 	let app: ASRepository.App
 
-	init(sourceURL: URL?, source: ASRepository?, app: ASRepository.App) {
+	init(sourceURL: URL?, source: ASRepository?, app: ASRepository.App, idleTitle: String = "Get") {
+		self.idleTitle = idleTitle
 		self.sourceURL = sourceURL
 		self.source = source
 		self.app = app
@@ -116,7 +118,8 @@ struct WSOneViewGetButton: View {
 						)
 					}
 				} label: {
-					WSSearchCapsuleLabel(title: updateManager.hasUpdate(for: app, sourceURL: sourceURL) ? "Update" : "Get")
+					WSSearchCapsuleLabel(title: updateManager.hasUpdate(for: app, sourceURL: sourceURL) ? "Update" : idleTitle)
+						.frame(minHeight: 44)
 				}
 				.buttonStyle(.borderless)
 			case .downloading:

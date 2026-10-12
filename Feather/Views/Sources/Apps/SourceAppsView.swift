@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreData
 import AltSourceKit
 import NimbleViews
 import UIKit
@@ -35,8 +36,10 @@ struct SourceAppsView: View {
 	@State private var _sortOption: SortOption = .default
 	@State private var _selectedRoute: SourceAppRoute?
 	
-	@State var isLoading = true
-	@State var hasLoadedOnce = false
+	@State private var _refreshError: String?
+	@State private var _isRefreshing = false
+	@Environment(\.dismiss) private var dismiss
+	@Environment(\.dynamicTypeSize) private var dynamicTypeSize
 	@State private var _searchText = ""
 
 	private var _navigationTitle: String {
@@ -49,34 +52,44 @@ struct SourceAppsView: View {
 	
 	var object: [AltSource]
 	@ObservedObject var viewModel: SourcesViewModel
-	@State private var _sourceContexts: [SourceRepositoryContext]?
+	private var _sourceContexts: [SourceRepositoryContext] {
+		object.compactMap { source in
+			guard !source.isDeleted, let repository = viewModel.sources[source] else { return nil }
+			return SourceRepositoryContext(sourceURL: source.sourceURL, repository: repository)
+		}
+	}
 	
 	// MARK: Body
 	var body: some View {
 		ZStack {
-			if
-				let _sourceContexts,
-				!_sourceContexts.isEmpty
-			{
+			if !_sourceContexts.isEmpty {
 				SourceAppsTableRepresentableView(
 					sourceContexts: _sourceContexts,
 					searchText: $_searchText,
 					sortOption: $_sortOption,
 					sortAscending: $_sortAscending,
-					onSelect: {self._selectedRoute = $0}
+					onSelect: {self._selectedRoute = $0},
+					onRefresh: { await _refresh() }
 				)
-				.ignoresSafeArea()
+			} else if _isRefreshing {
+				ProgressView("正在刷新软件源…")
 			} else {
-				ProgressView()
+				ContentUnavailableView {
+					Label("暂时无法加载应用", systemImage: "exclamationmark.arrow.triangle.2.circlepath")
+				} description: {
+					Text(_refreshError ?? "点击重试以刷新软件源。")
+				} actions: {
+					Button("重试") { Task { await _refresh() } }
+				}
 			}
 		}
 		.navigationTitle(_navigationTitle)
+		.navigationBarTitleDisplayMode(.inline)
+		.toolbar(.visible, for: .navigationBar)
 		.searchable(text: $_searchText, placement: .platform())
 		.toolbarTitleMenu {
-			if
-				let _sourceContexts,
-				_sourceContexts.count == 1
-			{
+			if dynamicTypeSize.isAccessibilitySize { _sortActions() }
+			if _sourceContexts.count == 1 {
 				if let url = _sourceContexts[0].repository.website {
 					Button(.localized("Visit Website"), systemImage: "globe") {
 						UIApplication.open(url)
@@ -101,7 +114,7 @@ struct SourceAppsView: View {
 					return
 				}
 				UIPasteboard.general.string = object.map {
-					$0.sourceURL!.absoluteString
+					$0.sourceURL?.absoluteString ?? ""
 				}.joined(separator: "\n")
 				UIAlertController.showAlertWithOk(
 					title: .localized("Success"),
@@ -110,23 +123,38 @@ struct SourceAppsView: View {
 			}
 		}
 		.toolbar {
-			NBToolbarMenu(
-				systemImage: "line.3.horizontal.decrease",
-				style: .icon,
-				placement: .topBarTrailing
-			) {
-				_sortActions()
+			if !dynamicTypeSize.isAccessibilitySize {
+				NBToolbarMenu(
+					systemImage: "line.3.horizontal.decrease",
+					style: .icon,
+					placement: .topBarTrailing
+				) {
+					_sortActions()
+				}
+			}
+			if object.count == 1, let source = object.first, !source.isDeleted {
+				ToolbarItem(placement: .topBarTrailing) {
+					NavigationLink {
+						if let endpoint = CloudSourceEndpoint.managementURL(for: source.sourceURL) {
+							CloudSourceManagerView(source: source, managementAddress: endpoint.absoluteString)
+						} else {
+							SourceManagementView(source: source, viewModel: viewModel)
+						}
+					} label: {
+						Label("软件源设置", systemImage: "gearshape")
+					}
+					.accessibilityIdentifier("source-settings")
+				}
 			}
 		}
 		.onAppear {
-			if !hasLoadedOnce, viewModel.isFinished {
-				_load()
-				hasLoadedOnce = true
-			}
 			_sortOption = SortOption(rawValue: _sortOptionRawValue) ?? .default
 		}
-		.onChange(of: viewModel.isFinished) { _ in
-			_load()
+		.task {
+			if _sourceContexts.isEmpty { await _refresh() }
+		}
+		.onReceive(NotificationCenter.default.publisher(for: .NSManagedObjectContextObjectsDidChange)) { _ in
+			if object.allSatisfy({ $0.isDeleted || $0.managedObjectContext == nil }) { dismiss() }
 		}
 		.onChange(of: _sortOption) { newValue in
 			_sortOptionRawValue = newValue.rawValue
@@ -140,18 +168,15 @@ struct SourceAppsView: View {
 		}
 	}
 	
-	private func _load() {
-		isLoading = true
-		
-		Task {
-			let loadedSources = object.compactMap { source -> SourceRepositoryContext? in
-				guard let repository = viewModel.sources[source] else { return nil }
-				return SourceRepositoryContext(sourceURL: source.sourceURL, repository: repository)
-			}
-			_sourceContexts = loadedSources
-			withAnimation(.smooth) {
-				isLoading = false
-			}
+	@MainActor
+	private func _refresh() async {
+		guard !_isRefreshing else { return }
+		_isRefreshing = true
+		_refreshError = nil
+		defer { _isRefreshing = false }
+		for source in object where !source.isDeleted {
+			do { try await viewModel.refreshSource(source) }
+			catch { _refreshError = error.localizedDescription }
 		}
 	}
 	
