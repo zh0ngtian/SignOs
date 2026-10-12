@@ -27,6 +27,7 @@ xcodebuild \
   -derivedDataPath "$BUILD_OUTPUT/DerivedData" \
   -resultBundlePath "$BUILD_OUTPUT/Build.xcresult" \
   -skipPackagePluginValidation \
+  -onlyUsePackageVersionsFromResolvedFile \
   CODE_SIGNING_ALLOWED=NO \
   DEPLOYMENT_LOCATION=NO \
   ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES=NO \
@@ -74,6 +75,11 @@ metadata = {
     'size': ipa.stat().st_size,
     'sha256': hashlib.sha256(ipa.read_bytes()).hexdigest(),
 }
+manifest = Path('.release-batch.json')
+if manifest.exists():
+    batch = json.loads(subprocess.check_output(['python3', 'scripts/check_release_batch.py', metadata['commit']], text=True))
+    metadata.update(batch)
+    (output / 'release-batch.json').write_bytes(manifest.read_bytes())
 report = json.dumps(metadata, indent=2) + '\n'
 (output / 'build-metadata.json').write_text(report)
 print(report)

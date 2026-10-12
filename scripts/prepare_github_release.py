@@ -43,6 +43,16 @@ def prepare_release(output: Path, tag: str, commit: str) -> None:
     if metadata["bundleIdentifier"] != info["CFBundleIdentifier"]:
         raise ValueError("Bundle identifier does not match build metadata")
 
+    if metadata.get("batchId"):
+        manifest_path = output / "release-batch.json"
+        manifest = json.loads(manifest_path.read_text())
+        if hashlib.sha256(manifest_path.read_bytes()).hexdigest() != metadata["batchManifestSha256"]:
+            raise ValueError("Frozen batch manifest checksum mismatch")
+        if manifest["batchId"] != metadata["batchId"] or manifest["scope"] != metadata["releaseScope"]:
+            raise ValueError("Artifact belongs to another release batch")
+        if manifest["prepared"]["version"] != metadata["version"] or manifest["prepared"]["buildNumber"] != metadata["buildNumber"]:
+            raise ValueError("Artifact version differs from frozen batch")
+
     metadata_digest = hashlib.sha256(metadata_path.read_bytes()).hexdigest()
     (output / "SHA256SUMS").write_text(
         f"{digest}  SignOs.ipa\n{metadata_digest}  build-metadata.json\n"

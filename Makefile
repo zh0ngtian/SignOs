@@ -1,5 +1,6 @@
 NAME := SignOs
 SCHEME := Feather
+XCODEBUILD_FLAGS ?= -onlyUsePackageVersionsFromResolvedFile
 PLATFORMS := iphoneos maccatalyst
 
 TMP := $(TMPDIR)/$(NAME)
@@ -40,6 +41,7 @@ $(PLATFORMS): deps
 		-destination "$$DEST" \
 		-derivedDataPath $(TMP)/$@ \
 		-skipPackagePluginValidation \
+		$(XCODEBUILD_FLAGS) \
 		CODE_SIGNING_ALLOWED=NO \
 		ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES=NO
 

@@ -115,10 +115,16 @@ Project workflow and post-test delivery requirements are in [AGENTS.md](AGENTS.m
 锁与恢复的通用策略以当前生效的 canonical 全局 `AGENTS.md` 为准；项目只补充
 [发布目标、接入状态和具体改造项](docs/release-coordination.md)。
 
-**目前规则已定义，自动机制尚未实现。** 现有 CI/发布工具能校验同提交产物并执行单步
-发布，不能自动登记任务、合批或恢复协调状态；正式 `main` 构建仍可能被新 push 取消。
-在实际共享队列与互斥机制建立前，不得由各任务自行发包，也不得把口头指定负责人当成
-完整协调。本文的构建、标签及 OTA 命令是协调负责人使用的底层步骤，不是各任务各自执行的发布入口。
+本机统一入口为 `~/.local/bin/releasectl`；协调器独立维护在
+[release-coordinator](https://github.com/zh0ngtian/release-coordinator)，通过 Python / SQLite
+和 owner-only Unix socket 在各 worktree 间共享状态。不同项目独立队列和锁，可并行；
+SignOs 使用 `signos-production` 配置，适配器为 `scripts/signos_release_adapter.py`。
+运行时不依赖开发 worktree，状态、心跳、CI 进度和共同凭证在仓库外持久保存。
+启动模式以本机安装凭证为准：LaunchAgent 是登录启动，LaunchDaemon 才是登录前开机启动。
+
+开发任务登记、维持心跳、完成验证并 push 开发分支后提交就绪；后台服务自动推进兼容批次。
+本节后续构建、标签和 OTA 命令是适配器的底层步骤，不由各任务分别执行。常用命令和
+恢复方式见[发布协调说明](docs/release-coordination.md)。
 
 ### GitHub Actions 构建检查
 
@@ -129,11 +135,13 @@ Swift 回归、客户端构建、发布脚本及对应回归、模拟器回归�
 非客户端改动跳过自动构建。
 路径过滤不影响标签发布或手动构建。使用 `macos-26` 与 Xcode 26+，递归检出子模块，
 检查 Xcode 和 iOS SDK 后，仅执行一次 `generic/platform=iOS` 的 Release 构建，
-设置 `CODE_SIGNING_ALLOWED=NO`。PR 和其他分支的手动构建以编译、链接成功为准；
-`main` push 与 `main` 手动构建还会打包、校验 IPA 并保留发布产物。
+设置 `CODE_SIGNING_ALLOWED=NO` 并锁定 `Package.resolved` 的依赖版本。PR 和其他分支的手动构建以编译、链接成功为准；
+`main` push 与 `main` 手动构建还会打包、校验 IPA 并保留发布产物。正式 main / 标签发布
+使用同一 `signos-production-release` 并发组，关闭进行中取消并保留多批排队；PR 与其他
+分支检查另组。正式构建和标签发布须通过冻结批次校验，手动入口不能借用后来 main 的提交。
 
 日常 push / PR 和手动构建不运行 Swift / Python 回归，不启动、安装或运行模拟器。
-`main` 构建使用 `--package-ipa` 模式，上传 `SignOs-ci-<commit>`，包含 IPA 与构建元数据，
+`main` 构建使用 `--package-ipa` 模式，上传 `SignOs-ci-<commit>`，包含 IPA、构建元数据和冻结清单，
 保留 14 天；其他构建不打包或上传成功产物。失败时尝试上传构建日志与 Xcode result bundle，
 保留 7 天。
 流水线不依赖私有 `TLS_DIR` 或分发签名材料。**CI 成功不能替代功能验收**；功能按改动范围

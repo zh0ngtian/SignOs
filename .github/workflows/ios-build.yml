@@ -24,6 +24,9 @@ on:
       - 'scripts/check_ios_build.sh'
       - 'scripts/find_release_artifact.py'
       - 'scripts/prepare_github_release.py'
+      - 'Tests/test_signos_release_adapter.py'
+      - 'scripts/check_release_batch.py'
+      - 'scripts/signos_release_adapter.py'
       - 'Tests/test_release_artifact.py'
       - 'Tests/GitHubReleaseRegression.py'
       - 'scripts/test_download_manager_simulator.py'
@@ -50,6 +53,9 @@ on:
       - 'scripts/check_ios_build.sh'
       - 'scripts/find_release_artifact.py'
       - 'scripts/prepare_github_release.py'
+      - 'Tests/test_signos_release_adapter.py'
+      - 'scripts/check_release_batch.py'
+      - 'scripts/signos_release_adapter.py'
       - 'Tests/test_release_artifact.py'
       - 'Tests/GitHubReleaseRegression.py'
       - 'scripts/test_download_manager_simulator.py'
@@ -62,8 +68,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: ios-build-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+  group: ${{ github.event_name == 'pull_request' && format('signos-pr-{0}', github.event.pull_request.number) || ((github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && 'signos-production-release') || format('signos-check-{0}', github.ref) }}
+  cancel-in-progress: false
+  queue: max
 
 jobs:
   build:
@@ -79,7 +86,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 0
           persist-credentials: false
+
+      - name: Check frozen release batch
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: python3 scripts/check_release_batch.py "$GITHUB_SHA"
 
       - name: Check Xcode and iOS SDK
         run: |
@@ -107,6 +119,7 @@ jobs:
           path: |
             ${{ runner.temp }}/signos-ios-build/SignOs.ipa
             ${{ runner.temp }}/signos-ios-build/build-metadata.json
+            ${{ runner.temp }}/signos-ios-build/release-batch.json
           if-no-files-found: error
           retention-days: 14
           overwrite: true
@@ -134,7 +147,11 @@ jobs:
       - name: Checkout release tooling
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           persist-credentials: false
+
+      - name: Check frozen release batch
+        run: python3 scripts/check_release_batch.py "$GITHUB_SHA"
 
       - name: Find verified main build artifact
         id: artifact
