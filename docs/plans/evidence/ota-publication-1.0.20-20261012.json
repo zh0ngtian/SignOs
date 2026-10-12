@@ -1,0 +1,32 @@
+{
+  "version": "1.0.20",
+  "buildNumber": "21",
+  "bundleId": "com.signos.app",
+  "signed": true,
+  "size": 14871080,
+  "sha256": "b7676c2e6f89f943a4e70ee6ea8ea0c176a5428c51069a927f387570a8596dc3",
+  "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+  "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.0.20/latest.ipa",
+  "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.0.20/manifest.plist",
+  "publishedAt": "2026-10-12T05:27:53.146339+00:00",
+  "sourceCommit": "c6e29839ac9fb439c535e4a4307fc58f1ac2bacc",
+  "unsignedIpaSha256": "d6483960f9c771f1026c8bf93cf733232d43b2502f57082657f5857eef1896ca",
+  "githubReleaseUrl": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.0.20",
+  "buildRun": 38207285225,
+  "releaseRun": 38207902786,
+  "fixedIpaUrl": "https://192.168.123.79:8769/channels/signos/current/latest.ipa",
+  "httpsFullDownloadVerified": true,
+  "localQA": {
+    "simulator": "iPhone 17 Pro / iOS 26.5",
+    "checks": [
+      "Full Debug application built and launched on simulator",
+      "Updates tab screenshot verified: Check capsule removed",
+      "Sources tab screenshot verified: Sync capsules and reserved button spacing removed from both source cards",
+      "Sources screenshot verified in dark appearance with Accessibility XXXL text: cards reflow and Sync capsules remain absent",
+      "Existing pull-to-refresh closures and source management navigation retained in code review",
+      "Production UpdateManager simulator regression passed, including cancellation and cloud synchronization",
+      "Local make iphoneos Release build passed; IPA version 1.0.20 build 21 verified"
+    ],
+    "physicalUpgradeVerified": false
+  }
+}

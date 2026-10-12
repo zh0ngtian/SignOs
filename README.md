@@ -408,6 +408,16 @@ GitHub Actions 构建和标签发布成功，Release 附件与校验和通过核
 真机覆盖安装与数据保留未在本次验证。
 实测记录见 [1.0.19 发布凭证](docs/plans/evidence/ota-publication-1.0.19-20261012.json)。
 
+2026-10-12 后续发布 1.0.20（21）：移除更新页检查按钮和软件源卡片上的同步胶囊，
+保留两个页面的下拉刷新及软件源管理入口，清理按钮留白并将重试提示改为下拉操作。
+完整应用模拟器构建与启动、两个页面截图验收、深色大字号软件源布局核验、
+更新管理器回归及本地 iOS Release 构建通过。
+GitHub Actions 构建和标签发布成功，Release 附件及校验和通过核验，同一 CI 产物完成
+Ad Hoc 签名与固定 OTA 发布。固定入口、manifest、包内版本及完整 IPA 下载核验通过；
+签名包为 14,871,080 字节，SHA-256 为 `b7676c2e6f89f943a4e70ee6ea8ea0c176a5428c51069a927f387570a8596dc3`。
+真机覆盖安装与数据保留未在本次验证。
+实测记录见 [1.0.20 发布凭证](docs/plans/evidence/ota-publication-1.0.20-20261012.json)。
+
 The installed 1.0.0 release is this project's upgrade baseline. The private
 configuration now uses `compatibilityIpa` plus `compatibilityIpaSha256`, with
 `firstInstall` removed. Preserve that signed IPA and do not reuse another app's
