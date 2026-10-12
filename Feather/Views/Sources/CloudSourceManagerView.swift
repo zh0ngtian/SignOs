@@ -60,6 +60,16 @@ struct CloudSourceManagerView: View {
         .sheet(isPresented: $showsSettings) { NavigationStack { CloudSourceSettingsView(store: store) } }
         .alert("已订阅软件源", isPresented: $sourceAdded) { Button("好", role: .cancel) {} }
         .task {
+            store.onEntryDeleted = { [weak store] entry, url, identifier in
+                if let url {
+                    let bundle = entry.current?.metadata.bundleIdentifier ?? entry.history.first?.metadata.bundleIdentifier
+                    let count = store?.snapshot?.entries.filter { ($0.current?.metadata.bundleIdentifier ?? $0.history.first?.metadata.bundleIdentifier) == bundle }.count ?? 0
+                    SourceAccessManager.shared.deleteSubscription(url: url, identifier: identifier, bundle: bundle, subscriptionID: entry.id, allowLegacy: bundle != nil && count == 1)
+                }
+            }
+            store.onBackupRestored = { url, identifier in
+                if let url { SourceAccessManager.shared.clearDeletedSubscriptions(url: url, identifier: identifier) }
+            }
             if let endpoint = try? CloudSourceEndpoint.baseURL(effectiveAddress), let saved = CloudSourceCredentials.read(for: endpoint) {
                 token = saved
                 await store.connect(address: effectiveAddress, token: saved, expectedIdentifier: source?.identifier)

@@ -4,6 +4,7 @@ import CoreData
 struct SourcesView: View {
     @StateObject private var viewModel = SourcesViewModel.shared
     @State private var isAdding = false
+    @ObservedObject private var access = SourceAccessManager.shared
     @State private var refreshDates = UserDefaults.standard.dictionary(forKey: "SignOs.sourceRefreshDates") as? [String: Date] ?? [:]
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -51,7 +52,7 @@ struct SourcesView: View {
                     Text(source.name ?? .localized("Source"))
                         .font(.body.weight(.semibold)).foregroundStyle(.primary)
                         .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
-                    Text(caption(source)).font(.caption).foregroundStyle(.secondary)
+                    Text((access.isEnabled(source) ? "" : "已禁用 · ") + caption(source)).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.forward")
@@ -94,6 +95,7 @@ struct SourceManagementSection: View {
     @ObservedObject var viewModel: SourcesViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var confirmsRemoval = false
+    @ObservedObject private var access = SourceAccessManager.shared
 
     var body: some View {
         Section {
@@ -101,7 +103,7 @@ struct SourceManagementSection: View {
                 .accessibilityIdentifier("source-remove")
         }
         .confirmationDialog("移除软件源？", isPresented: $confirmsRemoval, titleVisibility: .visible) {
-            Button("移除软件源", role: .destructive) { Storage.shared.deleteSource(for: source); dismiss() }
+            Button("移除软件源", role: .destructive) { access.setEnabled(false, for: source); Storage.shared.deleteSource(for: source); dismiss() }
         }
     }
 }

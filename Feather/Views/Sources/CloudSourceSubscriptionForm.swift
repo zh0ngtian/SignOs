@@ -207,7 +207,7 @@ struct CloudSourceEntryView: View {
         .navigationTitle(entry?.title ?? "订阅")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $isEditing) { if let entry { NavigationStack { CloudSourceSubscriptionForm(store: store, entry: entry) } } }
-        .confirmationDialog("删除订阅及其公开应用记录？", isPresented: $isDeleting, titleVisibility: .visible) {
+        .confirmationDialog("删除订阅及其本机包和公开应用记录？", isPresented: $isDeleting, titleVisibility: .visible) {
             Button("删除", role: .destructive) { if let entry { Task { await store.delete(entry); if store.errorMessage == nil { dismiss() } } } }
         }
         .refreshable { await store.refresh() }

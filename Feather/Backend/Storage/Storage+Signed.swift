@@ -10,6 +10,7 @@ import UIKit.UIImpactFeedbackGenerator
 
 // MARK: - Class extension: Signed Apps
 extension Storage {
+	@MainActor
 	func addSigned(
 		uuid: String,
 		source: URL? = nil,

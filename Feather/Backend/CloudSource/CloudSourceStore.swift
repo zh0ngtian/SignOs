@@ -139,9 +139,13 @@ final class CloudSourceStore {
         } ?? []
     }
 
+    var onEntryDeleted: ((CloudSourceEntry, URL?, String?) -> Void)?
+    var onBackupRestored: ((URL?, String?) -> Void)?
+
     func delete(_ entry: CloudSourceEntry) async {
         await perform {
             _ = try await self.request("DELETE", "/api/entries/\(entry.id)", body: ["revision": self.snapshot?.revision ?? 0])
+            self.onEntryDeleted?(entry, self.sourceURL, self.snapshot?.settings.identifier)
             try await self.load()
         }
     }
@@ -159,6 +163,7 @@ final class CloudSourceStore {
         await perform {
             let backup = try JSONSerialization.jsonObject(with: data)
             _ = try await self.request("POST", "/api/restore", body: ["revision": self.snapshot?.revision ?? 0, "backup": backup])
+            self.onBackupRestored?(self.sourceURL, self.snapshot?.settings.identifier)
             try await self.load()
         }
     }

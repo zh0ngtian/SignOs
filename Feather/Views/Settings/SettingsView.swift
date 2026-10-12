@@ -91,8 +91,7 @@ extension SettingsView {
 		Section {
 			Picker(selection: $_defaultTabRaw) {
 				Text(.localized("Sources")).tag(TabEnum.sources.rawValue)
-				Text(.localized("Library")).tag(TabEnum.library.rawValue)
-				Text(.localized("Updates")).tag(TabEnum.updates.rawValue)
+				Text("应用").tag(TabEnum.library.rawValue)
 				Text(.localized("Settings")).tag(TabEnum.settings.rawValue)
 			} label: {
 				HStack(spacing: 12) {

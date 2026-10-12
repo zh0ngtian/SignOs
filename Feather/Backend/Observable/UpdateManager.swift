@@ -20,6 +20,7 @@ struct AppUpdate: Identifiable, Equatable {
 	let sourceURL: URL
 	let sourceProvenance: SourceAppProvenance
 	let whatsNew: String?
+    var managedIdentifier: String? = nil
 }
 
 @MainActor
@@ -27,12 +28,15 @@ final class UpdateManager: ObservableObject {
 	static let shared = UpdateManager()
 	
 	@Published private(set) var updates: [String: AppUpdate] = [:]
+	@Published private(set) var candidates: [String: [AppUpdate]] = [:]
 	@Published private(set) var isChecking = false
 	@Published private(set) var lastCheckedDate: Date?
 	
 	@Published private(set) var checkIssues: [String] = []
 	
-	private let session: URLSession
+	private var repositorySnapshot: [(AltSource, ASRepository)] = []
+    private var localSnapshot: [any AppInfoPresentable] = []
+    private let session: URLSession
 
 	init(session: URLSession = .shared) { self.session = session }
 	
@@ -96,6 +100,8 @@ final class UpdateManager: ObservableObject {
 			// Both screens consume the same response; checking never downloads it again.
 			onSourcesSynchronized(result.repositories)
 			checkIssues = synchronizationIssues + result.issues
+            repositorySnapshot = result.repositories
+            localSnapshot = localApps
 			updates = _applySkips(_findUpdates(
 				repositories: result.repositories, localApps: localApps, failedSources: result.failedSources
 			))
@@ -151,8 +157,8 @@ final class UpdateManager: ObservableObject {
 
 		return found.filter { entry in
 			let update = entry.value
-			if held[update.bundleIdentifier] == true { return false }
-			if skipped[update.bundleIdentifier] == update.remoteVersion { return false }
+			if held[update.managedIdentifier ?? update.bundleIdentifier] == true { return false }
+			if skipped[update.managedIdentifier ?? update.bundleIdentifier] == update.remoteVersion { return false }
 			return true
 		}
 	}
@@ -164,7 +170,7 @@ final class UpdateManager: ObservableObject {
 		var issues: [String] = []
 		var failedSources: [AltSource] = []
 		
-		for source in sources {
+		for source in sources where SourcePolicy.isEnabled(url: source.sourceURL, identifier: source.identifier) {
 			try Task.checkCancellation()
 			guard let url = source.sourceURL else {
 				issues.append("\(source.name ?? .localized("Source")): \(String.localized("source URL is missing."))")
@@ -197,172 +203,119 @@ final class UpdateManager: ObservableObject {
 	}
 	
 	private func _findUpdates(
-		repositories: [(AltSource, ASRepository)],
-		localApps: [AppInfoPresentable],
-		failedSources: [AltSource]
-	) -> [String: AppUpdate] {
-		var foundUpdates: [String: AppUpdate] = [:]
-		let metadataByUUID = Storage.shared.getSourceMetadata().reduce(into: [String: AppSourceMetadata]()) {
-			$0[$1.appUUID] = $1
-		}
-		let metadataCandidates = localApps.compactMap { app -> SourceMetadataCandidate? in
-			guard
-				let uuid = app.uuid,
-				let metadata = metadataByUUID[uuid]
-			else {
-				return nil
-			}
-			return SourceMetadataCandidate(appUUID: uuid, app: app, metadata: metadata)
-		}
-		
-		for localApp in localApps {
-			guard let localUUID = localApp.uuid else {
-				continue
-			}
-			
-			let sourceAppIdentifier: String
-			let sourceAppVersion: String?
-			let storedSourceURL: URL
-			let storedRepositoryIdentifier: String?
-			if let directMetadata = metadataByUUID[localUUID] {
-				guard
-					let metadataSourceAppIdentifier = directMetadata.sourceAppIdentifier,
-					let metadataSourceURL = directMetadata.sourceRepositoryURL
-				else {
-					checkIssues.append("\(localApp.name ?? localUUID): \(String.localized("incomplete source metadata."))")
-					continue
-				}
-				
-				sourceAppIdentifier = metadataSourceAppIdentifier
-				sourceAppVersion = directMetadata.sourceAppVersion
-				storedSourceURL = metadataSourceURL
-				storedRepositoryIdentifier = directMetadata.sourceRepositoryIdentifier
-			} else if let fallback = _fallbackMetadataCandidate(
-				for: localApp,
-				localUUID: localUUID,
-				candidates: metadataCandidates
-			) {
-				guard
-					let metadataSourceAppIdentifier = fallback.metadata.sourceAppIdentifier,
-					let metadataSourceURL = fallback.metadata.sourceRepositoryURL
-				else {
-					checkIssues.append("\(localApp.name ?? localUUID): \(String.localized("incomplete source metadata."))")
-					continue
-				}
-				
-				sourceAppIdentifier = metadataSourceAppIdentifier
-				sourceAppVersion = fallback.metadata.sourceAppVersion
-				storedSourceURL = metadataSourceURL
-				storedRepositoryIdentifier = fallback.metadata.sourceRepositoryIdentifier
-				Storage.shared.copySourceMetadata(
-					from: fallback.appUUID,
-					to: localUUID,
-					kind: localApp.isSigned ? .signed : .imported
-				)
-			} else if
-				let localSourceURL = localApp.source,
-				let localIdentifier = localApp.identifier
-			{
-				sourceAppIdentifier = localIdentifier
-				sourceAppVersion = localApp.version
-				storedSourceURL = localSourceURL
-				storedRepositoryIdentifier = nil
-			} else {
-				continue
-			}
-			
-			var matchedRepository = false
-			for (source, repository) in repositories {
-				guard let sourceURL = source.sourceURL else {
-					continue
-				}
-				
-				guard SourceRepositoryIdentity.matches(
-					storedURL: storedSourceURL,
-					storedIdentifier: storedRepositoryIdentifier,
-					currentURL: sourceURL,
-					currentIdentifier: repository.id
-				) else {
-					continue
-				}
-				
-				matchedRepository = true
-				guard let remoteIndex = SourceSubscriptionIdentity.matchIndex(
-					storedKey: sourceAppIdentifier,
-					candidates: repository.apps.map { ($0.id ?? "", $0.sourceEntryIdentifier) },
-					legacyPreferredIndex: repository.apps.firstIndex { $0.id == sourceAppIdentifier && $0.legacyDefault == true }
-				) else {
-					checkIssues.append("\(localApp.name ?? localUUID): \(String.localized("source subscription is missing or ambiguous."))")
-					continue
-				}
-				let remoteApp = repository.apps[remoteIndex]
-				// Persist the installed version, not the latest version from the repository.
-				// This also repairs records on devices that already completed the v2 migration.
-				if metadataByUUID[localUUID] == nil, storedRepositoryIdentifier == nil,
-					let identifier = remoteApp.id {
-					Storage.shared.addSourceMetadata(
-						for: localUUID, kind: localApp.isSigned ? .signed : .imported,
-						provenance: SourceAppProvenance(
-							sourceRepositoryURL: sourceURL, sourceRepositoryIdentifier: repository.id,
-							sourceRepositoryName: repository.name,
-							sourceAppIdentifier: SourceSubscriptionIdentity.key(bundleIdentifier: identifier, subscriptionID: remoteApp.sourceEntryIdentifier),
-							sourceAppName: localApp.name, sourceAppVersion: sourceAppVersion,
-							sourceAppVersionDate: nil, sourceAppDownloadURL: nil
-						)
-					)
-				}
-				
-				guard let remoteVersion = remoteApp.currentVersion, !remoteVersion.isEmpty else {
-					checkIssues.append("\(localApp.name ?? localUUID): \(String.localized("source version is missing."))")
-					continue
-				}
-				
-				guard remoteVersion != sourceAppVersion else {
-					continue
-				}
-				
-				guard let downloadURL = remoteApp.currentDownloadUrl else {
-					checkIssues.append("\(localApp.name ?? localUUID): \(String.localized("update download URL is missing."))")
-					continue
-				}
-				
-				guard let provenance = SourceAppProvenance(
-					sourceURL: sourceURL,
-					repository: repository,
-					app: remoteApp
-				) else {
-					continue
-				}
-				
-				foundUpdates[localUUID] = AppUpdate(
-					id: localUUID,
-					localUUID: localUUID,
-					localVersion: sourceAppVersion ?? localApp.version,
-					remoteVersion: remoteVersion,
-					appName: remoteApp.currentName,
-					bundleIdentifier: remoteApp.id ?? "",
-					downloadURL: downloadURL,
-					sourceURL: sourceURL,
-					sourceProvenance: provenance,
-					whatsNew: remoteApp.currentAppVersion?.localizedDescription
-				)
-				break
-			}
-			let linkedSourceFailed = failedSources.contains { source in
-				guard let url = source.sourceURL else { return false }
-				return SourceRepositoryIdentity.matches(
-					storedURL: storedSourceURL, storedIdentifier: storedRepositoryIdentifier,
-					currentURL: url, currentIdentifier: source.identifier
-				)
-			}
-			if !matchedRepository && !linkedSourceFailed {
-				checkIssues.append("\(localApp.name ?? localUUID): \(String.localized("linked repository is unavailable. Refresh or restore its source in Sources."))")
-			}
-		}
-		checkIssues = Array(Set(checkIssues)).sorted()
-		return foundUpdates
-	}
-	
+        repositories: [(AltSource, ASRepository)],
+        localApps: [AppInfoPresentable],
+        failedSources: [AltSource]
+    ) -> [String: AppUpdate] {
+        var found: [String: AppUpdate] = [:]
+        var available: [String: [AppUpdate]] = [:]
+        for application in AppInventory.applications(localApps) {
+            let local = application.primary
+            guard let uuid = local.uuid, let identifier = local.identifier else { continue }
+            var metadata = Storage.shared.sourceMetadata(for: local)
+            // Repair legacy signing records only when their retained provenance is unambiguous.
+            if metadata == nil, local.isSigned {
+                let matches = application.packages.filter { !$0.isSigned && $0.version == local.version && Storage.shared.sourceMetadata(for: $0) != nil }
+                if matches.count == 1, let oldUUID = matches[0].uuid {
+                    Storage.shared.copySourceMetadata(from: oldUUID, to: uuid, kind: .signed)
+                    metadata = Storage.shared.sourceMetadata(for: local)
+                }
+            }
+            if metadata == nil, let storedURL = local.source {
+                for (source, repository) in repositories {
+                    guard let url = source.sourceURL,
+                        SourceRepositoryIdentity.matches(storedURL: storedURL, storedIdentifier: nil, currentURL: url, currentIdentifier: repository.id),
+                        let index = SourceSubscriptionIdentity.matchIndex(storedKey: identifier,
+                            candidates: repository.apps.map { ($0.id ?? "", $0.sourceEntryIdentifier) },
+                            legacyPreferredIndex: repository.apps.firstIndex { $0.id == identifier && $0.legacyDefault == true }) else { continue }
+                    let remote = repository.apps[index]
+                    Storage.shared.addSourceMetadata(for: uuid, kind: local.isSigned ? .signed : .imported,
+                        provenance: SourceAppProvenance(sourceRepositoryURL: url, sourceRepositoryIdentifier: repository.id,
+                            sourceRepositoryName: repository.name, sourceAppIdentifier: SourceSubscriptionIdentity.key(bundleIdentifier: identifier, subscriptionID: remote.sourceEntryIdentifier),
+                            sourceAppName: local.name, sourceAppVersion: local.version, sourceAppVersionDate: nil, sourceAppDownloadURL: nil))
+                    metadata = Storage.shared.sourceMetadata(for: local)
+                    break
+                }
+            }
+            let bundle = SourceSubscriptionIdentity.bundleIdentifier(from: metadata?.sourceAppIdentifier ?? identifier)
+            let baseline = metadata?.sourceAppVersion ?? local.version
+            var choices: [AppUpdate] = []
+            for (source, repository) in repositories {
+                guard let url = source.sourceURL,
+                    SourcePolicy.isEnabled(url: url, identifier: repository.id ?? source.identifier) else { continue }
+                for remote in repository.apps where remote.id == bundle {
+                    guard let version = remote.currentVersion, !version.isEmpty,
+                        let downloadURL = remote.currentDownloadUrl,
+                        let provenance = SourceAppProvenance(sourceURL: url, repository: repository, app: remote),
+                        !SourcePolicy.isSubscriptionDeleted(url: url, identifier: repository.id, appIdentifier: provenance.sourceAppIdentifier)
+                    else { continue }
+                    choices.append(AppUpdate(id: uuid, localUUID: uuid, localVersion: local.version,
+                        remoteVersion: version, appName: remote.currentName, bundleIdentifier: bundle,
+                        downloadURL: downloadURL, sourceURL: url, sourceProvenance: provenance,
+                        whatsNew: remote.currentAppVersion?.localizedDescription, managedIdentifier: identifier))
+                }
+            }
+            var seen = Set<String>()
+            choices = choices.filter { seen.insert($0.sourceProvenance.sourceVersionID).inserted }
+            choices.sort {
+                if let comparison = AppVersion.compare($0.remoteVersion, $1.remoteVersion), comparison != .orderedSame {
+                    return comparison == .orderedDescending
+                }
+                return $0.sourceProvenance.sourceVersionID < $1.sourceProvenance.sourceVersionID
+            }
+            available[identifier] = choices
+            let newer = choices.filter { candidate in
+                guard let baseline else { return false }
+                return AppVersion.compare(candidate.remoteVersion, baseline) == .orderedDescending
+            }
+            guard let first = newer.first else { continue }
+            let tied = newer.filter { AppVersion.compare($0.remoteVersion, first.remoteVersion) == .orderedSame }
+            let preference = (UserDefaults.standard.dictionary(forKey: "SignOs.preferredUpdateSources") as? [String: String])?[identifier]
+            let preferred = tied.first { Self.preferenceKey($0) == preference }
+            let current = tied.first { candidate in
+                let provenance = candidate.sourceProvenance
+                guard let storedURL = metadata?.sourceRepositoryURL ?? local.source else { return false }
+                return metadata?.sourceAppIdentifier == provenance.sourceAppIdentifier && SourceRepositoryIdentity.matches(
+                    storedURL: storedURL,
+                    storedIdentifier: metadata?.sourceRepositoryIdentifier,
+                    currentURL: candidate.sourceURL, currentIdentifier: provenance.sourceRepositoryIdentifier)
+            }
+            if let chosen = preferred ?? current ?? (tied.count == 1 ? first : nil) {
+                found[uuid] = chosen
+            } else {
+                checkIssues.append("\(local.name ?? identifier)：多个来源提供相同版本，请在应用详情中选择一次来源。")
+            }
+        }
+        candidates = available
+        checkIssues = Array(Set(checkIssues)).sorted()
+        return found
+    }
+
+    static func preferenceKey(_ update: AppUpdate) -> String {
+        SourcePolicy.subscriptionKey(url: update.sourceURL, identifier: update.sourceProvenance.sourceRepositoryIdentifier,
+            appIdentifier: update.sourceProvenance.sourceAppIdentifier)
+    }
+
+    func selectCandidate(_ update: AppUpdate, for identifier: String) {
+        guard SourcePolicy.isEnabled(url: update.sourceURL, identifier: update.sourceProvenance.sourceRepositoryIdentifier) else { return }
+        var preferences = UserDefaults.standard.dictionary(forKey: "SignOs.preferredUpdateSources") as? [String: String] ?? [:]
+        preferences[identifier] = Self.preferenceKey(update)
+        UserDefaults.standard.set(preferences, forKey: "SignOs.preferredUpdateSources")
+        if AppVersion.compare(update.remoteVersion, update.localVersion ?? "") == .orderedDescending { updates[update.localUUID] = update }
+    }
+
+    private func eligible(_ update: AppUpdate) -> Bool {
+        let origin = update.sourceProvenance
+        return SourcePolicy.isEnabled(url: update.sourceURL, identifier: origin.sourceRepositoryIdentifier) &&
+            !SourcePolicy.isSubscriptionDeleted(url: update.sourceURL, identifier: origin.sourceRepositoryIdentifier, appIdentifier: origin.sourceAppIdentifier)
+    }
+
+    func sourceAvailabilityChanged(localApps: [any AppInfoPresentable]? = nil) {
+        if let localApps { localSnapshot = localApps }
+        checkIssues = []
+        updates = _applySkips(_findUpdates(repositories: repositorySnapshot, localApps: localSnapshot, failedSources: []))
+    }
+
 	private func _matchesStoredRepository(
 		storedSourceURL: URL,
 		sourceURL: URL

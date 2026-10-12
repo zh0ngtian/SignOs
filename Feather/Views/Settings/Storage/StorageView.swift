@@ -100,8 +100,7 @@ extension StorageView {
 	/// PPQ protection can change identifiers between signs, so group
 	/// by display name first and fall back to the identifier.
 	private func _matchKey(_ name: String?, _ identifier: String?) -> String? {
-		if let name, !name.isEmpty { return "name:" + name.lowercased() }
-		if let identifier, !identifier.isEmpty { return "id:" + identifier }
+        if let identifier, !identifier.isEmpty { return "id:" + identifier }
 		return nil
 	}
 }
@@ -127,6 +126,7 @@ extension StorageView {
 		}
 
 		return _signedApps.filter { app in
+            guard !AppOperations.isSourceManaged(app) else { return false }
 			guard let key = _matchKey(app.name, app.identifier) else { return false }
 			guard let newest = newestByKey[key] else { return false }
 			return (app.date ?? .distantPast) < newest
@@ -134,12 +134,11 @@ extension StorageView {
 	}
 
 	private func _duplicateVictims() -> [Imported] {
-		let installedNames = Set(_signedApps.compactMap { $0.name?.lowercased() })
 		let installedIds = Set(_signedApps.compactMap { $0.identifier })
 
 		return _importedApps.filter { imported in
+            guard !AppOperations.isSourceManaged(imported) else { return false }
 			if let identifier = imported.identifier, installedIds.contains(identifier) { return true }
-			if let name = imported.name?.lowercased(), installedNames.contains(name) { return true }
 			return false
 		}
 	}

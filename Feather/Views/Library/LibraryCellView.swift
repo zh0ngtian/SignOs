@@ -148,9 +148,9 @@ extension LibraryCellView {
 	
 	@ViewBuilder
 	private func _actions(for app: AppInfoPresentable) -> some View {
-		Button(.localized("Delete"), systemImage: "trash", role: .destructive) {
-			Storage.shared.deleteApp(for: app)
-		}
+		if !AppOperations.isSourceManaged(app) {
+            Button(.localized("Delete"), systemImage: "trash", role: .destructive) { Storage.shared.deleteApp(for: app) }
+        }
 	}
 	
 	@ViewBuilder
@@ -250,10 +250,6 @@ extension LibraryCellView {
 	}
 	
 	private func _startUpdateDownload(_ update: AppUpdate) {
-		_ = DownloadManager.shared.startDownload(
-			from: update.downloadURL,
-			id: "FeatherManualDownload_Update_\(update.localUUID)",
-			sourceProvenance: update.sourceProvenance
-		)
+        AppOperations.update(update)
 	}
 }

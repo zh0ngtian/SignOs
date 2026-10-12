@@ -24,14 +24,16 @@ extension Storage {
 	func deleteApp(for app: AppInfoPresentable) {
 		do {
 			if let url = getUuidDirectory(for: app) {
-				try? FileManager.default.removeItem(at: url)
+				if FileManager.default.fileExists(atPath: url.path) { try FileManager.default.removeItem(at: url) }
 			}
 			deleteSourceMetadata(for: app.uuid)
 			if let object = app as? NSManagedObject {
 				context.delete(object)
 			}
 			saveContext()
-		}
+        } catch {
+            NSLog("SignOs package cleanup failed: %@", error.localizedDescription)
+        }
 	}
 	
 	@MainActor
@@ -43,11 +45,11 @@ extension Storage {
 			if signed {
 				let request: NSFetchRequest<Signed> = Signed.fetchRequest()
 				request.predicate = NSPredicate(format: "uuid == %@", victimUUID)
-				if let victim = (try? context.fetch(request))?.first { deleteApp(for: victim) }
+				if let victim = (try? context.fetch(request))?.first, !AppOperations.isSourceManaged(victim) || AppOperations.isAllowed(victim) { deleteApp(for: victim) }
 			} else {
 				let request: NSFetchRequest<Imported> = Imported.fetchRequest()
 				request.predicate = NSPredicate(format: "uuid == %@", victimUUID)
-				if let victim = (try? context.fetch(request))?.first { deleteApp(for: victim) }
+				if let victim = (try? context.fetch(request))?.first, !AppOperations.isSourceManaged(victim) || AppOperations.isAllowed(victim) { deleteApp(for: victim) }
 			}
 		}
 	}

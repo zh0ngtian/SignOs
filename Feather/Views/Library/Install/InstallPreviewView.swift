@@ -121,6 +121,7 @@ struct InstallPreviewView: View {
 	}
 	
 	private func _install() {
+        guard isSharing || AppOperations.isAllowed(app) else { AppOperations.showError("来源已禁用，请先启用软件源。"); return }
 		guard isSharing || app.identifier != Bundle.main.bundleIdentifier! || _installationMethod == 1 else {
 			UIAlertController.showAlertWithOk(
 				title: .localized("Install"),
@@ -129,7 +130,9 @@ struct InstallPreviewView: View {
 			return
 		}
 				
+        SourceAccessManager.shared.beginUse(app)
 		Task.detached(priority: .userInitiated) {
+            defer { Task { @MainActor in SourceAccessManager.shared.endUse(app) } }
 			do {
 				let handler = await ArchiveHandler(app: app, viewModel: viewModel)
 				try await handler.move()
@@ -137,6 +140,7 @@ struct InstallPreviewView: View {
 				let packageUrl = try await handler.archive()
 				
 				if await !isSharing {
+                    guard await AppOperations.isAllowed(app) else { return }
 					if await _installationMethod == 0 {
 						await MainActor.run {
 							installer.packageUrl = packageUrl

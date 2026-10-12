@@ -38,15 +38,16 @@ struct OneViewTracker {
 		let queueJobs = (autoSignManager.currentJob.map { [$0] } ?? []) + autoSignManager.queue
 
 		let identifier = app.id
-		let newestSigned = signed
-			.filter { $0.identifier == identifier && (($0.date ?? .distantPast) >= startedAt || $0.version == app.currentVersion) }
+		let provenance = source.flatMap { SourceAppProvenance(sourceURL: sourceURL, repository: $0, app: app) }
+        let newestSigned = signed
+			.filter { $0.identifier == identifier && AppOperations.matchesSourcePackage($0, provenance: provenance) && (provenance != nil || ($0.date ?? .distantPast) >= startedAt || $0.version == app.currentVersion) }
 			.max { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }
 		let newestImported = imported
-			.filter { $0.identifier == identifier && (($0.date ?? .distantPast) >= startedAt || $0.version == app.currentVersion) }
+			.filter { $0.identifier == identifier && AppOperations.matchesSourcePackage($0, provenance: provenance) && (provenance != nil || ($0.date ?? .distantPast) >= startedAt || $0.version == app.currentVersion) }
 			.max { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }
 		return .resolve(
 			downloading: downloadManager.getDownload(by: app.currentUniqueId) != nil,
-			queued: queueJobs.contains { $0.appIdentifier == app.id },
+			queued: queueJobs.contains { $0.appIdentifier == app.id } || SourceAccessManager.shared.hasActiveApplication(identifier ?? ""),
 			signed: newestSigned != nil,
 			installed: newestSigned?.uuid.map { autoSignManager.confirmedInstallUUIDs.contains($0) } ?? false,
 			imported: newestImported != nil
@@ -69,6 +70,7 @@ struct WSOneViewGetButton: View {
 	}
 
 	@ObservedObject private var updateManager = UpdateManager.shared
+    @ObservedObject private var sourceAccess = SourceAccessManager.shared
 	@ObservedObject private var downloadManager = DownloadManager.shared
 	@ObservedObject private var autoSignManager = AutoSignManager.shared
 	@State private var _tappedGet = false
@@ -111,10 +113,10 @@ struct WSOneViewGetButton: View {
 					_tappedGet = true
 					if let url = app.currentDownloadUrl {
 						_startedAt = Date()
-						_ = downloadManager.startDownload(
-							from: url,
+						AppOperations.obtain(
+							url: url,
 							id: app.currentUniqueId,
-							sourceProvenance: _provenance()
+							provenance: _provenance()
 						)
 					}
 				} label: {
@@ -171,7 +173,7 @@ struct WSOneViewGetButton: View {
 				.buttonStyle(.borderless)
 			case .ready:
 				Button {
-					_presentingInstall = true
+                    if let signed = _newestSigned() { autoSignManager.enqueueInstall(app: signed) }
 				} label: {
 					Text(.localized("Install"))
 						.lineLimit(0)
@@ -211,6 +213,7 @@ struct WSOneViewGetButton: View {
 		} message: {
 			Text(_installError ?? "")
 		}
+        .disabled(phase != .installed && !SourcePolicy.isEnabled(url: sourceURL, identifier: source?.id))
 		.sheet(isPresented: $_presentingInstall) {
 			if let installed = _newestSigned() {
 				InstallPreviewView(app: installed)
@@ -261,13 +264,13 @@ struct WSOneViewGetButton: View {
 
 	private func _newestSigned() -> Signed? {
 		_signedApps
-			.filter { $0.identifier == app.id && (($0.date ?? .distantPast) >= _startedAt || $0.version == app.currentVersion) }
+			.filter { $0.identifier == app.id && AppOperations.matchesSourcePackage($0, provenance: _provenance()) && (_provenance() != nil || ($0.date ?? .distantPast) >= _startedAt || $0.version == app.currentVersion) }
 			.max { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }
 	}
 
 	private func _newestImported() -> Imported? {
 		_importedApps
-			.filter { $0.identifier == app.id && (($0.date ?? .distantPast) >= _startedAt || $0.version == app.currentVersion) }
+			.filter { $0.identifier == app.id && AppOperations.matchesSourcePackage($0, provenance: _provenance()) && (_provenance() != nil || ($0.date ?? .distantPast) >= _startedAt || $0.version == app.currentVersion) }
 			.max { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }
 	}
 }
@@ -281,6 +284,7 @@ struct OneViewInstallView: View {
 	let app: ASRepository.App
 
 	@ObservedObject private var updateManager = UpdateManager.shared
+    @ObservedObject private var sourceAccess = SourceAccessManager.shared
 	@ObservedObject private var downloadManager = DownloadManager.shared
 	@ObservedObject private var autoSignManager = AutoSignManager.shared
 	@FetchRequest(
@@ -310,13 +314,13 @@ struct OneViewInstallView: View {
 
 	private var _newestInstalled: Signed? {
 		_signedApps
-			.filter { $0.identifier == app.id && (($0.date ?? .distantPast) >= _startedAt || $0.version == app.currentVersion) }
+			.filter { $0.identifier == app.id && AppOperations.matchesSourcePackage($0, provenance: _provenance()) && (_provenance() != nil || ($0.date ?? .distantPast) >= _startedAt || $0.version == app.currentVersion) }
 			.max { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }
 	}
 
 	private var _newestImported: Imported? {
 		_importedApps
-			.filter { $0.identifier == app.id && (($0.date ?? .distantPast) >= _startedAt || $0.version == app.currentVersion) }
+			.filter { $0.identifier == app.id && AppOperations.matchesSourcePackage($0, provenance: _provenance()) && (_provenance() != nil || ($0.date ?? .distantPast) >= _startedAt || $0.version == app.currentVersion) }
 			.max { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }
 	}
 
@@ -436,10 +440,10 @@ extension OneViewInstallView {
 					}
 					_tappedGet = true
 					if let url = app.currentDownloadUrl {
-						_ = downloadManager.startDownload(
-							from: url,
+						AppOperations.obtain(
+							url: url,
 							id: app.currentUniqueId,
-							sourceProvenance: _provenance()
+							provenance: _provenance()
 						)
 					}
 				} label: {
@@ -506,7 +510,7 @@ extension OneViewInstallView {
 
 			case .ready:
 				Button {
-					_presentingInstall = true
+                    if let signed = _newestInstalled { autoSignManager.enqueueInstall(app: signed) }
 				} label: {
 					_prominentButton(title: "Install Now", systemImage: "square.and.arrow.down.fill", color: .accentColor)
 				}

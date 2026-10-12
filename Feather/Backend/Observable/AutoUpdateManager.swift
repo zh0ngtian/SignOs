@@ -121,7 +121,7 @@ final class AutoUpdateManager: ObservableObject {
 	/// Runs a check if the configured interval has elapsed and the
 	/// network/time constraints allow it.
 	func tick() {
-		if let last = lastCheckDate, Date().timeIntervalSince(last) < intervalHours * 3600 {
+		if UpdateManager.shared.lastCheckedDate != nil, let last = lastCheckDate, Date().timeIntervalSince(last) < intervalHours * 3600 {
 			checkRenewals()
 			return
 		}
@@ -156,7 +156,7 @@ final class AutoUpdateManager: ObservableObject {
 			isAutoChecking = false
 		}
 
-		let sources = _fetchSources()
+		let sources = _fetchSources().filter { SourcePolicy.isEnabled(url: $0.sourceURL, identifier: $0.identifier) }
 		let completed = await UpdateManager.shared.checkForUpdates(
 			sources: sources,
 			localApps: _fetchSignedApps().map { $0 as AppInfoPresentable }
@@ -194,7 +194,7 @@ final class AutoUpdateManager: ObservableObject {
 
 		_updateBadge(updates.count)
 
-		if !isAutoUpdateEnabled {
+		if !isAutoUpdateEnabled || !_networkAllowed() || !_withinWindow() {
 			if silent { return updates.count }
 			let body: String
 			if
@@ -217,16 +217,12 @@ final class AutoUpdateManager: ObservableObject {
 
 		var started = 0
 		for update in updates {
-			guard isAutoUpdateEnabled(for: update.bundleIdentifier) else { continue }
+			guard isAutoUpdateEnabled(for: update.managedIdentifier ?? update.bundleIdentifier) else { continue }
 			guard !_matchesDisabledSource(update.sourceURL, disabled: disabledSourceURLs) else { continue }
 			let jobId = "\(Self.autoDownloadPrefix)_\(update.localUUID)"
 			guard DownloadManager.shared.getDownload(by: jobId) == nil else { continue }
 
-			_ = DownloadManager.shared.startDownload(
-				from: update.downloadURL,
-				id: jobId,
-				sourceProvenance: update.sourceProvenance
-			)
+            guard AppOperations.update(update, automatic: true) else { continue }
 			ActivityLog.shared.log(.downloaded, app: update.appName)
 			started += 1
 		}
@@ -295,11 +291,7 @@ final class AutoUpdateManager: ObservableObject {
 			let jobId = "\(Self.autoDownloadPrefix)_\(update.localUUID)"
 			guard DownloadManager.shared.getDownload(by: jobId) == nil else { continue }
 
-			_ = DownloadManager.shared.startDownload(
-				from: update.downloadURL,
-				id: jobId,
-				sourceProvenance: update.sourceProvenance
-			)
+            guard AppOperations.update(update, automatic: true) else { continue }
 			started += 1
 		}
 		return started
@@ -345,7 +337,8 @@ final class AutoUpdateManager: ObservableObject {
 		let threshold = Double(renewThresholdDays) * 86400
 		var renewed = Set(UserDefaults.standard.stringArray(forKey: Keys.renewedUUIDs) ?? [])
 
-		for app in _fetchSignedApps() {
+		for app in AppInventory.applications(_fetchSignedApps().map { $0 as any AppInfoPresentable }).compactMap({ $0.installed as? Signed }) {
+			guard AppOperations.isAllowed(app) else { continue }
 			guard let uuid = app.uuid, !renewed.contains(uuid) else { continue }
 
 			let needsRenewal: Bool
@@ -364,7 +357,8 @@ final class AutoUpdateManager: ObservableObject {
 			guard needsRenewal else { continue }
 
 			// Only renew when a healthy replacement certificate exists.
-			guard let replacement = _healthiestCertificate(excluding: app.certificate) else { continue }
+			guard let replacement = _healthiestCertificate(excluding: app.certificate, bundleIdentifier: app.identifier),
+                app.certificate.map({ AppOperations.compatible($0, replacement, bundleIdentifier: app.identifier) }) ?? false else { continue }
 
 			renewed.insert(uuid)
 			UserDefaults.standard.set(Array(renewed), forKey: Keys.renewedUUIDs)
@@ -373,7 +367,7 @@ final class AutoUpdateManager: ObservableObject {
 		}
 	}
 
-	private func _healthiestCertificate(excluding: CertificatePair?) -> CertificatePair? {
+	private func _healthiestCertificate(excluding: CertificatePair?, bundleIdentifier: String?) -> CertificatePair? {
 		let certs = Storage.shared.getAllCertificates().filter { cert in
 			guard !cert.revoked, cert != excluding else { return false }
 			if let expiration = cert.expiration {
@@ -381,7 +375,8 @@ final class AutoUpdateManager: ObservableObject {
 			}
 			return true
 		}
-		return certs.first { $0.isDefault } ?? certs.first
+		let compatible = certs.filter { candidate in excluding.map { AppOperations.compatible($0, candidate, bundleIdentifier: bundleIdentifier) } ?? true }
+		return compatible.first { $0.isDefault } ?? compatible.first
 	}
 
 	// MARK: - Notifications

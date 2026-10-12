@@ -11,6 +11,7 @@ protocol AppInfoPresentable {
     var version: String? { get }
     var source: URL? { get }
     var isSigned: Bool { get }
+    var date: Date? { get }
 }
 struct LocalApp: AppInfoPresentable {
     var uuid: String? = "museum"
@@ -19,6 +20,7 @@ struct LocalApp: AppInfoPresentable {
     var version: String? = "1.1.2"
     var source: URL? = URL(string: "https://yao-app-source.305301890.workers.dev/source.json")!
     var isSigned = true
+    var date: Date? = Date(timeIntervalSince1970: 100)
 }
 struct AltSource {
     let sourceURL: URL?
@@ -116,7 +118,7 @@ struct UpdateManagerRegression {
         try fixture([app(), app(version: "9.0", entry: "museum-variant", legacy: false)])
         await manager.checkForUpdates(sources: [source], localApps: [local])
         checkpoint("first legacy check completed")
-        precondition(manager.updates["museum"]?.remoteVersion == "1.1.3", "Updates: \(manager.updates), issues: \(manager.checkIssues)")
+        precondition(manager.updates["museum"]?.remoteVersion == "9.0", "Updates: \(manager.updates), issues: \(manager.checkIssues)")
         precondition(manager.updates["museum"]?.localVersion == "1.1.2")
         precondition(manager.checkIssues.isEmpty)
         let repaired = Storage.shared.sourceMetadata(for: "museum")!
@@ -126,7 +128,7 @@ struct UpdateManagerRegression {
         precondition(FixtureProtocol.requests.last!.cachePolicy == .reloadIgnoringLocalCacheData)
         await manager.checkForUpdates(sources: [source], localApps: [local])
         checkpoint("repeat legacy check completed")
-        precondition(manager.updates["museum"]?.remoteVersion == "1.1.3", "Repeat checks must retain the update after repair")
+        precondition(manager.updates["museum"]?.remoteVersion == "9.0", "Repeat checks must retain the update after repair")
 
         let secondSource = AltSource(sourceURL: URL(string: "https://example.com/second-source.json")!)
         try fixture([app(version: "1.1.4")])
@@ -141,7 +143,7 @@ struct UpdateManagerRegression {
             precondition(remoteSynchronized)
             precondition(repositories.count == 2, "Synchronize every subscribed source, including sources without installed apps")
             precondition(FixtureProtocol.requests.count == requestsBeforeSync + 2, "Download each source only once")
-            precondition(manager.updates["museum"]?.remoteVersion == "1.1.3", "Publish sources before comparing app versions")
+            precondition(manager.updates["museum"]?.remoteVersion == "9.0", "Publish sources before comparing app versions")
             synchronized = true
         }
         precondition(syncCompleted && synchronized && manager.updates["museum"]?.remoteVersion == "1.1.4")
@@ -248,6 +250,45 @@ struct UpdateManagerRegression {
         manager.clearSkip(for: bundle)
 
         checkpoint("holds and skips passed")
+        let multiA = AltSource(sourceURL: URL(string: "https://example.com/a.json")!, name: "A", identifier: "source.a")
+        let multiB = AltSource(sourceURL: URL(string: "https://example.com/b.json")!, name: "B", identifier: "source.b")
+        let manualCurrent = LocalApp(uuid: "manual-current", version: "1.0", source: nil, date: Date(timeIntervalSince1970: 200))
+        let priorHigher = LocalApp(uuid: "prior-higher", version: "9.0", source: nil, date: Date(timeIntervalSince1970: 100))
+        let pendingHigher = LocalApp(uuid: "pending-higher", version: "3.0", source: nil, isSigned: false, date: Date(timeIntervalSince1970: 300))
+        let inventory = [manualCurrent, priorHigher, pendingHigher]
+        precondition(AppInventory.applications(inventory).count == 1)
+        precondition(AppInventory.applications(inventory)[0].installed?.uuid == manualCurrent.uuid, "Latest signature wins, including deliberate downgrade; imports do not change installed version")
+        var aVersion = "1.1", bVersion = "1.2"
+        FixtureProtocol.response = { request in
+            let isA = request.url == multiA.sourceURL
+            let data = try! JSONSerialization.data(withJSONObject: ["identifier": isA ? "source.a" : "source.b", "name": isA ? "A" : "B", "apps": [app(version: isA ? aVersion : bVersion)]])
+            return (data, 200)
+        }
+        await manager.checkForUpdates(sources: [multiA, multiB], localApps: inventory)
+        precondition(manager.updates.count == 1 && manager.updates["manual-current"]?.remoteVersion == "1.2")
+        precondition(manager.updates["manual-current"]?.sourceURL == multiB.sourceURL)
+        UserDefaults.standard.set(["id:source.b"], forKey: "SignOs.disabledSources")
+        manager.sourceAvailabilityChanged()
+        precondition(manager.updates["manual-current"]?.sourceURL == multiA.sourceURL, "Disabling immediately falls back to the other enabled source")
+        let beforeDisabledCheck = FixtureProtocol.requests.count
+        await manager.checkForUpdates(sources: [multiA, multiB], localApps: inventory)
+        precondition(FixtureProtocol.requests.count == beforeDisabledCheck + 1, "Disabled sources are not fetched by update checking")
+        UserDefaults.standard.set(["id:source.a", "id:source.b"], forKey: "SignOs.disabledSources")
+        manager.sourceAvailabilityChanged()
+        precondition(manager.updates.isEmpty && inventory.count == 3)
+        UserDefaults.standard.removeObject(forKey: "SignOs.disabledSources")
+        aVersion = "1.2"
+        await manager.checkForUpdates(sources: [multiA, multiB], localApps: [manualCurrent])
+        precondition(manager.updates.isEmpty && manager.candidates[bundle]?.count == 2 && !manager.checkIssues.isEmpty, "Ambiguous equal versions ask once")
+        manager.selectCandidate(manager.candidates[bundle]!.first { $0.sourceURL == multiB.sourceURL }!, for: bundle)
+        await manager.checkForUpdates(sources: [multiA, multiB], localApps: [manualCurrent])
+        precondition(manager.updates["manual-current"]?.sourceURL == multiB.sourceURL, "The explicit equal-version preference survives refresh")
+        UserDefaults.standard.removeObject(forKey: "SignOs.preferredUpdateSources")
+        aVersion = "0.9"; bVersion = "1.0"
+        await manager.checkForUpdates(sources: [multiA, multiB], localApps: [manualCurrent])
+        precondition(manager.updates.isEmpty, "Lower/equal versions do not count as updates")
+        FixtureProtocol.response = nil
+        checkpoint("cross-source newest version, grouping, manual imports, disable fallback, equal-version choice and downgrade prevention passed")
         Storage.shared.reset()
         try fixture([app(legacy: false), app(entry: "other", legacy: false)])
         await manager.checkForUpdates(sources: [source], localApps: [local])
@@ -255,7 +296,7 @@ struct UpdateManagerRegression {
         precondition(Storage.shared.sourceMetadata(for: "museum") == nil, "Ambiguous variants must not be backfilled")
         try fixture([app()], id: "unrelated.source")
         await manager.checkForUpdates(sources: [source], localApps: [local])
-        precondition(manager.updates.isEmpty && !manager.checkIssues.isEmpty)
+        precondition(manager.updates["museum"]?.remoteVersion == "1.1.3" && manager.checkIssues.isEmpty, "A different enabled source may update the same bundle")
         precondition(Storage.shared.sourceMetadata(for: "museum") == nil)
         try fixture([app()])
         checkpoint("ambiguous and unrelated sources passed")
@@ -273,7 +314,7 @@ struct UpdateManagerRegression {
         precondition(manager.updates.isEmpty && manager.checkIssues.isEmpty, "Successful retry must clear failures")
         precondition(Storage.shared.sourceMetadata(for: "museum")?.sourceAppVersion == "1.1.2")
         await manager.checkForUpdates(sources: [], localApps: [local])
-        precondition(manager.checkIssues.contains { $0.contains(String.localized("linked repository is unavailable. Refresh or restore its source in Sources.")) }, "A removed source must still be reported")
+        precondition(manager.updates.isEmpty && manager.checkIssues.isEmpty, "No enabled source means no update candidates, not a missing ownership error")
         checkpoint("HTTP/JSON failures and retry passed")
         let beforePreflightCancellation = FixtureProtocol.requests.count
         let cancelledPreflight = await manager.checkForUpdates(sources: [source], localApps: [local], synchronizeSources: {

@@ -57,6 +57,12 @@ final class Storage {
 	func deleteSourceMetadata(for uuid: String?) { if let uuid { deletedMetadata.insert(uuid) } }
 }
 
+@MainActor enum AppOperations {
+    static var disabledSources = Set<String>()
+    static func isSourceManaged(_ app: AppInfoPresentable) -> Bool { app.uuid.map { disabledSources.contains($0) } ?? false }
+    static func isAllowed(_ app: AppInfoPresentable) -> Bool { !isSourceManaged(app) }
+}
+
 @main
 struct InstallPackageRetentionRegression {
 	@MainActor
@@ -138,6 +144,12 @@ struct InstallPackageRetentionRegression {
 		storage.finishInstallCleanup(for: resigned)
 		precondition(!exists("retry-signed", signed: true) && !exists("retry-source", signed: false))
 		precondition(exists("resigned", signed: true))
+        _ = try package("disabled-signed", signed: true)
+        _ = try package("disabled-import", signed: false)
+        AppOperations.disabledSources = ["disabled-signed", "disabled-import"]
+        retention.schedule(for: "resigned", signed: ["disabled-signed"], imported: ["disabled-import"])
+        storage.finishInstallCleanup(for: resigned)
+        precondition(exists("disabled-signed", signed: true) && exists("disabled-import", signed: false), "An update from another source must preserve disabled-source archives")
 		print("InstallPackageRetentionRegression passed: pending/failed retention, progress end, persisted retry, paired completion, file/metadata cleanup, replacement toggle, manual signing")
 	}
 }

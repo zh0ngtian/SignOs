@@ -119,12 +119,9 @@ final class SigningHandler: NSObject {
 			throw SigningFileHandlerError.missingCertifcate
 		}
 		
+		if let error = handler.hadError { throw error }
 		try await self.move()
 		try await self.addToDatabase()
-		
-		if let error = handler.hadError {
-			throw error
-		}
 	}
 	
 	func move() async throws {
@@ -144,6 +141,7 @@ final class SigningHandler: NSObject {
 		try? _fileManager.removeItem(at: _uniqueWorkDir)
 	}
 	
+	@MainActor
 	func addToDatabase() async throws {
 		let app = try await _directory()
 		
@@ -173,6 +171,10 @@ final class SigningHandler: NSObject {
 			to: _uuid,
 			kind: .signed
 		)
+        await MainActor.run {
+            AppOperations.preserveSigningIdentities()
+            SourceAccessManager.shared.recordSignedResult(input: _app.uuid, output: _uuid)
+        }
 		if _options.post_deleteAppAfterSigned, !_app.isSigned, let importedUUID = _app.uuid {
 			await MainActor.run {
 				InstallPackageRetention.shared.schedule(for: _uuid, manuallyDeletedImports: [importedUUID])

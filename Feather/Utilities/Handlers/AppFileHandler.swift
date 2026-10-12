@@ -105,6 +105,7 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 		try? _fileManager.removeItem(at: _uniqueWorkDir)
 	}
 	
+	@MainActor
 	func addToDatabase() async throws {
 		let app = try await _directory()
 		
@@ -142,10 +143,10 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 					let identifier = autoIdentifier,
 					AutoUpdateManager.shared.isAutoUpdateEnabled(for: identifier)
 				{
-					AutoSignManager.shared.enqueueImported(uuid: _uuid)
+					AutoSignManager.shared.enqueueImported(uuid: _uuid, targetAppUUID: _download?.targetAppUUID, force: _download?.targetAppUUID != nil && !isAutoUpdateDownload)
 				}
 			} else {
-				AutoSignManager.shared.enqueueImported(uuid: _uuid)
+				AutoSignManager.shared.enqueueImported(uuid: _uuid, targetAppUUID: _download?.targetAppUUID, force: _download?.targetAppUUID != nil && !isAutoUpdateDownload)
 			}
 		}
 	}

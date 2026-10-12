@@ -1,428 +1,227 @@
-//
-//  LibraryView.swift
-//  Feather
-//
-//  From-scratch App Store-style library surface.
-//
-
 import SwiftUI
 import CoreData
 import NimbleViews
 
-// MARK: - View
 struct LibraryView: View {
-	@StateObject var downloadManager = DownloadManager.shared
-	@StateObject var updateManager = UpdateManager.shared
-	@ObservedObject private var autoSignManager = AutoSignManager.shared
+    @ObservedObject private var updates = UpdateManager.shared
+    @ObservedObject private var downloads = DownloadManager.shared
+    @ObservedObject private var signer = AutoSignManager.shared
+    @ObservedObject private var access = SourceAccessManager.shared
+    @ObservedObject private var checker = AutoUpdateManager.shared
+    @AppStorage("SignOs.applicationScope") private var scope = "all"
+    @State private var search = ""
+    @State private var importing = false
+    @State private var importingURL = false
+    @State private var urlText = ""
+    @State private var replacement: CertificateReplacementRequest?
+    @FetchRequest(entity: Signed.entity(), sortDescriptors: [NSSortDescriptor(keyPath: \Signed.date, ascending: false)], animation: .snappy)
+    private var signed: FetchedResults<Signed>
+    @FetchRequest(entity: Imported.entity(), sortDescriptors: [NSSortDescriptor(keyPath: \Imported.date, ascending: false)], animation: .snappy)
+    private var imported: FetchedResults<Imported>
 
-	@State private var _selectedInfoAppPresenting: AnyApp?
-	@State private var _selectedSigningAppPresenting: AnyApp?
-	@State private var _selectedInstallAppPresenting: AnyApp?
-	@State private var _isImportingPresenting = false
-	@State private var _isDownloadingPresenting = false
-	@State private var _alertDownloadString = ""
+    private var applications: [ManagedApplication] {
+        AppInventory.applications(signed.map { $0 as any AppInfoPresentable } + imported.map { $0 as any AppInfoPresentable })
+    }
+    private var pending: Int { applications.filter { $0.installed == nil }.count }
+    private var filtered: [ManagedApplication] {
+        applications.filter {
+            (scope != "updates" || updates.update(for: $0.primary) != nil) &&
+            (scope != "pending" || $0.installed == nil) &&
+            (search.isEmpty || ($0.primary.name ?? "").localizedCaseInsensitiveContains(search) || $0.id.localizedCaseInsensitiveContains(search))
+        }
+    }
+    private var unknownDownloads: [Download] {
+        downloads.downloads.filter { download in
+            guard let origin = download.sourceProvenance else { return true }
+            let bundle = SourceSubscriptionIdentity.bundleIdentifier(from: origin.sourceAppIdentifier)
+            return !applications.contains { $0.id == bundle }
+        }
+    }
 
-	@State private var _searchText = ""
-	@State private var _selectedScope: Scope = .all
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: WSSpacing.sectionGap) {
+                    WSHeroHeader(eyebrow: "\(applications.count) 个应用", title: "应用")
+                    searchBar
+                    if checker.isAutoChecking || updates.isChecking { ProgressView("正在检查更新…").font(.footnote) }
+                    if scope == "updates", !filtered.isEmpty {
+                        HStack {
+                            Text("可更新 \(filtered.count) 个应用").font(.subheadline).foregroundStyle(.secondary)
+                            Spacer()
+                            WSSearchCapsuleButton(title: "Update All") {
+                                for app in filtered { if let update = updates.update(for: app.primary) { AppOperations.update(update) } }
+                            }
+                        }
+                    }
+                    LazyVStack(spacing: WSSpacing.md) {
+                        ForEach(filtered) { application in
+                            NavigationLink { ApplicationDetailView(identifier: application.id) } label: {
+                                applicationCard(application)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    if filtered.isEmpty {
+                        WSEmptyState(icon: scope == "updates" ? "checkmark.seal" : "square.stack.3d.up",
+                            title: emptyTitle,
+                            message: search.isEmpty ? "导入应用，或从软件源下载。下拉可检查更新。" : "没有匹配的应用。")
+                    }
+                    if !updates.checkIssues.isEmpty {
+                        WSCard {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Label("检查结果", systemImage: "exclamationmark.circle").font(.subheadline.weight(.semibold))
+                                ForEach(updates.checkIssues, id: \.self) { Text(verbatim: $0).font(.footnote).foregroundStyle(.secondary) }
+                            }
+                        }
+                    }
+                    ForEach(unknownDownloads) { WSDownloadCard(download: $0) }
+                    addApp
+                    if applications.contains(where: { $0.installed != nil }) {
+                        Button("批量更换证书并重新签名") { replacement = CertificateReplacementRequest(apps: applications.compactMap { $0.installed }.filter(AppOperations.isAllowed)) }
+                            .font(.subheadline).frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                }
+                .padding(.horizontal, WSSpacing.screenPadding).padding(.top, 4).padding(.bottom, 28)
+            }
+            .background(WSSurface.background)
+            .toolbar(.hidden, for: .navigationBar)
+            .refreshable { await checker.checkNow(notifyWhenClean: false, syncManagedSources: true) }
+            .sheet(isPresented: $importing) {
+                FileImporterRepresentableView(allowedContentTypes: [.ipa, .tipa], allowsMultipleSelection: true, onDocumentsPicked: { urls in
+                    for url in urls {
+                        let download = downloads.startArchive(from: url, id: "FeatherManualDownload_\(UUID().uuidString)")
+                        try? downloads.handlePachageFile(url: url, dl: download)
+                    }
+                }).ignoresSafeArea()
+            }
+            .alert("从 URL 导入", isPresented: $importingURL) {
+                TextField("URL", text: $urlText).textInputAutocapitalization(.never)
+                Button("取消", role: .cancel) { urlText = "" }
+                Button("导入") {
+                    if let url = URL(string: urlText), ["http", "https"].contains(url.scheme) {
+                        _ = downloads.startDownload(from: url, id: "FeatherManualDownload_\(UUID().uuidString)")
+                    }
+                    urlText = ""
+                }
+            }
+            .sheet(item: $replacement) { CertificateReplacementView(apps: $0.apps) }
+            .task { access.cleanupDeletedSubscriptions() }
+        }
+    }
 
-	// MARK: Fetch
-	@FetchRequest(
-		entity: Signed.entity(),
-		sortDescriptors: [NSSortDescriptor(keyPath: \Signed.date, ascending: false)],
-		animation: .snappy
-	) private var _signedApps: FetchedResults<Signed>
+    private var emptyTitle: String {
+        if !search.isEmpty { return "没有匹配的应用" }
+        if scope == "pending" { return "暂无待安装应用" }
+        guard scope == "updates" else { return "暂无应用" }
+        if checker.isAutoChecking || updates.isChecking { return "正在检查更新" }
+        if !updates.checkIssues.isEmpty { return "更新检查未完成" }
+        if updates.lastCheckedDate == nil { return "尚未检查更新" }
+        return "All Apps Up to Date"
+    }
 
-	@FetchRequest(
-		entity: Imported.entity(),
-		sortDescriptors: [NSSortDescriptor(keyPath: \Imported.date, ascending: false)],
-		animation: .snappy
-	) private var _importedApps: FetchedResults<Imported>
+    private var searchBar: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 9) {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                TextField("搜索应用", text: $search).textInputAutocapitalization(.never).autocorrectionDisabled()
+                if !search.isEmpty { Button { search = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }.accessibilityLabel("清除搜索") }
+            }
+            .padding(12).background(WSRadius.continuous(12).fill(WSSurface.card))
+            Picker("筛选应用", selection: $scope) {
+                Text("全部").tag("all")
+                Text("可更新 \(updates.updates.count)").tag("updates")
+                Text("待安装 \(pending)").tag("pending")
+            }.pickerStyle(.segmented).accessibilityIdentifier("applications-filter")
+        }
+    }
 
-	@FetchRequest(
-		entity: AltSource.entity(),
-		sortDescriptors: [NSSortDescriptor(keyPath: \AltSource.name, ascending: true)],
-		animation: .snappy
-	) private var _sources: FetchedResults<AltSource>
+    private func applicationCard(_ application: ManagedApplication) -> some View {
+        let app = application.primary
+        let update = updates.update(for: app)
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 13) {
+                FRAppIconView(app: app, size: 57)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(app.name ?? application.id).font(.body.weight(.semibold)).foregroundStyle(.primary)
+                    Text("\(application.installed == nil ? "待安装" : "已安装") · \(app.version ?? "未知版本")")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Text(AppOperations.sourceName(app) + (AppOperations.sourceStatus(app).map { " · " + $0 } ?? ""))
+                        .font(.caption).foregroundStyle(.secondary)
+                    if let update {
+                        Text("\(app.version ?? "") → \(update.remoteVersion) · \(update.sourceProvenance.sourceRepositoryName ?? "软件源")")
+                            .font(.caption).foregroundStyle(Color.accentColor)
+                        if cached(update) { Text("新版已下载").font(.caption).foregroundStyle(.secondary) }
+                    }
+                    if let cert = Storage.shared.getCertificate(from: app), !AppOperations.isValid(cert) {
+                        Label("需重新签名", systemImage: "signature").font(.caption).foregroundStyle(.orange)
+                    }
+                }
+                Spacer(minLength: 4)
+                action(application, update: update)
+            }
+            if let error = signer.installErrors[application.id] { Text(error).font(.footnote).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true) }
+            if let download = download(for: application) { WSDownloadCard(download: download) }
+            if scope == "updates", let update {
+                Divider()
+                Text(update.whatsNew?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? update.whatsNew! : "未提供更新说明")
+                    .font(.body).foregroundStyle(.primary).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(WSSpacing.cardPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(WSRadius.continuous(WSRadius.lg).fill(WSSurface.card))
+        .accessibilityIdentifier("application-\(application.id)")
+    }
 
-	private var _filteredSigned: [Signed] {
-		_signedApps.filter { _matches($0.name) }
-	}
+    @ViewBuilder private func action(_ application: ManagedApplication, update: AppUpdate?) -> some View {
+        if let job = signer.currentJob, job.appIdentifier == application.id {
+            VStack(spacing: 5) { ProgressView(); Text(signer.currentPhase).font(.caption2).foregroundStyle(.secondary) }
+        } else if access.hasActiveApplication(application.id) {
+            VStack(spacing: 5) { ProgressView(); Text("安装处理中").font(.caption2).foregroundStyle(.secondary) }
+        } else if signer.queue.contains(where: { $0.appIdentifier == application.id }) {
+            Text("等待处理").font(.caption).foregroundStyle(.secondary)
+        } else if download(for: application) != nil {
+            Text("下载中").font(.caption).foregroundStyle(.secondary)
+        } else if let update {
+            WSSearchCapsuleButton(title: signer.installErrors[application.id] == nil ? "Update" : "重试更新") { AppOperations.update(update) }
+        } else if let installed = application.installed {
+            if signer.installErrors[application.id] != nil, let signed = installed as? Signed, AppOperations.isAllowed(signed) {
+                WSSearchCapsuleButton(title: "重试安装") { signer.enqueueInstall(app: signed) }
+            } else if let cert = Storage.shared.getCertificate(from: installed), !AppOperations.isValid(cert), AppOperations.isAllowed(installed) {
+                WSSearchCapsuleButton(title: "重新签名") { replacement = CertificateReplacementRequest(apps: [installed]) }
+            } else {
+                WSSearchCapsuleButton(title: "Open") { UIApplication.openApp(with: application.id) }
+            }
+        } else if AppOperations.isAllowed(application.primary) {
+            WSSearchCapsuleButton(title: "Install") { signer.enqueue(app: application.primary, force: true) }
+        } else {
+            Image(systemName: "pause.circle").foregroundStyle(.secondary)
+        }
+    }
 
-	private var _filteredImported: [Imported] {
-		_importedApps.filter { _matches($0.name) }
-	}
+    private func cached(_ update: AppUpdate) -> Bool {
+        UpdateManager.shared.downloadedApp(for: update, among: applications.flatMap(\.packages), isPackageAvailable: {
+            guard let directory = Storage.shared.getAppDirectory(for: $0) else { return false }
+            return FileManager.default.fileExists(atPath: directory.appendingPathComponent("Info.plist").path)
+        }) != nil
+    }
 
-	private var _showSigned: Bool {
-		_selectedScope == .all || _selectedScope == .signed
-	}
+    private func download(for application: ManagedApplication) -> Download? {
+        downloads.downloads.first { download in
+            application.packages.contains { $0.uuid == download.targetAppUUID } ||
+            download.sourceProvenance.map { SourceSubscriptionIdentity.bundleIdentifier(from: $0.sourceAppIdentifier) == application.id } == true
+        }
+    }
 
-	private var _showImported: Bool {
-		_selectedScope == .all || _selectedScope == .imported
-	}
-
-	private var _isCompletelyEmpty: Bool {
-		_filteredSigned.isEmpty && _filteredImported.isEmpty
-	}
-
-	private func _matches(_ name: String?) -> Bool {
-		_searchText.isEmpty || (name?.localizedCaseInsensitiveContains(_searchText) ?? false)
-	}
-
-	// MARK: Body
-	var body: some View {
-		NavigationStack {
-			ScrollView {
-				VStack(alignment: .leading, spacing: 22) {
-					WSHeroHeader(
-						eyebrow: _countText,
-						title: "Library"
-					)
-
-					_searchBar()
-
-					if _showSigned && !_filteredSigned.isEmpty {
-						_appSection(title: "Installed", apps: _filteredSigned)
-					}
-
-					if _showImported && !_filteredImported.isEmpty {
-						_appSection(title: "Ready to Install", apps: _filteredImported)
-					}
-
-					if _isCompletelyEmpty {
-						_emptyCard()
-					}
-
-					_addCard()
-				}
-				.padding(.horizontal, 16)
-				.padding(.top, 4)
-				.padding(.bottom, 28)
-			}
-			.background(Color(uiColor: .systemGroupedBackground))
-			.toolbar(.hidden, for: .navigationBar)
-			.refreshable {
-				await _checkForUpdates()
-			}
-			.sheet(item: $_selectedInfoAppPresenting) { app in
-				LibraryInfoView(app: app.base)
-			}
-			.sheet(item: $_selectedInstallAppPresenting) { app in
-				InstallPreviewView(app: app.base, isSharing: app.archive)
-					.presentationDetents([.height(200)])
-					.presentationDragIndicator(.visible)
-			}
-			.sheet(item: $_selectedSigningAppPresenting) { app in
-				SigningView(app: app.base)
-			}
-			.sheet(isPresented: $_isImportingPresenting) {
-				FileImporterRepresentableView(
-					allowedContentTypes: [.ipa, .tipa],
-					allowsMultipleSelection: true,
-					onDocumentsPicked: { urls in
-						guard !urls.isEmpty else { return }
-						for url in urls {
-							let id = "FeatherManualDownload_\(UUID().uuidString)"
-							let dl = downloadManager.startArchive(from: url, id: id)
-							try? downloadManager.handlePachageFile(url: url, dl: dl)
-						}
-					}
-				)
-				.ignoresSafeArea()
-			}
-			.alert(.localized("Import from URL"), isPresented: $_isDownloadingPresenting) {
-				TextField(.localized("URL"), text: $_alertDownloadString)
-					.textInputAutocapitalization(.never)
-				Button(.localized("Cancel"), role: .cancel) {
-					_alertDownloadString = ""
-				}
-				Button(.localized("OK")) {
-					if let url = URL(string: _alertDownloadString) {
-						_ = downloadManager.startDownload(from: url, id: "FeatherManualDownload_\(UUID().uuidString)")
-					}
-				}
-			}
-			.onReceive(NotificationCenter.default.publisher(for: Notification.Name("Feather.installApp"))) { _ in
-				if let latest = _signedApps.first {
-					_selectedInstallAppPresenting = AnyApp(base: latest)
-				}
-			}
-		}
-	}
-}
-
-// MARK: - Sections
-extension LibraryView {
-	private var _countText: String {
-		let total = _filteredSigned.count + _filteredImported.count
-		return total == 1 ? "1 APP" : "\(total) APPS"
-	}
-
-	@ViewBuilder
-	private func _searchBar() -> some View {
-		HStack(spacing: 8) {
-			Image(systemName: "magnifyingglass")
-				.foregroundStyle(.secondary)
-			TextField("Search apps", text: $_searchText)
-				.textInputAutocapitalization(.never)
-				.autocorrectionDisabled()
-			if !_searchText.isEmpty {
-				Button {
-					_searchText = ""
-				} label: {
-					Image(systemName: "xmark.circle.fill")
-						.foregroundStyle(.tertiary)
-				}
-			}
-		}
-		.padding(.horizontal, 12)
-		.padding(.vertical, 10)
-		.background(
-			RoundedRectangle(cornerRadius: 14, style: .continuous)
-				.fill(Color(uiColor: .secondarySystemGroupedBackground))
-		)
-
-		Picker("", selection: $_selectedScope) {
-			Text("All").tag(Scope.all)
-			Text("Installed").tag(Scope.signed)
-			Text("Imports").tag(Scope.imported)
-		}
-		.pickerStyle(.segmented)
-	}
-
-	@ViewBuilder
-	private func _appSection(title: String, apps: [any AppInfoPresentable]) -> some View {
-		VStack(alignment: .leading, spacing: 12) {
-			WSSectionTitle(title: title, actionTitle: "\(apps.count)")
-
-			VStack(spacing: 10) {
-				ForEach(apps, id: \.uuid) { app in
-					_appCard(app)
-				}
-			}
-		}
-	}
-
-	@ViewBuilder
-	private func _appCard(_ app: any AppInfoPresentable) -> some View {
-		HStack(spacing: 14) {
-			FRAppIconView(app: app, size: 57)
-				.overlay(alignment: .topTrailing) {
-					if updateManager.update(for: app) != nil {
-						Circle()
-							.fill(Color.accentColor)
-							.frame(width: 10, height: 10)
-							.offset(x: 4, y: -4)
-					}
-				}
-
-			VStack(alignment: .leading, spacing: 3) {
-				Text(app.name ?? .localized("Unknown"))
-					.font(.body.weight(.semibold))
-					.foregroundStyle(.primary)
-					.lineLimit(1)
-				Text(verbatim: app.version ?? "")
-					.font(.caption)
-					.foregroundStyle(.secondary)
-					.lineLimit(1)
-			}
-
-			Spacer()
-
-			_actionPill(app)
-		}
-		.padding(14)
-		.background(
-			RoundedRectangle(cornerRadius: 20, style: .continuous)
-				.fill(Color(uiColor: .secondarySystemGroupedBackground))
-		)
-		.contextMenu {
-			_contextActions(app)
-		}
-	}
-
-	@ViewBuilder
-	private func _actionPill(_ app: any AppInfoPresentable) -> some View {
-		if let update = updateManager.update(for: app) {
-			WSActionButton(title: "Update") {
-				_startUpdateDownload(update)
-			}
-		} else if app.isSigned {
-			WSActionButton(title: "Open") {
-				UIApplication.openApp(with: app.identifier ?? "")
-			}
-		} else if _isInstalling(app) {
-			HStack(spacing: 8) {
-				ProgressView()
-					.frame(width: 16, height: 16)
-				Text(.localized("Installing"))
-					.font(.caption.weight(.semibold))
-					.foregroundStyle(.secondary)
-			}
-			.frame(minWidth: 68, minHeight: 30)
-		} else {
-			WSActionButton(title: "Get", systemImage: "arrow.down.circle") {
-				if autoSignManager.isAutoSignEnabled {
-					UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-					AutoSignManager.shared.enqueue(app: app, reason: .autoSign)
-				} else {
-					_selectedSigningAppPresenting = AnyApp(base: app)
-				}
-			}
-		}
-	}
-
-	private func _isInstalling(_ app: any AppInfoPresentable) -> Bool {
-		let jobs = (autoSignManager.currentJob.map { [$0] } ?? []) + autoSignManager.queue
-		return jobs.contains { $0.appIdentifier == app.identifier }
-	}
-
-	@ViewBuilder
-	private func _contextActions(_ app: any AppInfoPresentable) -> some View {
-		Button {
-			_selectedInfoAppPresenting = AnyApp(base: app)
-		} label: {
-			Label("Get Info", systemImage: "info.circle")
-		}
-
-		if let update = updateManager.update(for: app) {
-			Button {
-				_startUpdateDownload(update)
-			} label: {
-				Label("Update", systemImage: "arrow.down.circle")
-			}
-		}
-
-		if app.isSigned {
-			Button {
-				UIApplication.openApp(with: app.identifier ?? "")
-			} label: {
-				Label("Open", systemImage: "app.badge.checkmark")
-			}
-			Button {
-				_selectedInstallAppPresenting = AnyApp(base: app)
-			} label: {
-				Label("Install", systemImage: "square.and.arrow.down")
-			}
-			Button {
-				_selectedSigningAppPresenting = AnyApp(base: app)
-			} label: {
-				Label("Re-sign", systemImage: "signature")
-			}
-			Button {
-				UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-				AutoSignManager.shared.cloneApp(app: app)
-			} label: {
-			Label("Clone App", systemImage: "plus.square.on.square")
-			}
-			Button {
-				_selectedInstallAppPresenting = AnyApp(base: app, archive: true)
-			} label: {
-				Label("Export", systemImage: "square.and.arrow.up")
-			}
-		} else {
-			Button {
-				_selectedInstallAppPresenting = AnyApp(base: app)
-			} label: {
-				Label("Install", systemImage: "square.and.arrow.down")
-			}
-			Button {
-				_selectedSigningAppPresenting = AnyApp(base: app)
-			} label: {
-				Label("Sign", systemImage: "signature")
-			}
-			Button {
-				UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-				AutoSignManager.shared.cloneApp(app: app)
-			} label: {
-			Label("Clone App", systemImage: "plus.square.on.square")
-			}
-		}
-
-		Divider()
-
-		Button(role: .destructive) {
-			Storage.shared.deleteApp(for: app)
-		} label: {
-			Label("Remove", systemImage: "trash")
-		}
-	}
-
-	private func _emptyCard() -> some View {
-		VStack(spacing: 10) {
-			Image(systemName: "square.stack.3d.up.slash")
-				.font(.system(size: 40))
-				.foregroundStyle(.tint)
-			Text("No Apps Yet")
-				.font(.headline)
-			Text("Import an app or grab one from your sources.")
-				.font(.caption)
-				.foregroundStyle(.secondary)
-		}
-		.frame(maxWidth: .infinity)
-		.padding(.vertical, 36)
-		.background(
-			RoundedRectangle(cornerRadius: 24, style: .continuous)
-				.fill(Color(uiColor: .secondarySystemGroupedBackground).opacity(0.6))
-		)
-	}
-
-	private func _addCard() -> some View {
-		Menu {
-			Button("Import from Files") {
-				_isImportingPresenting = true
-			}
-			Button("Import from URL") {
-				_isDownloadingPresenting = true
-			}
-		} label: {
-			HStack(spacing: 10) {
-				Image(systemName: "plus.circle.fill")
-					.font(.title3)
-					.foregroundStyle(.tint)
-				Text("Add App")
-					.font(.body.weight(.semibold))
-					.foregroundStyle(.tint)
-				Spacer()
-			}
-			.padding(16)
-			.background(
-				RoundedRectangle(cornerRadius: 20, style: .continuous)
-					.fill(Color(uiColor: .secondarySystemGroupedBackground).opacity(0.6))
-					.overlay(
-						RoundedRectangle(cornerRadius: 20, style: .continuous)
-							.strokeBorder(
-								Color(uiColor: .separator).opacity(0.4),
-								style: StrokeStyle(lineWidth: 1.2, dash: [6])
-							)
-					)
-			)
-		}
-	}
-}
-
-// MARK: - Actions
-extension LibraryView {
-	enum Scope: CaseIterable {
-		case all
-		case signed
-		case imported
-	}
-
-	private func _checkForUpdates() async {
-		let localApps = _signedApps.map { $0 as AppInfoPresentable }
-			+ _importedApps.map { $0 as AppInfoPresentable }
-		await updateManager.checkForUpdates(
-			sources: Array(_sources),
-			localApps: localApps
-		)
-	}
-
-	private func _startUpdateDownload(_ update: AppUpdate) {
-		UIImpactFeedbackGenerator(style: .light).impactOccurred()
-		_ = DownloadManager.shared.startDownload(
-			from: update.downloadURL,
-			id: "SignOsManualUpdate_\(update.localUUID)",
-			sourceProvenance: update.sourceProvenance
-		)
-	}
+    private var addApp: some View {
+        Menu {
+            Button("从文件导入") { importing = true }
+            Button("从 URL 导入") { importingURL = true }
+        } label: {
+            Label("添加应用", systemImage: "plus.circle.fill").font(.body.weight(.semibold))
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).padding(14)
+                .background(WSRadius.continuous(WSRadius.lg).fill(WSSurface.cardFaded))
+        }
+    }
 }

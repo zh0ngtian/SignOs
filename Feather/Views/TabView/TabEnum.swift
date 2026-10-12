@@ -20,7 +20,7 @@ enum TabEnum: String, CaseIterable, Hashable {
 		switch self {
 		case .sources: 	return .localized("Sources")
 		case .search: 		return .localized("Search")
-		case .library: 		return .localized("Library")
+		case .library: 		return "应用"
 		case .updates: 		return .localized("Updates")
 		case .settings: 	return .localized("Settings")
 		case .certificates:	return .localized("Certificates")
@@ -44,7 +44,7 @@ enum TabEnum: String, CaseIterable, Hashable {
 		case .sources: SourcesView()
 		case .search: SearchView()
 		case .library: LibraryView()
-		case .updates: UpdatesView()
+		case .updates: LibraryView()
 		case .settings: SettingsView()
 		case .certificates: NBNavigationView(.localized("Certificates")) { CertificatesView() }
 		}
@@ -52,7 +52,8 @@ enum TabEnum: String, CaseIterable, Hashable {
 
 	static func launchTab(in defaults: UserDefaults = .standard) -> TabEnum {
 		let stored = defaults.string(forKey: "SignOs.defaultTab")
-		let tab = stored.flatMap(TabEnum.init(rawValue:)) ?? .sources
+		let tab = stored == "updates" ? TabEnum.library : (stored.flatMap(TabEnum.init(rawValue:)) ?? .sources)
+		if stored == "updates" { defaults.set("updates", forKey: "SignOs.applicationScope") }
 		let launchTab = defaultTabs.contains(tab) ? tab : .sources
 		if stored != launchTab.rawValue {
 			defaults.set(launchTab.rawValue, forKey: "SignOs.defaultTab")
@@ -64,7 +65,6 @@ enum TabEnum: String, CaseIterable, Hashable {
 		return [
 			.sources,
 			.library,
-			.updates,
 			.settings
 		]
 	}

@@ -36,7 +36,9 @@ extension Storage {
 		completion(nil)
 	}
 	
+	@MainActor
 	func deleteCertificate(for cert: CertificatePair) {
+        AppOperations.preserveSigningIdentities()
 		if let url = getUuidDirectory(for: cert) {
 			try? FileManager.default.removeItem(at: url)
 		}

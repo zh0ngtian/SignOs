@@ -32,6 +32,7 @@ class Download: Identifiable, @unchecked Sendable {
 	let fileName: String
 	let onlyArchiving: Bool
 	var sourceProvenance: SourceAppProvenance?
+	var targetAppUUID: String?
 
 	init(
 		id: String,
@@ -79,17 +80,23 @@ class DownloadManager: NSObject, ObservableObject {
 	func startDownload(
 		from url: URL,
 		id: String = UUID().uuidString,
-		sourceProvenance: SourceAppProvenance? = nil
+		sourceProvenance: SourceAppProvenance? = nil,
+		targetAppUUID: String? = nil
 	) -> Download {
-		let requestHasSourceProvenance = sourceProvenance != nil
+		if let origin = sourceProvenance, !SourcePolicy.isEnabled(url: origin.sourceRepositoryURL, identifier: origin.sourceRepositoryIdentifier) || SourcePolicy.isSubscriptionDeleted(url: origin.sourceRepositoryURL, identifier: origin.sourceRepositoryIdentifier, appIdentifier: origin.sourceAppIdentifier) {
+            DispatchQueue.main.async { AppOperations.showError("来源已禁用或订阅已删除，请先启用软件源。") }
+            return Download(id: id, url: url, sourceProvenance: sourceProvenance)
+        }
+        let requestHasSourceProvenance = sourceProvenance != nil
 		if let existingDownload = downloads.first(where: {
-			$0.url == url && ($0.sourceProvenance != nil) == requestHasSourceProvenance
+			$0.url == url && ($0.sourceProvenance != nil) == requestHasSourceProvenance && $0.sourceProvenance?.sourceVersionID == sourceProvenance?.sourceVersionID && $0.targetAppUUID == targetAppUUID
 		}) {
 			resumeDownload(existingDownload)
 			return existingDownload
 		}
 
 		let download = Download(id: id, url: url, sourceProvenance: sourceProvenance)
+		download.targetAppUUID = targetAppUUID
 
 		let task = _session.downloadTask(with: url)
 		download.task = task
@@ -222,6 +229,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
 				DownloadManager.shared._removeProgressNotification(for: dl)
 				if let index = DownloadManager.shared.getDownloadIndex(by: dl.id) {
 					DownloadManager.shared.downloads.remove(at: index)
+                    AppOperations.resumeDeferredUpdates()
 
 					#if !targetEnvironment(macCatalyst)
 					if #available(iOS 26.0, *) {

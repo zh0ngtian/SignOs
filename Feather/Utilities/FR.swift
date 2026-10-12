@@ -51,8 +51,17 @@ enum FR {
 		certificate: CertificatePair?,
 		completion: @escaping (Error?) -> Void
 	) {
-		Task.detached(priority: .userInitiated) {
-			let handler = SigningHandler(app: app, options: options)
+        Task.detached(priority: .userInitiated) {
+            let error = await MainActor.run {
+                let error = AppOperations.signingError(for: app, certificate: certificate, targetIdentifier: options.appIdentifier)
+                if error == nil { SourceAccessManager.shared.beginUse(app) }
+                return error
+            }
+            if let error {
+                await MainActor.run { completion(NSError(domain: "SignOs.Signing", code: 1, userInfo: [NSLocalizedDescriptionKey: error])) }
+                return
+            }
+            let handler = SigningHandler(app: app, options: options)
 			handler.appCertificate = certificate
 			handler.appIcon = icon
 			
@@ -61,18 +70,20 @@ enum FR {
 				try await handler.modify()
 				try? await handler.clean()
 				await MainActor.run {
-					completion(nil)
-				}
-			} catch {
-				try? await handler.clean()
-				await MainActor.run {
-					completion(error)
-				}
-			}
-		}
-	}
-	
-	static func handleCertificateFiles(
+                    SourceAccessManager.shared.endUse(app)
+                    completion(nil)
+                }
+            } catch {
+                try? await handler.clean()
+                await MainActor.run {
+                    SourceAccessManager.shared.endUse(app)
+                    completion(error)
+                }
+            }
+        }
+    }
+
+    static func handleCertificateFiles(
 		p12URL: URL,
 		provisionURL: URL,
 		p12Password: String,

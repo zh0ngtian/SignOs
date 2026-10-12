@@ -79,6 +79,8 @@ def main():
         }))
         subprocess.run(["xcrun", "swiftc", "-module-cache-path", str(pathlib.Path(directory) / "ModuleCache"),
                         "-sdk", sdk, "-target", f"{arch}-apple-ios17.0-simulator",
+                        str(ROOT / "NimbleKit/Sources/NimbleExtensions/String/String+localized.swift"),
+                        str(ROOT / "Feather/Utilities/SourcePolicy.swift"),
                         str(ROOT / "Feather/Backend/Observable/DownloadManager.swift"),
                         str(ROOT / "Tests/DownloadManagerSimulatorRegression.swift"), "-o", str(binary)],
                        check=True, env={**os.environ, "SDKROOT": sdk})

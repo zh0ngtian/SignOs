@@ -25,6 +25,7 @@ contributors for their work, this wouldn't exist without them.
 ## Features
 
 ### Automatic Updates
+- Enabled repositories jointly supply the newest version for each app; equal versions prefer the current or explicitly selected source. Manual imports and multiple repositories can share a Bundle ID.
 - Repository URL migrations keep existing app update links when the fetched source
   retains the same nonempty repository identifier. Legacy records without an
   identifier continue to require the original URL.
@@ -38,12 +39,12 @@ contributors for their work, this wouldn't exist without them.
 - Live download progress in Notification Center with speed and ETA
 - What's New text from the source in each Available Updates card and update notification;
   multiline notes are shown in full, with a localized fallback when no notes are provided
-- Update All reuses downloaded source versions: signed packages install directly, imported packages resume signing; only missing versions download again
-- Recently Updated and home screen badge for pending updates
+- Update All reuses downloaded source versions and checks signing identity; imported or differently signed packages resume signing, and only missing versions download again
+- One Applications tab with All / Available Updates / Pending filters, full release notes, cached-package reuse and a deduplicated home screen badge
 
 ### Background Signing
 - Serial signing queue — every import or download signs itself automatically
-- Apps keep their existing certificate so your data always survives updates
+- Existing apps keep their valid certificate; replacement checks the signed package’s actual identity and access groups before re-signing. Changing the default certificate does not re-sign existing apps
 - Self-Heal: revoked certificates are detected and apps are re-signed with your
   healthiest certificate automatically
 - Certificate Health dashboard with expiry rings, revocation status and Renew All
@@ -64,8 +65,10 @@ contributors for their work, this wouldn't exist without them.
   The top-right settings button opens source settings with remote subscription management
   and source removal; configuration backup, management access and local subscription sections are omitted
 - Search across every source with recent searches (tab currently hidden; implementation retained)
-- Library with filters and quick actions
-- Updates tab with app updates and recent activity; tap Check or pull down to synchronize every subscribed source, then check for updates using the same fresh data
+- Applications combines Library and Updates, groups retained packages by Bundle ID, and exposes version/source/certificate history in app details
+- Pull down Applications to synchronize enabled subscribed sources and check updates from the same fresh data
+- Sources can be disabled locally while retaining packages; disabled archives remain visible and are excluded from signing, installation and automatic cleanup
+- Single-app and batch certificate replacement reuses local packages without changing app versions
 - Simplified Chinese throughout app controls, settings, status messages and notifications; source sync and update actions share Search's capsule style
 - Automatic update and signing preferences in Settings
 - OneView install — Get (or Update for a detected source update), download progress with speed, signing and Open on one screen
@@ -500,3 +503,17 @@ SignOs by [@ihateios](https://github.com/ihateios). It's built over the open sou
 [Feather](https://github.com/claration/Feather) project, so special thanks to
 [claration](https://github.com/claration), [Nyasami](https://github.com/Nyasami) and
 [llsc12](https://github.com/llsc12) for the foundation they built.
+
+### 应用页合并与跨源更新（1.1.0 / 22）
+
+资源库与更新合并为应用页，每个 Bundle ID 一张卡片，按最近成功签名包展示当前版本。
+启用源共同选择较新版本，同版本优先当前或已选择来源；手动包和源包可共存。
+软件源开关保留本地包，禁用立即重算候选并取消该源排队与下载任务；签名中的任务
+保留结果且不继续安装，已发起安装保留既有流程与重试。删除远端订阅仅清理该订阅
+对应包，正在使用的包延后清理。更换证书提供单个与批量入口，核对实际签名身份，
+不改变版本计数；移除证书资料前保存可验证身份。详细规则和验收见
+[应用页合并方案](docs/plans/application-tab-merge.md)。
+
+新增纯 Swift 回归可按手动回归工作流执行：AppVersion、SigningIdentity、
+MachOEntitlements、SourceAccess 和 SignedSchemaMigration；现有更新、签名队列、
+下载和安装清理回归已扩展到跨源、禁用与缓存场景。

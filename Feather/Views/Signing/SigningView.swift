@@ -39,7 +39,8 @@ struct SigningView: View {
 	
 	init(app: AppInfoPresentable) {
 		self.app = app
-		let storedCert = UserDefaults.standard.integer(forKey: "feather.selectedCert")
+		let existing = AppOperations.certificate(for: app)
+        let storedCert = existing.flatMap { cert in Storage.shared.getAllCertificates().firstIndex { $0.uuid == cert.uuid } } ?? UserDefaults.standard.integer(forKey: "feather.selectedCert")
 		__temporaryCertificate = State(initialValue: storedCert)
 	}
 		
@@ -325,6 +326,9 @@ extension SigningView {
 // MARK: - Extension: View (import)
 extension SigningView {
 	private func _start() {
+        if AutoSignManager.shared.currentJob?.appIdentifier == app.identifier || AutoSignManager.shared.queue.contains(where: { $0.appIdentifier == app.identifier }) {
+            AppOperations.showError("这个应用正在处理，请等待当前任务结束。"); return
+        }
 		guard
 			_selectedCert() != nil || _temporaryOptions.signingOption != .default
 		else {
@@ -357,11 +361,13 @@ extension SigningView {
 					actions: [ok]
 				)
 			} else {
-				if _temporaryOptions.post_installAppAfterSigned {
-					DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-						NotificationCenter.default.post(name: Notification.Name("Feather.installApp"), object: nil)
-					}
-				}
+                if _temporaryOptions.post_installAppAfterSigned,
+                    !SourceAccessManager.shared.wasSuppressed(app.uuid),
+                    let result = AppOperations.signedResult(for: app), AppOperations.isAllowed(result) {
+                    AutoSignManager.shared.enqueueInstall(app: result)
+                }
+                UpdateManager.shared.sourceAvailabilityChanged(localApps: AppOperations.packages())
+                AutoUpdateManager.shared.updateBadgeFromState()
 				dismiss()
 			}
 		}

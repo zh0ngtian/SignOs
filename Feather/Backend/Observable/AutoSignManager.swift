@@ -9,6 +9,7 @@
 //
 
 import Foundation
+import Combine
 import CoreData
 import UIKit
 import IDeviceSwift
@@ -39,6 +40,8 @@ final class AutoSignManager: ObservableObject {
 
 	@Published private(set) var queue: [Job] = []
 	@Published private(set) var currentJob: Job?
+	@Published private(set) var currentPhase = ""
+	private var suppressedJobs = Set<String>()
 	@Published private(set) var completedCount = 0
 	@Published private(set) var lastErrorMessage: String?
 	@Published private(set) var confirmedInstallUUIDs: Set<String> = []
@@ -48,6 +51,8 @@ final class AutoSignManager: ObservableObject {
 
 	/// Keeps local install servers alive until the system fetches the payload.
 	private static var _liveInstallers: [ServerInstaller] = []
+    private static var installLeases: [String: String] = [:]
+    private static var installObservers: [String: AnyCancellable] = [:]
 
 	private init() {
 		UIDevice.current.isBatteryMonitoringEnabled = true
@@ -91,7 +96,7 @@ final class AutoSignManager: ObservableObject {
 
 	/// Reuse an already signed update without creating another signed copy.
 	func enqueueInstall(app: Signed) {
-		guard let uuid = app.uuid else { return }
+		guard let uuid = app.uuid, AppOperations.isAllowed(app), !SourceAccessManager.shared.hasActiveApplication(app.identifier ?? "") else { return }
 		if let versionID = Storage.shared.sourceMetadata(for: app)?.sourceVersionID {
 			let jobs = queue + (currentJob.map { [$0] } ?? [])
 			guard !jobs.contains(where: { job in
@@ -113,13 +118,13 @@ final class AutoSignManager: ObservableObject {
 		force: Bool = false
 	) {
 		guard force || isAutoSignEnabled else { return }
-		guard let uuid = app.uuid else { return }
+		guard let uuid = app.uuid, AppOperations.isAllowed(app) else { return }
 
 		let job = Job(
 			appUUID: uuid,
 			reason: reason,
-			appIdentifier: app.identifier,
-			appName: app.name,
+			appIdentifier: options?.appIdentifier ?? app.identifier,
+			appName: options?.appName ?? app.name,
 			certificate: certificate,
 			options: options
 		)
@@ -142,17 +147,29 @@ final class AutoSignManager: ObservableObject {
 
 	/// Resolves an imported app by uuid and queues it. Safe to call for
 	/// every import: duplicates and already signed apps are filtered.
-	func enqueueImported(uuid: String) {
-		guard isAutoSignEnabled else { return }
+	func enqueueImported(uuid: String, targetAppUUID: String? = nil, force: Bool = false) {
+		guard force || isAutoSignEnabled else { return }
 
 		let request: NSFetchRequest<Imported> = Imported.fetchRequest()
 		request.predicate = NSPredicate(format: "uuid == %@", uuid)
 		guard let app = (try? Storage.shared.context.fetch(request))?.first else { return }
 
-		enqueue(app: app, reason: .autoSign)
+		var options = OptionsManager.shared.options
+        var cert: CertificatePair?
+        if let targetAppUUID, let baseline = _resolveApp(uuid: targetAppUUID) {
+            options.appIdentifier = baseline.identifier
+            if baseline.identifier != app.identifier { options.appName = baseline.name }
+            cert = AppOperations.certificate(for: baseline)
+        }
+        enqueue(app: app, reason: targetAppUUID == nil ? .autoSign : .autoUpdate, certificate: cert, options: options, force: force)
 	}
 
-	private func enqueue(job: Job) {
+    func cancelPending(where matches: (any AppInfoPresentable) -> Bool) {
+        queue.removeAll { job in _resolveApp(uuid: job.appUUID).map(matches) ?? true }
+        if let job = currentJob, let app = _resolveApp(uuid: job.appUUID), matches(app) { suppressedJobs.insert(job.id) }
+    }
+
+    private func enqueue(job: Job) {
 		guard currentJob?.appUUID != job.appUUID else { return }
 		guard !queue.contains(where: { $0.appUUID == job.appUUID }) else { return }
 
@@ -174,12 +191,18 @@ final class AutoSignManager: ObservableObject {
 			currentJob = job
 			await _process(job)
 			currentJob = nil
+			currentPhase = ""
+			suppressedJobs.remove(job.id)
+			SourceAccessManager.shared.cleanupDeletedSubscriptions()
+            UpdateManager.shared.sourceAvailabilityChanged(localApps: AppOperations.packages())
+            AutoUpdateManager.shared.updateBadgeFromState()
+            AppOperations.resumeDeferredUpdates()
 			completedCount += 1
 		}
 	}
 
 	private func _process(_ job: Job) async {
-		guard let app = _resolveApp(uuid: job.appUUID) else { return }
+		guard let app = _resolveApp(uuid: job.appUUID), AppOperations.isAllowed(app), !suppressedJobs.contains(job.id) else { return }
 
 		if job.installOnly {
 			if let signed = app as? Signed {
@@ -191,9 +214,16 @@ final class AutoSignManager: ObservableObject {
 
 		let options = job.options ?? OptionsManager.shared.options
 		let certificate = job.certificate ?? _certificate(for: app, options: options)
+		if let error = AppOperations.signingError(for: app, certificate: certificate, targetIdentifier: options.appIdentifier) {
+			lastErrorMessage = error
+			if let id = app.identifier { installErrors[id] = error }
+			return
+		}
+		currentPhase = "正在签名"
 
 		if certificate == nil && options.signingOption == .default {
 			lastErrorMessage = .localized("No valid certificate available for automatic signing.")
+            if let id = job.appIdentifier ?? app.identifier { installErrors[id] = lastErrorMessage }
 			AutoUpdateManager.shared.notify(
 				title: .localized("Signing Failed"),
 				body: .localized("%@ could not be signed automatically. Import a certificate in Settings.", arguments: job.appName ?? .localized("App")),
@@ -212,10 +242,15 @@ final class AutoSignManager: ObservableObject {
 
 		if let signingError {
 			lastErrorMessage = signingError.localizedDescription
+            if let id = app.identifier { installErrors[id] = signingError.localizedDescription }
+            if job.reason == .renewal {
+                let ids = UserDefaults.standard.stringArray(forKey: "SignOs.renewedUUIDs") ?? []
+                UserDefaults.standard.set(ids.filter { $0 != job.appUUID }, forKey: "SignOs.renewedUUIDs")
+            }
 			ActivityLog.shared.log(.failed, app: job.appName ?? .localized("App"), detail: signingError.localizedDescription)
 
 			// one automatic retry — transient failures (locks, disk spikes) recover
-			if job.retryCount < 1 {
+			if job.retryCount < 1 && AppOperations.isAllowed(app) && !suppressedJobs.contains(job.id) {
 				var retry = Job(
 					appUUID: job.appUUID,
 					reason: job.reason,
@@ -238,24 +273,15 @@ final class AutoSignManager: ObservableObject {
 			return
 		}
 
-		guard let identifier = job.appIdentifier ?? app.identifier else { return }
+		guard AppOperations.isAllowed(app), !suppressedJobs.contains(job.id) else { return }
+		guard let identifier = options.appIdentifier ?? job.appIdentifier ?? app.identifier else { return }
 
-		var signedApps = _signedApps().filter { $0.identifier == identifier }
-		if let newestEntry = signedApps.max(by: { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }) {
-			// PPQ-protected apps change identifiers on every sign; catch
-			// those old versions by display name so they never pile up.
-			let sameName = _signedApps().filter {
-				$0.uuid != newestEntry.uuid && $0.name != nil && $0.name == newestEntry.name
-			}
-			for extra in sameName where !signedApps.contains(where: { $0.uuid == extra.uuid }) {
-				signedApps.append(extra)
-			}
-		}
-		guard let newest = signedApps.max(by: { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }) else {
+		guard let newest = AppOperations.signedResult(for: app) ?? _signedApps().filter({ $0.identifier == identifier }).max(by: { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }) else {
 			lastErrorMessage = .localized("Signing did not produce a new app entry.")
 			return
 		}
 
+        let signedApps = _signedApps().filter { $0.identifier == newest.identifier }
 		if let uuid = newest.uuid {
 			InstallPackageRetention.shared.schedule(
 				for: uuid,
@@ -271,6 +297,7 @@ final class AutoSignManager: ObservableObject {
 			ActivityLog.shared.log(.updated, app: newest.name ?? identifier, detail: newest.version)
 		}
 
+		if let uuid = app.uuid { UpdateManager.shared.dismissUpdate(withLocalUUID: uuid) }
 		await _attemptSilentInstall(newest)
 		AutoUpdateManager.shared.updateBadgeFromState()
 	}
@@ -283,6 +310,8 @@ final class AutoSignManager: ObservableObject {
 	/// system prompt immediately (app in foreground) or present a
 	/// "tap to install" notification that completes on open.
 	private func _attemptSilentInstall(_ app: Signed) async {
+		guard AppOperations.isAllowed(app), currentJob.map({ !suppressedJobs.contains($0.id) }) ?? true else { return }
+		currentPhase = "正在安装"
 		if let identifier = app.identifier { installErrors.removeValue(forKey: identifier) }
 		let method = UserDefaults.standard.integer(forKey: "Feather.installationMethod")
 		guard method == 0 || method == 1 else { return }
@@ -311,6 +340,7 @@ final class AutoSignManager: ObservableObject {
 				let packageUrl = try await handler.archive()
 
 				let proxy = InstallationProxy(viewModel: viewModel)
+				guard AppOperations.isAllowed(app), currentJob.map({ !suppressedJobs.contains($0.id) }) ?? true else { return }
 				try await proxy.install(at: packageUrl, suspend: false)
 				Storage.shared.finishInstallCleanup(for: app)
 				if let uuid = app.uuid { confirmedInstallUUIDs.insert(uuid) }
@@ -326,6 +356,7 @@ final class AutoSignManager: ObservableObject {
 				try await _serverInstall(app)
 			}
 		} catch {
+            Self.releaseInstaller(app: app)
 			lastErrorMessage = error.localizedDescription
 			if let identifier = app.identifier { installErrors[identifier] = error.localizedDescription }
 			ActivityLog.shared.log(.failed, app: app.name ?? .localized("App"), detail: error.localizedDescription)
@@ -343,9 +374,10 @@ final class AutoSignManager: ObservableObject {
 		try await handler.move()
 		let packageUrl = try await handler.archive()
 
+		guard AppOperations.isAllowed(app), currentJob.map({ !suppressedJobs.contains($0.id) }) ?? true else { return }
 		let installer = try ServerInstaller(app: app, viewModel: viewModel)
 		installer.packageUrl = packageUrl
-		Self._retainInstaller(installer)
+		Self._retainInstaller(installer, app: app, viewModel: viewModel)
 
 		if UIApplication.shared.applicationState == .active {
 			if installer.getServerMethod() == 1 {
@@ -373,13 +405,33 @@ final class AutoSignManager: ObservableObject {
 		}
 	}
 
-	private static func _retainInstaller(_ installer: ServerInstaller) {
-		_liveInstallers.append(installer)
-		Task { @MainActor in
-			try? await Task.sleep(nanoseconds: 600_000_000_000)
-			_liveInstallers.removeAll { $0 === installer }
-		}
-	}
+    private static func releaseInstaller(app: Signed, token: String? = nil) {
+        guard let uuid = app.uuid, let active = installLeases[uuid], token == nil || active == token else { return }
+        installLeases.removeValue(forKey: uuid)
+        installObservers.removeValue(forKey: active)
+        SourceAccessManager.shared.endUse(app)
+    }
+
+    private static func _retainInstaller(_ installer: ServerInstaller, app: Signed, viewModel: InstallerStatusViewModel) {
+        _liveInstallers.append(installer)
+        let token = UUID().uuidString
+        if UIApplication.shared.applicationState == .active, let uuid = app.uuid {
+            installLeases[uuid] = token
+            SourceAccessManager.shared.beginUse(app)
+            installObservers[token] = viewModel.$status.sink { status in
+                switch status {
+                case .completed, .broken:
+                    Task { @MainActor in releaseInstaller(app: app, token: token) }
+                default: break
+                }
+            }
+        }
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 600_000_000_000)
+            releaseInstaller(app: app, token: token)
+            _liveInstallers.removeAll { $0 === installer }
+        }
+    }
 
 	/// Fires the pending install when the user opens SignOs from the
 	/// "tap to install" notification.
@@ -388,50 +440,13 @@ final class AutoSignManager: ObservableObject {
 		request.predicate = NSPredicate(format: "uuid == %@", uuid)
 		guard let app = (try? Storage.shared.context.fetch(request))?.first else { return }
 
-		do {
-			try await _serverInstall(app)
-		} catch {
-			lastErrorMessage = error.localizedDescription
-		}
+        enqueueInstall(app: app)
 	}
 
 	// MARK: - Certificate selection
 
 	private func _certificate(for app: AppInfoPresentable, options: Options) -> CertificatePair? {
-		// Updates and renewals keep the app's existing certificate while
-		// it is still valid, preserving the signing identity.
-		if let existing = Storage.shared.getCertificate(from: app), !existing.revoked {
-			if let expiration = existing.expiration {
-				if expiration.timeIntervalSinceNow > 0 {
-					return existing
-				}
-			} else {
-				return existing
-			}
-		}
-
-		let certs = Storage.shared.getAllCertificates().filter { cert in
-			if cert.revoked { return false }
-			if let expiration = cert.expiration {
-				return expiration.timeIntervalSinceNow > 0
-			}
-			return true
-		}
-
-		if let defaultCert = certs.first(where: { $0.isDefault }) {
-			return defaultCert
-		}
-
-		let selectedIndex = UserDefaults.standard.integer(forKey: "feather.selectedCert")
-		if
-			selectedIndex >= 0,
-			let selected = Storage.shared.getCertificate(for: selectedIndex),
-			certs.contains(selected)
-		{
-			return selected
-		}
-
-		return certs.first
+        AppOperations.certificate(for: app)
 	}
 
 	// MARK: - Fetch helpers

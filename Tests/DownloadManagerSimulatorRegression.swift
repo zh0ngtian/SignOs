@@ -2,7 +2,16 @@
 import Foundation
 import Darwin
 
-struct SourceAppProvenance {}
+struct SourceAppProvenance {
+    var sourceRepositoryURL = URL(string: "https://example.com/source.json")!
+    var sourceRepositoryIdentifier: String? = "fixture.source"
+    var sourceAppIdentifier = "fixture.app"
+    var sourceVersionID = "fixture|1"
+}
+@MainActor enum AppOperations {
+    static func showError(_ message: String) {}
+    static func resumeDeferredUpdates() {}
+}
 final class BackgroundAudioManager {
     static let shared = BackgroundAudioManager()
     func start() {}

@@ -42,12 +42,27 @@ jobs:
       - name: Run Swift regressions
         run: |
           set -euo pipefail
-          for TEST in OneViewPhase SourceRepositoryIdentity SourceSubscriptionIdentity SourceMigrationReadiness; do
+          for TEST in OneViewPhase SourceRepositoryIdentity SourceSubscriptionIdentity SourceMigrationReadiness AppVersion SigningIdentity MachOEntitlements; do
             BINARY="$RUNNER_TEMP/signos-$TEST"
             xcrun swiftc "Feather/Utilities/$TEST.swift" "Tests/${TEST}Regression.swift" -o "$BINARY"
             "$BINARY"
             rm "$BINARY"
           done
+          BINARY="$RUNNER_TEMP/signos-source-access"
+          xcrun swiftc Feather/Utilities/SourcePolicy.swift \
+            Feather/Utilities/SourceRepositoryIdentity.swift \
+            Feather/Utilities/SourceSubscriptionIdentity.swift \
+            Feather/Backend/Observable/SourceAccessManager.swift \
+            Tests/SourceAccessRegression.swift -o "$BINARY"
+          "$BINARY"
+          rm "$BINARY"
+          MODEL="$RUNNER_TEMP/signos-migration-model.momd"
+          xcrun momc Feather/Backend/Storage/Feather.xcdatamodeld "$MODEL"
+          BINARY="$RUNNER_TEMP/signos-signed-migration"
+          xcrun swiftc Feather/Utilities/SigningIdentity.swift Tests/SignedSchemaMigrationRegression.swift -o "$BINARY"
+          "$BINARY" "$MODEL"
+          rm "$BINARY"
+          rm -rf "$MODEL"
           BINARY="$RUNNER_TEMP/signos-cloud-subscription"
           xcrun swiftc Feather/Utilities/CloudSourceAssetRule.swift \
             Feather/Backend/CloudSource/CloudSourceModels.swift \

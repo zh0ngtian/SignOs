@@ -52,8 +52,29 @@ struct Metadata { let sourceVersionID: String }
     func getAllCertificates() -> [CertificatePair] { [] }
     func getCertificate(for index: Int) -> CertificatePair? { nil }
 }
-struct Options { enum SigningOption { case `default`, adhoc }; var signingOption = SigningOption.adhoc; var appIdentifier = ""; var appName = "" }
+struct Options { enum SigningOption { case `default`, adhoc }; var signingOption = SigningOption.adhoc; var appIdentifier: String?; var appName: String? }
 @MainActor final class OptionsManager { static let shared = OptionsManager(); var options = Options() }
+@MainActor enum AppOperations {
+    static var disabled = Set<String>()
+    static func isAllowed(_ app: AppInfoPresentable) -> Bool { !disabled.contains(app.uuid ?? "") }
+    static func packages() -> [any AppInfoPresentable] { [] }
+    static func signedResult(for app: AppInfoPresentable) -> Signed? { nil }
+    static func resumeDeferredUpdates() {}
+    static func certificate(for app: AppInfoPresentable) -> CertificatePair? { nil }
+    static func signingError(for app: AppInfoPresentable, certificate: CertificatePair?, targetIdentifier: String? = nil) -> String? { nil }
+}
+@MainActor final class SourceAccessManager {
+    static let shared = SourceAccessManager()
+    func cleanupDeletedSubscriptions() {}
+    func beginUse(_ app: AppInfoPresentable) {}
+    func hasActiveApplication(_ identifier: String) -> Bool { false }
+    func endUse(_ app: AppInfoPresentable) {}
+}
+@MainActor final class UpdateManager {
+    static let shared = UpdateManager()
+    func dismissUpdate(withLocalUUID: String) {}
+    func sourceAvailabilityChanged(localApps: [any AppInfoPresentable]? = nil) {}
+}
 @MainActor enum FR {
     static var signCalls = 0; static var completion: ((Error?) -> Void)?
     static func signPackageFile(_ app: AppInfoPresentable, using: Options, icon: String?, certificate: CertificatePair?, completion: @escaping (Error?) -> Void) {
@@ -74,7 +95,7 @@ struct Options { enum SigningOption { case `default`, adhoc }; var signingOption
     static let shared = InstallPackageRetention()
     func schedule(for uuid: String, signed: [String], imported: [String]) {}
 }
-final class InstallerStatusViewModel { init(isIdevice: Bool) {} }
+final class InstallerStatusViewModel { enum Status { case none, completed, broken }; @Published var status = Status.none; init(isIdevice: Bool) {} }
 @MainActor final class ArchiveHandler {
     static var fastestCompressionOverride = false
     static var entered: [String] = []; static var waiting: CheckedContinuation<Void, Never>?
@@ -147,6 +168,22 @@ extension UIApplication { static func topViewController() -> UIViewController? {
         ArchiveHandler.finish()
         try await waitUntil { manager.currentJob == nil }
         precondition(ArchiveHandler.entered == ["first", "second", "produced"] && FR.signCalls == 1)
+        let interrupted = Imported(context: Storage.shared.context)
+        interrupted.uuid = "interrupted"; interrupted.identifier = "fixture.interrupted"; interrupted.name = "interrupted"
+        let queued = signed("cancelled-queue", identifier: "fixture.cancelled")
+        let unaffected = signed("unaffected", identifier: "fixture.unaffected")
+        manager.enqueue(app: interrupted, force: true)
+        try await waitUntil { FR.completion != nil }
+        manager.enqueueInstall(app: queued); manager.enqueueInstall(app: unaffected)
+        manager.cancelPending { $0.uuid == interrupted.uuid || $0.uuid == queued.uuid }
+        precondition(manager.queue.map(\.appUUID) == [unaffected.uuid!])
+        _ = signed("late-result", identifier: "fixture.interrupted")
+        FR.completion!(nil); FR.completion = nil
+        try await waitUntil { ArchiveHandler.entered.count == 4 }
+        precondition(ArchiveHandler.entered.last == "unaffected", "Interrupted signing must not install or resume, including after reenabling")
+        ArchiveHandler.finish()
+        try await waitUntil { manager.currentJob == nil }
+        precondition(!ArchiveHandler.entered.contains("late-result") && !ArchiveHandler.entered.contains("cancelled-queue"))
         print("AutoSignManagerRegression passed: direct install without signing, serial queue, queued/active deduplication, imported signing and in-flight result reuse")
         fflush(stdout)
     }
