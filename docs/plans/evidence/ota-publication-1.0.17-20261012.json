@@ -1,0 +1,33 @@
+{
+  "version": "1.0.17",
+  "buildNumber": "18",
+  "bundleId": "com.signos.app",
+  "signed": true,
+  "size": 14865380,
+  "sha256": "3607856cc350848a501bd355423d1288cc1346e74d9baeef43ac69c553084074",
+  "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+  "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.0.17/latest.ipa",
+  "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.0.17/manifest.plist",
+  "publishedAt": "2026-10-12T03:44:31.887502+00:00",
+  "sourceCommit": "46c53cc1685c984ca25bbb9ae1deb12973a73dfd",
+  "unsignedIpaSha256": "f263d1b021a76ebb209c72f786cab7a6dc26ecbc8a0e606618b8c4e3b55a93dc",
+  "githubReleaseUrl": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.0.17",
+  "buildRun": 38200199875,
+  "releaseRun": 38200889934,
+  "fixedIpaUrl": "https://192.168.123.79:8769/channels/signos/current/latest.ipa",
+  "httpsFullDownloadVerified": true,
+  "localQA": {
+    "simulator": "iPhone 17 Pro / iOS 26.5",
+    "checks": [
+      "Simulator Debug build and app launch passed; local iphoneos Release build passed",
+      "OneViewPhaseRegression: 6 passed",
+      "Production UpdateManager with Core Data metadata and package-file fixtures passed",
+      "Reuse prioritizes signed packages, supports imported packages and manager recreation, and matches source versions despite IPA version differences",
+      "Delivery URL changes and recognized repository moves reuse packages; unrelated subscriptions, cloned identities, older versions and missing files do not",
+      "Production AutoSignManager queue regression passed with controlled signing/archive/install boundaries",
+      "Retained signed updates skip signing; queued and active jobs deduplicate; multiple installs execute serially",
+      "Imported manual updates sign once with automation disabled; in-flight signed results do not enqueue duplicate installs"
+    ],
+    "physicalUpgradeVerified": false
+  }
+}

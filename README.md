@@ -138,7 +138,7 @@ bash scripts/check_ios_build.sh "$(mktemp -d /tmp/signos-ios-build.XXXXXX)"
 [Full iOS Regression](.github/workflows/ios-regression.yml) 只通过 `workflow_dispatch`
 按需运行，与日常构建及标签发布独立。它运行 `Tests/test_*.py` 的 Python 回归、
 `GitHubReleaseRegression.py` 发布工具回归、`OneViewPhase`、`SourceRepositoryIdentity`、
-`SourceSubscriptionIdentity`、`SourceMigrationReadiness` Swift 回归，以及更新管理器和
+`SourceSubscriptionIdentity`、`SourceMigrationReadiness` Swift 回归，以及更新管理器、签名安装队列、
 下载管理器与安装清理的 iOS 模拟器回归；需要时在 Actions 页面选择分支并点击 Run workflow，或运行：
 
 ```sh
@@ -356,6 +356,17 @@ GitHub Actions 构建及标签发布成功，同一 CI 产物完成 Ad Hoc 签�
 SHA-256 为 `57b2262cf2d0ec0847930473fe1db18a2e98ba327eeedb4728df0422567bcfbc`。
 进度消失仍不能证明新版实际安装成功；真机覆盖安装未在本次验证。
 实测记录见 [1.0.16 发布凭证](docs/plans/evidence/ota-publication-1.0.16-20261012.json)。
+
+2026-10-12 后续发布 1.0.17（18）：单个更新与 Update All 复用已下载的同一软件源订阅版本，
+优先直接安装签名包，未签名包继续签名安装，仅缺少对应文件时重新下载。
+安装任务按队列串行执行并去重；安装未完成时仍保留包和重试入口。
+更新包匹配、生产签名安装队列与 OneView 模拟器回归及本地构建通过，
+GitHub Actions 构建和标签发布成功。Release 下载校验通过，同一 CI 产物完成 Ad Hoc
+签名和固定 OTA 发布；固定入口、manifest、包内版本及完整下载 SHA-256 核验通过。
+签名包为 14,865,380 字节，SHA-256 为
+`3607856cc350848a501bd355423d1288cc1346e74d9baeef43ac69c553084074`。
+真机覆盖安装与数据保留未在本次验证；
+实测记录见 [1.0.17 发布凭证](docs/plans/evidence/ota-publication-1.0.17-20261012.json)。
 
 The installed 1.0.0 release is this project's upgrade baseline. The private
 configuration now uses `compatibilityIpa` plus `compatibilityIpaSha256`, with
