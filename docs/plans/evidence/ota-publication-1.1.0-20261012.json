@@ -1,0 +1,31 @@
+{
+  "bundleId": "com.signos.app",
+  "version": "1.1.0",
+  "buildNumber": "22",
+  "teamId": "SC456JW7RP",
+  "applicationIdentifier": "SC456JW7RP.app.jade6694.grapefruit3766",
+  "keychainAccessGroups": [
+    "SC456JW7RP.com.signos.app"
+  ],
+  "entitlementsSha256": "728ac51330eccc39410b929a76bac295efed8f32af1c0665db1462d7b3362506",
+  "signed": true,
+  "size": 14939371,
+  "sha256": "9029841f440053c5a3ec81b46b235aecdd42a97c531da1ab3f9ea7dcfbcc7872",
+  "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+  "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.0/manifest.plist",
+  "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.0/latest.ipa",
+  "publishedAt": "2026-10-12T13:06:20.147389+00:00",
+  "implementationCommit": "bf1cc03a4a62c4a0ac429ed7b8e128934cad8d8d",
+  "buildRun": "https://github.com/zh0ngtian/SignOs/actions/runs/38251330899",
+  "releaseRun": "https://github.com/zh0ngtian/SignOs/actions/runs/38252981196",
+  "githubRelease": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.0",
+  "fixedIpaUrl": "https://192.168.123.79:8769/channels/signos/current/latest.ipa",
+  "checks": {
+    "fixedInstallPage": true,
+    "manifestBuildAndIdentity": true,
+    "fixedJsonVersionAndBuild": true,
+    "fixedIpaHead": true,
+    "completeDownloadSizeAndSHA256": true
+  },
+  "physicalOverlayInstallAndDataRetentionVerified": false
+}

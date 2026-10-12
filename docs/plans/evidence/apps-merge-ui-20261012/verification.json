@@ -1,0 +1,18 @@
+{
+  "version": "1.1.0",
+  "build": 22,
+  "implementationCommit": "bf1cc03a4a62c4a0ac429ed7b8e128934cad8d8d",
+  "environment": "isolated iPhone 17 Pro / iOS 26.5 simulator app and local fixture feeds",
+  "checks": [
+    "5 packages / 3 application cards",
+    "latest signed 1.0 retained despite imported 1.2",
+    "one update and one pending app",
+    "complete multiline release notes including final line",
+    "source package menu excludes manual deletion",
+    "disable B: 1.2 -> A 1.1; B cache retained and marked disabled",
+    "reenable B restores 1.2 and downloaded badge",
+    "batch replacement first presentation contains one allowed signed application"
+  ],
+  "physicalDeviceAvailable": false,
+  "physicalOverlayInstallAndDataRetentionVerified": false
+}

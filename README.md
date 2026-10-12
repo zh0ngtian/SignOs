@@ -517,3 +517,15 @@ SignOs by [@ihateios](https://github.com/ihateios). It's built over the open sou
 新增纯 Swift 回归可按手动回归工作流执行：AppVersion、SigningIdentity、
 MachOEntitlements、SourceAccess 和 SignedSchemaMigration；现有更新、签名队列、
 下载和安装清理回归已扩展到跨源、禁用与缓存场景。
+
+2026-10-12 发布完成 1.1.0（22）：实现提交 `bf1cc03a4a62c4a0ac429ed7b8e128934cad8d8d`
+的 [iOS Build Check](https://github.com/zh0ngtian/SignOs/actions/runs/38251330899) 与
+[标签发布工作流](https://github.com/zh0ngtian/SignOs/actions/runs/38252981196) 均成功，
+[GitHub Release](https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.0) 三个附件完整，
+元数据与 SHA256SUMS 与该提交的 CI 产物一致。同一产物完成 Ad Hoc 签名及固定 OTA 更新，
+保留 SignOs 自身 Bundle ID、实际签名 App ID 和钥匙串权限兼容基线。固定安装页、JSON、
+manifest（构建号 22）、HEAD 及完整下载 SHA-256 验收通过。签名包大小为
+14939371 字节，SHA-256 为 `9029841f440053c5a3ec81b46b235aecdd42a97c531da1ab3f9ea7dcfbcc7872`。
+本次真机不可用，本地功能和界面在模拟器验收，未证明真机覆盖安装及数据、钥匙串保留。
+发布凭证见 [1.1.0 OTA 核验](docs/plans/evidence/ota-publication-1.1.0-20261012.json)，
+界面验收见 [模拟器记录](docs/plans/evidence/apps-merge-ui-20261012/verification.json)。
