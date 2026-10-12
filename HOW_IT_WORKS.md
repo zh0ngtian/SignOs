@@ -29,6 +29,18 @@ still required; automatic signing and prompting do not mean silent installation.
 
 Opening `itms-services` requests an installation; it does not confirm success. Streaming progress only measures IPA delivery. OneView therefore keeps the signed archive actionable as Install until installation is confirmed, and server-based OTA retains the retry action.
 
+Signing no longer deletes the previous signed archive or its imported package.
+With **Replace Old Versions** enabled, cleanup runs after server installation
+progress has appeared and then disappears (or returns to zero), or after a paired
+installation returns successfully. The imported package is deleted in the same
+cleanup step. Ready/prompt-only states and explicit installation errors retain
+both packages. Cleanup plans persist across app restarts and also apply to manual
+retries. Progress disappearing is a cleanup heuristic, not verification of the
+installed version; server-based OTA keeps the Install retry action. The newest
+signed archive remains available even after cleanup.
+The manual signing option **Delete After Installation** likewise defers deletion
+of its imported package until the same installation-end signal.
+
 #### Install (Pairing)
 - Establish a heartbeat with a TCP provider (the app will need this for later).
   - For it to be successful, we need a pairing file from [PlumeImpactor](https://github.com/khcrysalis/Impactor?tab=readme-ov-file#pairing-file) and a [VPN](https://apps.apple.com/us/app/localdevvpn/id6755608044).

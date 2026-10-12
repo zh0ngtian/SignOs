@@ -173,6 +173,11 @@ final class SigningHandler: NSObject {
 			to: _uuid,
 			kind: .signed
 		)
+		if _options.post_deleteAppAfterSigned, !_app.isSigned, let importedUUID = _app.uuid {
+			await MainActor.run {
+				InstallPackageRetention.shared.schedule(for: _uuid, manuallyDeletedImports: [importedUUID])
+			}
+		}
 	}
 	
 	private func _directory() async throws -> URL {

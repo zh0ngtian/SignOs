@@ -357,13 +357,6 @@ extension SigningView {
 					actions: [ok]
 				)
 			} else {
-				if
-					_temporaryOptions.post_deleteAppAfterSigned,
-					!app.isSigned
-				{
-					Storage.shared.deleteApp(for: app)
-				}
-				
 				if _temporaryOptions.post_installAppAfterSigned {
 					DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
 						NotificationCenter.default.post(name: Notification.Name("Feather.installApp"), object: nil)

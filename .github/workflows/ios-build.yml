@@ -28,6 +28,7 @@ on:
       - 'Tests/GitHubReleaseRegression.py'
       - 'scripts/test_download_manager_simulator.py'
       - 'scripts/test_update_manager.py'
+      - 'scripts/test_install_cleanup_simulator.py'
       - '.github/workflows/ios-build.yml'
   pull_request:
     branches: [main]
@@ -53,6 +54,7 @@ on:
       - 'Tests/GitHubReleaseRegression.py'
       - 'scripts/test_download_manager_simulator.py'
       - 'scripts/test_update_manager.py'
+      - 'scripts/test_install_cleanup_simulator.py'
       - '.github/workflows/ios-build.yml'
   workflow_dispatch:
 

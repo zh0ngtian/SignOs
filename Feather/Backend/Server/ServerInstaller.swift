@@ -24,6 +24,7 @@ class ServerInstaller: Identifiable, ObservableObject {
 	var app: AppInfoPresentable
 	@ObservedObject var viewModel: InstallerStatusViewModel
 	private var _server: Application?
+	private var _progressTask: Task<Void, Never>?
 
 	init(app: AppInfoPresentable, viewModel: InstallerStatusViewModel) throws {
 		self.app = app
@@ -35,6 +36,7 @@ class ServerInstaller: Identifiable, ObservableObject {
 	}
 	
 	deinit {
+		_progressTask?.cancel()
 		_shutdownServer()
 	}
 	
@@ -98,9 +100,52 @@ class ServerInstaller: Identifiable, ObservableObject {
 	private func _updateStatus(_ newStatus: InstallerStatusViewModel.InstallerStatus) {
 		DispatchQueue.main.async {
 			self.viewModel.status = newStatus
+			if case .installing = newStatus {
+				self._startProgressMonitoring()
+			} else if case .broken = newStatus {
+				self._progressTask?.cancel()
+				self._progressTask = nil
+			}
 		}
 	}
 		
+	/// Shared by manual installation and the automatically retained local server.
+	@MainActor
+	private func _startProgressMonitoring() {
+		guard _progressTask == nil else { return }
+		_progressTask = Task { @MainActor [weak self] in
+			var tracker = InstallProgressTracker()
+			while !Task.isCancelled {
+				guard let keepMonitoring = self?._pollProgress(tracker: &tracker), keepMonitoring else { return }
+				do {
+					try await Task.sleep(nanoseconds: 250_000_000)
+				} catch { return }
+			}
+		}
+	}
+
+	@MainActor
+	private func _pollProgress(tracker: inout InstallProgressTracker) -> Bool {
+		guard let identifier = app.identifier else { return false }
+		switch viewModel.status {
+		case .broken, .completed: return false
+		case .installing: break
+		default: return true // A repeated manifest/payload request can temporarily change the status.
+		}
+		let rawProgress = UIApplication.installProgress(for: identifier)
+		if tracker.observe(rawProgress) {
+			// Progress disappearing is a cleanup signal, not proof of the installed version.
+			Storage.shared.finishInstallCleanup(for: app)
+			viewModel.installProgress = 1
+			viewModel.status = .completed(.success(()))
+			_progressTask = nil
+			return false
+		}
+		viewModel.installProgress = tracker.hasStarted
+			? min(1, max(0, ((rawProgress ?? 0) - 0.6) / 0.3)) : 0
+		return true
+	}
+
 	func getServerMethod() -> Int {
 		InstallationDefaults.serverMethod()
 	}

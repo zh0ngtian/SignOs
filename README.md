@@ -137,7 +137,7 @@ bash scripts/check_ios_build.sh "$(mktemp -d /tmp/signos-ios-build.XXXXXX)"
 按需运行，与日常构建及标签发布独立。它运行 `Tests/test_*.py` 的 Python 回归、
 `GitHubReleaseRegression.py` 发布工具回归、`OneViewPhase`、`SourceRepositoryIdentity`、
 `SourceSubscriptionIdentity`、`SourceMigrationReadiness` Swift 回归，以及更新管理器和
-下载管理器的 iOS 模拟器回归；需要时在 Actions 页面选择分支并点击 Run workflow，或运行：
+下载管理器与安装清理的 iOS 模拟器回归；需要时在 Actions 页面选择分支并点击 Run workflow，或运行：
 
 ```sh
 gh workflow run ios-regression.yml --repo zh0ngtian/SignOs --ref main
@@ -351,6 +351,24 @@ xcrun swiftc Feather/Utilities/OneViewPhase.swift Tests/OneViewPhaseRegression.s
 /tmp/signos-phase-regression
 rm /tmp/signos-phase-regression
 ```
+
+Installation cleanup regression uses the production retention policy and storage
+deletion code with isolated Core Data and temporary package files. It verifies
+retention before progress starts and while it is active, cleanup on disappearance
+or zero after progress starts, persisted retry plans, removal of package files and
+metadata, and both automatic replacement and manual imported-package deletion:
+
+```sh
+python3 scripts/test_install_cleanup_simulator.py <SIMULATOR_UDID>
+```
+
+**Replace Old Versions** now cleans up the old signed package and its imported
+package together at installation end, rather than at signing completion. Paired
+installation uses its successful return; server installation uses observed
+progress disappearing. The latter does not verify the installed version. Failed
+or pending attempts retain packages until that signal, and the new signed package
+remains available for retry after cleanup. **Delete After Installation** replaces
+the manual signing option's former immediate deletion behavior.
 
 The source identity regression covers URL migrations, unrelated sources and
 legacy URL-only metadata, including the official Yao source move. During update

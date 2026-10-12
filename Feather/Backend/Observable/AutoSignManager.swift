@@ -4,8 +4,8 @@
 //
 //  Serial background signing queue. Imported/updated/renewal apps are
 //  signed with the correct certificate without any user interaction,
-//  old versions are cleaned up, and installation is attempted
-//  immediately when the active installation method supports it.
+//  installation is attempted immediately when the active method supports it,
+//  and old packages are cleaned up only after the installation-end signal.
 //
 
 import Foundation
@@ -84,10 +84,6 @@ final class AutoSignManager: ObservableObject {
 			pins.removeValue(forKey: identifier)
 		}
 		UserDefaults.standard.set(pins, forKey: "SignOs.appCertificatePins")
-	}
-
-	private var _autoDeleteOldVersions: Bool {
-		UserDefaults.standard.object(forKey: "SignOs.autoDeleteOldVersions") as? Bool ?? true
 	}
 
 	// MARK: - Enqueueing
@@ -236,13 +232,12 @@ final class AutoSignManager: ObservableObject {
 			return
 		}
 
-		if _autoDeleteOldVersions {
-			for old in signedApps where old.uuid != newest.uuid {
-				Storage.shared.deleteApp(for: old)
-			}
-			if !app.isSigned {
-				Storage.shared.deleteApp(for: app)
-			}
+		if let uuid = newest.uuid {
+			InstallPackageRetention.shared.schedule(
+				for: uuid,
+				signed: signedApps.filter { $0.uuid != uuid }.compactMap(\.uuid),
+				imported: app.isSigned ? [] : [job.appUUID]
+			)
 		}
 
 		switch job.reason {
@@ -293,6 +288,7 @@ final class AutoSignManager: ObservableObject {
 
 				let proxy = InstallationProxy(viewModel: viewModel)
 				try await proxy.install(at: packageUrl, suspend: false)
+				Storage.shared.finishInstallCleanup(for: app)
 				if let uuid = app.uuid { confirmedInstallUUIDs.insert(uuid) }
 
 				ActivityLog.shared.log(.installed, app: app.name ?? .localized("App"))

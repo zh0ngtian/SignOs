@@ -34,6 +34,24 @@ extension Storage {
 		}
 	}
 	
+	@MainActor
+	func finishInstallCleanup(for app: AppInfoPresentable) {
+		guard app.isSigned, let uuid = app.uuid,
+			let object = app as? NSManagedObject, !object.isDeleted else { return }
+		let replace = UserDefaults.standard.object(forKey: "SignOs.autoDeleteOldVersions") as? Bool ?? true
+		InstallPackageRetention.shared.installationEnded(for: uuid, replaceOldVersions: replace) { victimUUID, signed in
+			if signed {
+				let request: NSFetchRequest<Signed> = Signed.fetchRequest()
+				request.predicate = NSPredicate(format: "uuid == %@", victimUUID)
+				if let victim = (try? context.fetch(request))?.first { deleteApp(for: victim) }
+			} else {
+				let request: NSFetchRequest<Imported> = Imported.fetchRequest()
+				request.predicate = NSPredicate(format: "uuid == %@", victimUUID)
+				if let victim = (try? context.fetch(request))?.first { deleteApp(for: victim) }
+			}
+		}
+	}
+
 	func getCertificate(from app: AppInfoPresentable) -> CertificatePair? {
 		if let signed = app as? Signed {
 			return signed.certificate

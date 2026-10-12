@@ -1,6 +1,40 @@
 {
   "sourceLanguage": "en",
   "strings": {
+  "Keep the imported package until installation ends, so failed installations can be retried without downloading again.": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Keep the imported package until installation ends, so failed installations can be retried without downloading again."
+        }
+      },
+      "zh-Hans": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "保留未签名包直到安装结束，安装失败后可直接重试，无须重新下载。"
+        }
+      }
+    }
+  },
+  "Delete After Installation": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Delete After Installation"
+        }
+      },
+      "zh-Hans": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "安装结束后删除"
+        }
+      }
+    }
+  },
     "Update check was cancelled. Tap Check to retry.": {
       "extractionState": "manual",
       "localizations": {

@@ -18,7 +18,6 @@ struct InstallPreviewView: View {
 	@AppStorage("Feather.installationMethod") private var _installationMethod: Int = 0
 	@AppStorage("Feather.serverMethod") private var _serverMethod: Int = InstallationDefaults.serverMethod
 	@State private var _isWebviewPresenting = false
-	@State private var progressTask: Task<Void, Never>?
 	
 	var app: AppInfoPresentable
 	@StateObject var viewModel: InstallerStatusViewModel
@@ -70,19 +69,8 @@ struct InstallPreviewView: View {
 					_isWebviewPresenting = false
 				}
 				
-				if case .installing = newStatus {
-					if progressTask == nil {
-						progressTask = startInstallProgressPolling(
-							bundleID: app.identifier!,
-							viewModel: viewModel
-						)
-					}
-				}
-				
 				switch newStatus {
 				case .completed, .broken(_):
-					progressTask?.cancel()
-					progressTask = nil
 					#if !targetEnvironment(macCatalyst)
 					BackgroundAudioManager.shared.stop()
 					#endif
@@ -100,9 +88,6 @@ struct InstallPreviewView: View {
 		#endif
 		
 		.onDisappear {
-			progressTask?.cancel()
-			progressTask = nil
-			
 			#if !targetEnvironment(macCatalyst)
 			BackgroundAudioManager.shared.stop()
 			#endif
@@ -158,19 +143,10 @@ struct InstallPreviewView: View {
 							viewModel.status = .ready
 						}
 						
-						if case .installing = await viewModel.status {
-							let task = await startInstallProgressPolling(
-								bundleID: app.identifier!,
-								viewModel: viewModel
-							)
-
-							await MainActor.run {
-								progressTask = task
-							}
-						}
 					} else if await _installationMethod == 1 {
 						let handler = await InstallationProxy(viewModel: viewModel)
 						try await handler.install(at: packageUrl, suspend: app.identifier == Bundle.main.bundleIdentifier!)
+						await Storage.shared.finishInstallCleanup(for: app)
 					}
 				} else {
 					let package = try await handler.moveToArchive(packageUrl, shouldOpen: !_useShareSheet)
@@ -189,8 +165,6 @@ struct InstallPreviewView: View {
 					}
 				}
 			} catch {
-				await progressTask?.cancel()
-				
 				await MainActor.run {
 					UIAlertController.showAlertWithOk(
 						title: .localized("Install"),
@@ -205,45 +179,4 @@ struct InstallPreviewView: View {
 		}
 	}
 	
-	private func startInstallProgressPolling(
-		bundleID: String,
-		viewModel: InstallerStatusViewModel
-	) -> Task<Void, Never> {
-
-		Task.detached(priority: .background) {
-			var hasStarted = false
-
-			while !Task.isCancelled {
-				let rawProgress = await UIApplication.installProgress(for: bundleID) ?? 0.0
-
-				if rawProgress > 0 {
-					hasStarted = true
-				}
-
-				let progress = await hasStarted
-					? _normalizeInstallProgress(rawProgress)
-					: 0.0
-
-				Logger.misc.info("Install progress for \(bundleID): \(progress)")
-
-				await MainActor.run {
-					viewModel.installProgress = progress
-				}
-
-				if hasStarted && rawProgress == 0 {
-					await MainActor.run {
-						viewModel.installProgress = 1.0
-						viewModel.status = .completed(.success(()))
-					}
-					break
-				}
-
-				try? await Task.sleep(nanoseconds: 1_000_000) // 1 ms
-			}
-		}
-	}
-
-	private func _normalizeInstallProgress(_ rawProgress: Double) -> Double {
-		min(1.0, max(0.0, (rawProgress - 0.6) / 0.3))
-	}
 }
