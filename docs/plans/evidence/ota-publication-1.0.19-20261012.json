@@ -1,0 +1,31 @@
+{
+  "version": "1.0.19",
+  "buildNumber": "20",
+  "bundleId": "com.signos.app",
+  "signed": true,
+  "size": 14888534,
+  "sha256": "19aa8ebc277b09a71a19d1a1541616715c35d7864c1c3e0e348f97b2e0b39fb1",
+  "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+  "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.0.19/latest.ipa",
+  "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.0.19/manifest.plist",
+  "publishedAt": "2026-10-12T04:23:59.385124+00:00",
+  "sourceCommit": "40aa448405090167c5ac47a8be89afe17c561b79",
+  "unsignedIpaSha256": "e1c8fcd1557ef113eacd8d9c4c79b98a4c140af7cfd4632d24fd9988b7ba6462",
+  "githubReleaseUrl": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.0.19",
+  "buildRun": 38202901835,
+  "releaseRun": 38203482946,
+  "fixedIpaUrl": "https://192.168.123.79:8769/channels/signos/current/latest.ipa",
+  "httpsFullDownloadVerified": true,
+  "localQA": {
+    "simulator": "iPhone 17 Pro / iOS 26.5",
+    "checks": [
+      "CloudSourceSubscriptionRegression: independent rules and IDs, sequential revisions, partial retry, lost response reconciliation and failed catalog refresh",
+      "SourceSubscriptionIdentityRegression: variants with the same Bundle ID remain independent",
+      "Production UpdateManager simulator regression passed, including variants and source matching",
+      "Full Debug application built and launched on simulator",
+      "Production subscription form with controlled API and credential fixtures: selected two IPAs, edited each rule, rejected ambiguous glob and created two subscriptions",
+      "Local make iphoneos Release build passed"
+    ],
+    "physicalUpgradeVerified": false
+  }
+}

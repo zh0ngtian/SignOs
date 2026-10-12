@@ -397,6 +397,17 @@ SHA-256 为 `ab263bb87817b2e0b9d39710fecc4b75441b982ac719099c4fec882bbcdf47fc`�
 真机覆盖安装与数据保留未在本次验证。
 实测记录见 [1.0.18 发布凭证](docs/plans/evidence/ota-publication-1.0.18-20261012.json)。
 
+2026-10-12 后续发布 1.0.19（20）：添加 GitHub 订阅支持多选同仓库的 IPA，每个附件分别配置
+后续匹配规则并建立独立订阅、同步状态和版本历史。宽泛规则匹配多个附件时禁止解析；
+批量添加途中失败可只重试剩余项目，订阅列表显示规则以区分同仓库的变体。
+批量订阅、订阅身份和更新管理器回归通过；生产表单的多选、规则编辑、冲突提示及两个订阅的
+创建完成模拟器验收，完整应用模拟器构建与启动、本地 iOS Release 构建通过。
+GitHub Actions 构建和标签发布成功，Release 附件与校验和通过核验，同一产物完成 Ad Hoc
+签名及固定 OTA 发布。固定入口、manifest、包内版本与完整 IPA 下载核验通过；签名包为
+14,888,534 字节，SHA-256 为 `19aa8ebc277b09a71a19d1a1541616715c35d7864c1c3e0e348f97b2e0b39fb1`。
+真机覆盖安装与数据保留未在本次验证。
+实测记录见 [1.0.19 发布凭证](docs/plans/evidence/ota-publication-1.0.19-20261012.json)。
+
 The installed 1.0.0 release is this project's upgrade baseline. The private
 configuration now uses `compatibilityIpa` plus `compatibilityIpaSha256`, with
 `firstInstall` removed. Preserve that signed IPA and do not reuse another app's
