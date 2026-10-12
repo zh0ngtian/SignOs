@@ -1,0 +1,32 @@
+{
+  "date": "2026-10-12",
+  "implementationCommit": "435decbd067fcb3b4022ec9f47cfb62530f2b3d6",
+  "verifiedCommit": "bf1cc03a4a62c4a0ac429ed7b8e128934cad8d8d",
+  "version": "1.1.0",
+  "buildNumber": "22",
+  "buildRun": 38251330899,
+  "releaseRun": 38252981196,
+  "githubReleaseUrl": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.0",
+  "unsignedIpaSha256": "fbf6b6d64b0dff627a129de86f5a5d52aa15cf4008ea99ed8a2543ff2e0f7be2",
+  "signedIpaSha256": "9029841f440053c5a3ec81b46b235aecdd42a97c531da1ab3f9ea7dcfbcc7872",
+  "signedIpaSize": 14939371,
+  "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+  "fixedIpaUrl": "https://192.168.123.79:8769/channels/signos/current/latest.ipa",
+  "checks": [
+    "Ordinary and remote source cards open their app lists directly, with matching app counts",
+    "App rows display Install capsules; Update uses the shared production update candidate state",
+    "Top-right settings opens source settings for ordinary and remote sources",
+    "Configuration backup, management access and local subscription sections removed; source removal retained",
+    "Source list consumes published repositories and has retry plus UIKit pull-to-refresh",
+    "Dark appearance and Accessibility XXXL verified; app name remains readable and gear stays visible",
+    "OneViewPhaseRegression: 6 passed",
+    "Production UpdateManager simulator regressions passed before and after cross-source merge",
+    "Local make iphoneos and locked-dependency Release builds passed for source UI changes",
+    "Merged release commit built and launched on iPhone 17 Pro / iOS 26.5; source list and settings rechecked",
+    "GitHub build and entire tag workflow succeeded; release assets match CI artifact byte for byte",
+    "HTTPS versioned resources, fixed manifest, full fixed IPA download, size and SHA-256 verified",
+    "Downloaded OTA IPA independently verified with ios_sign.py --verify-ipa"
+  ],
+  "physicalUpgradeVerified": false,
+  "publicationNote": "Initial 1.0.21 build was superseded by the parallel application-tab merge; delivered in descendant 1.1.0 with the same source UI."
+}
