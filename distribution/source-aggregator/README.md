@@ -51,7 +51,7 @@ SignOs 原订阅已就地从 `ipa-archive` 切换到正式仓库，当前版本�
 `migrate_cloud_source.py` 是原始迁移工具，仍使用归档规则；重跑旧源迁移时应加
 `--skip-bundle tech.zh0ngtian.MuseumMuse`，避免另外创建归档订阅。
 
-`scripts/publish_signos.py` 是原有双渠道签名包发布工具，仍会创建或更新 `ipa-archive` 订阅，不用于当前正式仓库主订阅的更新。仅在用户另行明确要求新增签名包渠道时使用：先按项目 OTA 流程发布正式签名包，再用 `scripts/publish_signos.py --ipa <同一签名包> --release-json <OTA凭证> --plan` 预检后执行实际发布。工具公开归档到 GitHub，再核对 Cloudflare 的版本、构建号、URL、大小和全包 SHA-256；GitHub 完整 GET 也必须匹配 OTA 凭证。常规交付仍采用 GitHub 构建检查，不自动发布 App。
+`scripts/publish_signos.py` 是原有双渠道签名包发布工具，仍会创建或更新 `ipa-archive` 订阅，不用于当前正式仓库主订阅的更新。仅在用户另行明确要求新增签名包渠道时，由对应批次的协调负责人执行：先按项目 OTA 流程发布正式签名包，再用 `scripts/publish_signos.py --ipa <同一签名包> --release-json <OTA凭证> --plan` 预检后执行实际发布。工具公开归档到 GitHub，再核对 Cloudflare 的版本、构建号、URL、大小和全包 SHA-256；GitHub 完整 GET 也必须匹配 OTA 凭证。纯软件源服务改动只完成对应部署与接口验收，不触发客户端构建或 App 发布；涉及 SignOs 客户端的改动按[项目合批发布流程](../../README.md#多任务协调与合批发布)完成 GitHub Release 与 OTA。此工具不是统一任务协调入口。
 
 | 接口 | 功能 |
 | --- | --- |

@@ -108,6 +108,18 @@ That produces packages/SignOs.ipa. You need Xcode 26 or newer on macOS.
 Initialize both Git submodules with `git submodule update --init --recursive` first.
 Project workflow and post-test delivery requirements are in [AGENTS.md](AGENTS.md).
 
+### 多任务协调与合批发布
+
+开发任务在独立分支或 worktree 完成本地必要验证，登记确定的提交 SHA 与结果；由同一
+发布作用域的协调负责人统一整合、分配版本、推进 `main` 并完成发布。合批窗口、冻结、
+锁与恢复的通用策略以当前生效的 canonical 全局 `AGENTS.md` 为准；项目只补充
+[发布目标、接入状态和具体改造项](docs/release-coordination.md)。
+
+**目前规则已定义，自动机制尚未实现。** 现有 CI/发布工具能校验同提交产物并执行单步
+发布，不能自动登记任务、合批或恢复协调状态；正式 `main` 构建仍可能被新 push 取消。
+在实际共享队列与互斥机制建立前，不得由各任务自行发包，也不得把口头指定负责人当成
+完整协调。本文的构建、标签及 OTA 命令是协调负责人使用的底层步骤，不是各任务各自执行的发布入口。
+
 ### GitHub Actions 构建检查
 
 [工作流](.github/workflows/ios-build.yml) 在涉及客户端的 `main` push 和面向 `main` 的 PR
@@ -190,19 +202,24 @@ python3 scripts/test_download_manager_simulator.py <SIMULATOR_UDID>
 得到的地址，输出字节数、耗时、吞吐量和 URLSession 分段指标。跳转地址只用于本次
 诊断，不保存签名 URL，也不作为软件源的长期地址。测试结束会移除临时 App 和文件。
 
-常规交付流程为：完成本地必要检查、提交与 push、核对远端提交。涉及客户端时，须等待
-**该提交**的 `iOS Build Check / iOS Release build` 成功，并按下节流程发布新版；任何涉及
-App 的改动都必须发布，不按类型、规模或是否改变用户可见功能区别处理，发布完成才算交付。
-不涉及客户端时，仅完成受影响部分的检查，无须执行、手动触发或等待客户端构建。
-发布默认使用 GitHub Release，版本号和构建号由本次改动递增。普通提交和手动构建本身
-不创建 Release，因此客户端交付必须继续完成标签发布；每次 App 发布同时使用该产物完成 OTA 签名与固定渠道更新，并交付安装链接。
+常规交付流程为：各开发任务完成本地必要检查，提交并 push 开发分支，核对远端 SHA 后
+登记就绪；协调负责人整合并完成合并后的必要检查，统一分配版本，冻结批次及最终提交，
+再推进 `main`，触发该批次一次正式构建。各任务须核对自己的改动已包含在最终提交中，
+等待 **冻结提交** 的 `iOS Build Check / iOS Release build` 成功，并读取该批次共同的发布凭证。
+任何涉及 App 的改动都必须随所属批次发布，不按类型、规模或是否改变用户可见功能区别
+处理；进入队列或加入批次不算交付完成。不涉及构建或发布的改动检查后直接提交与 push，
+不额外触发客户端构建；纯服务改动按既有部署与 HTTPS 验收要求完成，不发 App。
+发布默认使用 GitHub Release，由协调负责人按批次递增版本号和构建号，参与任务共用
+该版本。普通提交和手动构建本身不创建 Release；客户端批次还须完成标签发布，并使用
+同一产物完成 OTA 签名与固定渠道更新，交付安装链接，避免参与任务分别发包。
 
 ### GitHub Release 标准发布流程
 
-发布标签使用 `vX.Y.Z`，例如 `v1.0.11`。准备发布时，先将 `Feather.xcconfig`
-中的 `FEATHER_PROJECT_VERSION` 更新为 `X.Y.Z`，并按需要更新 Xcode 工程中的
-`CURRENT_PROJECT_VERSION`；每次 App 改动都发布新版本，版本号和构建号均须高于之前发出的包。提交并 push 到
-`main`，等待该提交的 `iOS Build Check` 成功，再为这个已验证的提交打标签：
+以下步骤由协调负责人对冻结批次执行。发布标签使用 `vX.Y.Z`，例如 `v1.0.11`。
+整合及必要检查通过后，统一将 `Feather.xcconfig` 的 `FEATHER_PROJECT_VERSION`
+更新为 `X.Y.Z`，并递增 Xcode 工程的 `CURRENT_PROJECT_VERSION`，将版本改动纳入
+批次最终提交后冻结。每个涉及 App 的批次都发布新版，版本号和构建号均须高于之前
+发出的包。推进该冻结提交到 `main`，等待其 `iOS Build Check` 成功，再为该提交打标签：
 
 ```sh
 # 将版本与完整提交 SHA 替换为本次发布值
@@ -318,13 +335,13 @@ the shared signing materials without copying them into the project.
 `ios-adhoc-ota` skill's allowlisted handler and the existing LAN TLS certificate.
 The local launch agent is `local.ios-adhoc-ota.signos`.
 
-Use the skill's `release_ipa.py` with the private configuration, the generated IPA,
-and its actual version/build number; run `--plan` before publishing. The publisher
+The batch coordinator uses the skill's `release_ipa.py` with the private configuration,
+the exact frozen commit's verified CI IPA, and its actual version/build number; run `--plan` before publishing. The publisher
 verifies signing, stages versioned resources, checks HTTPS downloads, and then
 switches the fixed `current` entry.
 
-任何涉及 App 的改动都须通过上文的 GitHub Actions 构建检查，并按标签发布新版到 GitHub Release。
-用户已持续授权每次 App 发布同时更新 OTA：使用同一已验证构建产物和现有私有配置发布正式
+任何涉及 App 的改动都须随所属批次通过上文的 GitHub Actions 构建检查，并按标签发布新版到 GitHub Release。
+用户已持续授权每批 App 发布同时更新 OTA：由协调负责人使用同一已验证构建产物和现有私有配置发布正式
 Ad Hoc 签名 IPA，保持两者版本一致、构建号递增，无须逐次询问。GitHub Release 和 OTA
 均验收成功才算交付完成，最终回复须附上可点击的固定 OTA 安装页链接和实际版本、构建号。
 固定安装页为 `https://192.168.123.79:8769/channels/signos/current/install.html`；
