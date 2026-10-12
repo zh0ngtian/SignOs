@@ -64,21 +64,27 @@ CI 正式 main / 标签使用同一 `signos-production-release` 并发组，
 
 ```sh
 ~/.local/bin/releasectl batch --id <batch-id>
-~/.local/bin/releasectl resume --batch <batch-id>
+~/.local/bin/releasectl resume --batch <interrupted-batch-id>
+~/.local/bin/releasectl register --project signos-production --task <repair-task-id> --repairs-batch <failed-batch-id>
 ```
 
 每个作用域有独立租约，10 秒心跳、60 秒过期；接管前仍先读取实际远端状态。
-服务重启保持状态并恢复未完成工作，不取消远端 CI。有效 owner 存在时不能接管；
-失败批次阻止本作用域新任务覆盖状态，但不阻止其他项目发布。
+服务重启保持状态，并优先接管中断的子批次，不取消远端 CI。有效 owner 存在时不能接管。
+`resume` 只适用于中断且未标记 failed 的批次；阶段错误会保留 failed 状态及诊断，
+阻止本作用域无关任务覆盖状态，但不阻止其他项目发布。动作响应丢失时先核对一次远端
+效果；已验证成功就继续，不重复执行，也不对持续失败自动循环构建或发布。
 
-合并冲突保留 worktree，解决并提交冲突后 resume。已冻结 worktree 不能改内容；
-若冻结提交无法安全推进 main，应按项目规则创建关联修复批次，不能原地改 SHA。
+合并冲突保留 worktree。将解决结果提交到独立修复分支并 push，以完整 SHA 和必要
+验证登记指向最新失败批次的修复任务。关联子批次继承原参与任务和提交，按本项目规则
+分配更高版本；原 failed 记录及冻结 worktree 保持不变，不能原地改 SHA。
 签名或渠道切换中断后，只能复用本批已验证的完整暂存包；不完整暂存目录及失败证据
 保留，按原不可覆盖规则通过更高版本的关联修复恢复，不在同版本上重新签名覆盖。
 签名资料仍使用原 `~/Library/Application Support/IOSAdHocOTA/signos/release.local.json`，
 历史签名包与验收记录不删除。软件源签名包归档仍需用户另行明确授权。
 
 receipt 位于私有状态目录 `receipts/<batch-id>.json`，全部参与任务读取同一份。
+修复子批次成功后，其新任务标为 `complete`，继承任务标为 `recovered` 并通过
+`recovered_by` 指向该成功子批次；状态查询与 wait 返回同一份成功凭证，父批次仍为 failed。
 共享凭证副本只导出可公开字段到 `docs/plans/evidence/`；私有配置、设备信息和签名材料
 不进入 Git。队列、合批、触发 CI 都不代表交付完成，任一要求的渠道失败不能完成。
 
@@ -89,3 +95,13 @@ receipt 位于私有状态目录 `receipts/<batch-id>.json`，全部参与任务
 既有发布产物及附件回归继续运行。本次修改客户端构建输入，必须让本批次通过一次
 正式 main 构建与 GitHub Release / OTA 全链路验收后才交付；实际结果另存发布凭证。
 用户 App 的签名完成仍不等于真机安装完成，真机覆盖与数据保留不由协调器验收替代。
+
+## 本机部署核验（2026-10-13）
+
+通用协调器版本 [v0.1.3](https://github.com/zh0ngtian/release-coordinator/tree/v0.1.3)，
+提交 `cafa2dcf8df01a2bc5dbb90efa268b060d9e7ecb`。19 项本地回归通过，
+[跨平台 CI](https://github.com/zh0ngtian/release-coordinator/actions/runs/38286727553)
+的 macOS/Linux、Python 3.9/3.13 四组全部成功。
+本机按用户选定的登录启动模式部署，`gui/501/local.release-coordinator` 为运行中的
+LaunchAgent，`releasectl health` 返回 0.1.3。后续运行事实仍以 health、installation.json
+和 launchctl 实际状态为准。

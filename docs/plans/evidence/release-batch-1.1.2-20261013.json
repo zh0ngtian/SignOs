@@ -1,0 +1,201 @@
+{
+  "schemaVersion": 1,
+  "exportedAtUTC": "2026-10-12T18:07:33.628450+00:00",
+  "id": "bcf7951a-fc48-41bc-aaf3-3ea101335ad8",
+  "scope": "96c87efa825ae59a58d467fb058a33fd710e4ced9bee0b003923625611c49047",
+  "project": "signos-production",
+  "coordinatorVersion": "0.1.3",
+  "tasks": [
+    {
+      "id": "01a13008-coordinator-implementation",
+      "sha": "a68817264ddcace0ae311859e3b60296be395ddf",
+      "validation": {
+        "checks": [
+          {
+            "name": "adapter-regression",
+            "status": "passed"
+          },
+          {
+            "name": "release-artifact-regression",
+            "status": "passed"
+          },
+          {
+            "name": "release-assets-regression",
+            "status": "passed"
+          },
+          {
+            "name": "workflow-review",
+            "status": "passed"
+          },
+          {
+            "name": "coordinator-regression",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    {
+      "id": "01a13008-gh-download-recovery",
+      "sha": "d1737756eb5bde21cc2e8ed9e61d3cd67843e87e",
+      "validation": {
+        "checks": [
+          {
+            "name": "adapter-regression",
+            "status": "passed"
+          },
+          {
+            "name": "release-artifact-regression",
+            "status": "passed"
+          },
+          {
+            "name": "release-assets-regression",
+            "status": "passed"
+          },
+          {
+            "name": "workflow-review",
+            "status": "passed"
+          }
+        ]
+      }
+    }
+  ],
+  "frozen": {
+    "buildNumber": "24",
+    "environment": "production",
+    "manifestSha256": "7e25063e9d199d44251977703034b1fbbeb2b4e18f7258caa63fd74d70d3e217",
+    "sha": "3884f1f38e844d506d0b121bb94ee262f845984f",
+    "target": "com.signos.app",
+    "tasks": [
+      {
+        "id": "01a13008-coordinator-implementation",
+        "sha": "a68817264ddcace0ae311859e3b60296be395ddf"
+      },
+      {
+        "id": "01a13008-gh-download-recovery",
+        "sha": "d1737756eb5bde21cc2e8ed9e61d3cd67843e87e"
+      }
+    ],
+    "version": "1.1.2"
+  },
+  "recoveryOf": "25c67d6a-0f0e-4c85-84a8-eb60f196ce7c",
+  "recoveryChain": [
+    "25c67d6a-0f0e-4c85-84a8-eb60f196ce7c"
+  ],
+  "results": {
+    "build": {
+      "buildNumber": "24",
+      "commit": "3884f1f38e844d506d0b121bb94ee262f845984f",
+      "runId": 38287059977,
+      "sha256": "400e9a3b2b7efdc91bcf52782e3f298571cef0d1f991063b378d7f40f0553676",
+      "version": "1.1.2"
+    },
+    "github": {
+      "runId": 38288244949,
+      "sha256": "400e9a3b2b7efdc91bcf52782e3f298571cef0d1f991063b378d7f40f0553676",
+      "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.2"
+    },
+    "ota": {
+      "buildNumber": "24",
+      "bundleId": "com.signos.app",
+      "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.2/latest.ipa",
+      "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+      "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.2/manifest.plist",
+      "sha256": "2a0177b93024a6ef7bebac161557dc55bd6be42c3a578a4a7e2a1a1626cf3694",
+      "signed": true,
+      "size": 14939279,
+      "sourceCommit": "3884f1f38e844d506d0b121bb94ee262f845984f",
+      "version": "1.1.2"
+    },
+    "prepare": {
+      "buildNumber": "24",
+      "bundleIdentifier": "com.signos.app",
+      "inputFingerprint": "ea206e9e63c26010a6a71268b8971691bb983a3f872b4963562d2ab938c02d42",
+      "localValidation": "passed",
+      "version": "1.1.2"
+    },
+    "verify": {
+      "github": {
+        "runId": 38288244949,
+        "sha256": "400e9a3b2b7efdc91bcf52782e3f298571cef0d1f991063b378d7f40f0553676",
+        "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.2"
+      },
+      "httpsFullDownloadVerified": true,
+      "ota": {
+        "buildNumber": "24",
+        "bundleId": "com.signos.app",
+        "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.2/latest.ipa",
+        "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+        "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.2/manifest.plist",
+        "sha256": "2a0177b93024a6ef7bebac161557dc55bd6be42c3a578a4a7e2a1a1626cf3694",
+        "signed": true,
+        "size": 14939279,
+        "sourceCommit": "3884f1f38e844d506d0b121bb94ee262f845984f",
+        "version": "1.1.2"
+      }
+    }
+  },
+  "completedAt": 1791828181.445747,
+  "ciRuns": {
+    "main": {
+      "id": 38287059977,
+      "url": "https://github.com/zh0ngtian/SignOs/actions/runs/38287059977",
+      "conclusion": "success",
+      "jobs": [
+        {
+          "name": "iOS Release build",
+          "conclusion": "success",
+          "startedAt": "2026-10-12T17:52:09Z",
+          "completedAt": "2026-10-12T18:01:41Z"
+        },
+        {
+          "name": "Publish GitHub Release",
+          "conclusion": "skipped",
+          "startedAt": "2026-10-12T17:52:02Z",
+          "completedAt": "2026-10-12T17:52:01Z"
+        }
+      ]
+    },
+    "tag": {
+      "id": 38288244949,
+      "url": "https://github.com/zh0ngtian/SignOs/actions/runs/38288244949",
+      "conclusion": "success",
+      "jobs": [
+        {
+          "name": "Publish GitHub Release",
+          "conclusion": "success",
+          "startedAt": "2026-10-12T18:02:33Z",
+          "completedAt": "2026-10-12T18:02:45Z"
+        },
+        {
+          "name": "iOS Release build",
+          "conclusion": "skipped",
+          "startedAt": "2026-10-12T18:02:32Z",
+          "completedAt": "2026-10-12T18:02:31Z"
+        }
+      ]
+    }
+  },
+  "timingsSeconds": {
+    "mergeAndLocalValidation": 131.13,
+    "formalBuildPhase": 629.44,
+    "tagPublication": 33.03,
+    "otaAndFinalVerification": 4.99,
+    "batchTotal": 798.59
+  },
+  "appBuildCounts": {
+    "mergedLocalBuild": 1,
+    "formalMainBuild": 1,
+    "tagAppBuild": 0
+  },
+  "independentAcceptance": {
+    "taskStates": {
+      "original": "recovered",
+      "repair": "complete"
+    },
+    "originalFailedBatchPreserved": true,
+    "fixedInstallPage": true,
+    "manifestBuildNumber": "24",
+    "fullHttpsIpaDownloadAndSha256Verified": true,
+    "deviceInstallationVerified": false
+  }
+}

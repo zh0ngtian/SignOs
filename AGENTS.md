@@ -19,7 +19,7 @@
 ## 测试后的交付规则
 
 - 通用的多任务协调、合批窗口、冻结、互斥及中断恢复规则继承当前生效的 canonical 全局 `AGENTS.md`，不在本项目复制正文。SignOs 的发布作用域、已部署入口、适配器与验收范围见 [发布协调说明](docs/release-coordination.md)。通用协调器独立维护于 https://github.com/zh0ngtian/release-coordinator，本项目不复制其核心实现。
-- SignOs App 的协调作用域为本仓库、`com.signos.app` 和既有正式 GitHub Release / 固定 OTA 渠道。就绪登记附本节要求的本地验证结果与远端开发提交 SHA；App 批次交付凭证必须关联最终提交、`main` 构建 run、标签发布 run、Release 附件及 OTA 回验结果。纯服务任务按实际服务与环境另行协调。开始开发即用 `~/.local/bin/releasectl register --project signos-production` 登记并维持任务心跳；本地必要验证及开发分支 push 后，以完整 SHA 和验证记录提交 `ready`。只有协调器负责版本分配、整合、冻结、main 推进、构建、标签及 OTA；任务读取同一份 batch receipt，不能另行发包。
+- SignOs App 的协调作用域为本仓库、`com.signos.app` 和既有正式 GitHub Release / 固定 OTA 渠道。就绪登记附本节要求的本地验证结果与远端开发提交 SHA；App 批次交付凭证必须关联最终提交、`main` 构建 run、标签发布 run、Release 附件及 OTA 回验结果。纯服务任务按实际服务与环境另行协调。开始开发即用 `~/.local/bin/releasectl register --project signos-production` 登记并维持任务心跳；本地必要验证及开发分支 push 后，以完整 SHA 和验证记录提交 `ready`。只有协调器负责版本分配、整合、冻结、main 推进、构建、标签及 OTA；任务读取同一份 batch receipt，不能另行发包。失败批次的关联修复登记、继承任务的 `recovered` 状态及成功子批次凭证以发布协调说明为准。
 - 不涉及构建或发布的改动完成相应检查后直接提交、push 并核对远端提交，无须为了合批触发或等待客户端流水线。
 - 流水线位于 `.github/workflows/ios-build.yml`，对客户端源码、依赖、回归和构建输入（含构建工作流自身）的 `main` push 和面向 `main` 的 PR 自动运行，另保留手动构建和 `v*` 标签发布入口。日常 CI 递归检出子模块、检查 Xcode 26+ 与 iOS SDK，只执行一次 `generic/platform=iOS` 的无签名 Release 构建；`main` push 和 `main` 手动构建同时打包、校验 IPA，生成元数据并保留产物 14 天，供后续标签发布复用。PR 和其他分支手动构建仅编译、链接。不运行回归或模拟器，只在失败时上传构建诊断。纯服务、文档、规则和其他非客户端改动跳过自动客户端构建。
 - 完整 Swift / Python 与更新、下载管理器、安装清理模拟器回归移至 `.github/workflows/ios-regression.yml`，仅手动按需运行。功能须按改动范围在本地验证，CI 成功不能替代功能验收。

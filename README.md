@@ -554,3 +554,28 @@ manifest（构建号 22）、HEAD 及完整下载 SHA-256 验收通过。签名�
 本次真机不可用，本地功能和界面在模拟器验收，未证明真机覆盖安装及数据、钥匙串保留。
 发布凭证见 [1.1.0 OTA 核验](docs/plans/evidence/ota-publication-1.1.0-20261012.json)，
 界面验收见 [模拟器记录](docs/plans/evidence/apps-merge-ui-20261012/verification.json)。
+
+### 发布协调本机部署与批次恢复（1.1.2 / 24）
+
+2026-10-13：独立协调器 0.1.3 已部署为本机登录启动的 LaunchAgent；通用规则继续维护在
+canonical 全局 AGENTS.md，项目配置和恢复命令见 [发布协调说明](docs/release-coordination.md)。
+不同仓库、应用或服务、环境独立协调；SignOs 批次统一完成 GitHub Release 和固定 OTA。
+
+原 1.1.1（23）冻结批次在 CI 成功后因 `gh run download` 不支持 `--clobber` 失败，
+保留原批次、提交、构建与诊断。关联修复批次 `bcf7951a-fc48-41bc-aaf3-3ea101335ad8`
+继承原任务，修复产物下载并分配 1.1.2（24），最终提交为
+`3884f1f38e844d506d0b121bb94ee262f845984f`。
+[main 构建](https://github.com/zh0ngtian/SignOs/actions/runs/38287059977) 和
+[标签发布](https://github.com/zh0ngtian/SignOs/actions/runs/38288244949) 均成功；
+本批只做一次合并后的本地构建及一次正式 main 构建，标签复用同一 IPA。
+[GitHub Release](https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.2) 三个附件已逐字节
+核对同批次 CI 产物；同一未签名 IPA 完成 Ad Hoc 签名并更新
+[固定 OTA 安装页](https://192.168.123.79:8769/channels/signos/current/install.html)。
+固定入口、manifest 构建号 24、包身份、完整 HTTPS 下载及 SHA-256 独立回验通过。
+签名 IPA 大小 14939279 字节，SHA-256 为
+`2a0177b93024a6ef7bebac161557dc55bd6be42c3a578a4a7e2a1a1626cf3694`。
+
+原任务为 `recovered`，修复任务为 `complete`，共同读取成功子批次的凭证；原批次仍为
+failed。公开字段、CI run、产物散列及耗时分布见
+[共同发布凭证](docs/plans/evidence/release-batch-1.1.2-20261013.json)。
+本次改动为发布基础设施及其验证输入，未执行真机覆盖安装与数据保留验收。
