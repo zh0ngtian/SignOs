@@ -1,0 +1,20 @@
+{
+  "date": "2026-10-12",
+  "baseCommit": "b6d72ba4e8c1f2640732eed02854dcf7164867b5",
+  "status": "development-ready; publication pending release coordination",
+  "change": "Ready-to-install actions reuse the idle WSSearchCapsuleLabel, including padding, colors and 44pt minimum tap height. Download, signing and installation actions remain unchanged.",
+  "validation": {
+    "build": "Complete Debug iOS Simulator app build and launch succeeded with Xcode 27; iPhone 17 Pro / iOS 26.5",
+    "phaseRegression": "OneViewPhaseRegression: 6 passed",
+    "runtime": "Production application binary copied into an isolated com.signos.buttoncheck container, with local source and a matching Signed/AppSourceMetadata fixture for the ready phase",
+    "screenshots": {
+      "light.png": "Idle and ready rows display matching gray capsules and accent text",
+      "dark.png": "Idle and ready rows display matching capsules in dark appearance",
+      "dark-accessibility.png": "Accessibility XXXL idle list button remains readable in stacked layout",
+      "dark-accessibility-detail.png": "Accessibility XXXL ready button remains readable in source app detail"
+    },
+    "physicalInstallation": "Not exercised; appearance-only change",
+    "diffCheck": "Passed"
+  },
+  "releaseGap": "Project release coordinator/shared queue/lock are not implemented; no main advancement, version increment, GitHub Release or OTA publication performed."
+}
