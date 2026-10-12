@@ -48,6 +48,14 @@ jobs:
             "$BINARY"
             rm "$BINARY"
           done
+          BINARY="$RUNNER_TEMP/signos-cloud-subscription"
+          xcrun swiftc Feather/Utilities/CloudSourceAssetRule.swift \
+            Feather/Backend/CloudSource/CloudSourceModels.swift \
+            Feather/Backend/CloudSource/CloudSourceStore.swift \
+            Feather/Backend/CloudSource/CloudSourceCredentials.swift \
+            Tests/CloudSourceSubscriptionRegression.swift -o "$BINARY"
+          "$BINARY"
+          rm "$BINARY"
 
       - name: Run update, download and installation cleanup simulator regressions
         run: |

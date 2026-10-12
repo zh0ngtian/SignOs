@@ -147,6 +147,25 @@ gh workflow run ios-regression.yml --repo zh0ngtian/SignOs --ref main
 
 该手动入口不替代改动所需的本地功能验收，也不包含依赖真机或私有配置的 OTA 验收。
 
+远端软件源的“添加订阅”支持一次选择同一 GitHub Release 的多个 IPA。每个附件都有独立的
+匹配规则、订阅 ID、同步状态和版本历史；解析成功后仍需逐项确认发布。同 Bundle ID 的
+不同变体继续按订阅 ID 区分。自动生成的规则若会命中其他附件，则保留精确文件名，需按实际
+命名方式调整后续匹配规则。批量添加失败时保留已成功的项目，重试只提交剩余选择；请求超时
+后能成功刷新远端目录时，也会核对该次请求是否已经创建订阅。
+
+手动完整回归还包含 `CloudSourceSubscriptionRegression`，覆盖独立附件规则、修订号连续写入、
+部分失败重试、响应丢失和目录刷新失败。可单独运行：
+
+```sh
+xcrun swiftc Feather/Utilities/CloudSourceAssetRule.swift \
+  Feather/Backend/CloudSource/CloudSourceModels.swift \
+  Feather/Backend/CloudSource/CloudSourceStore.swift \
+  Feather/Backend/CloudSource/CloudSourceCredentials.swift \
+  Tests/CloudSourceSubscriptionRegression.swift -o /tmp/signos-subscription-regression
+/tmp/signos-subscription-regression
+rm /tmp/signos-subscription-regression
+```
+
 更新管理器回归还验证已下载版本复用、来源与订阅匹配、签名包优先及文件缺失回退。
 签名队列回归使用生产 `AutoSignManager.swift`，以可控签名与安装替身验证已有签名包
 直接安装、连续点击去重、串行安装及已导入包继续签名：

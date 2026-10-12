@@ -56,6 +56,46 @@ final class CloudSourceStore {
         return succeeded
     }
 
+    /// Each IPA is a separate subscription. Return the successfully created prefix
+    /// so a retry only submits the remaining selections, even if refreshing fails.
+    func save(configurations: [CloudSourceConfiguration]) async -> Int {
+        var savedCount = 0
+        await perform {
+            struct Result: Decodable {
+                struct Entry: Decodable { let id: String }
+                let revision: Int
+                let entry: Entry
+            }
+            var revision = self.snapshot?.revision ?? 0
+            var knownIDs = Set(self.snapshot?.entries.map(\.id) ?? [])
+            var attemptedCount = 0
+            do {
+                for config in configurations {
+                    try Task.checkCancellation()
+                    attemptedCount += 1
+                    let data = try await self.request("POST", "/api/entries", body: ["revision": revision, "config": try self.object(config)])
+                    savedCount += 1
+                    let result = try JSONDecoder().decode(Result.self, from: data)
+                    revision = result.revision
+                    knownIDs.insert(result.entry.id)
+                }
+            } catch {
+                // A timed-out POST may have succeeded remotely. Reconcile that
+                // attempt against new IDs before allowing the remaining retry.
+                if (try? await self.load()) != nil, savedCount < attemptedCount,
+                   self.snapshot?.entries.contains(where: { !knownIDs.contains($0.id) && $0.config.matchesSubscription(configurations[savedCount]) }) == true {
+                    savedCount += 1
+                }
+                throw error
+            }
+            try await self.load()
+        }
+        if savedCount > 0, savedCount < configurations.count, let errorMessage {
+            self.errorMessage = "已添加 \(savedCount) 个订阅，剩余 \(configurations.count - savedCount) 个未添加。\(errorMessage)"
+        }
+        return savedCount
+    }
+
     func confirm(_ entry: CloudSourceEntry) async {
         await perform {
             _ = try await self.request("POST", "/api/entries/\(entry.id)/confirm", body: ["revision": self.snapshot?.revision ?? 0])

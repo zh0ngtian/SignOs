@@ -9,6 +9,22 @@ struct CloudSourceConfiguration: Codable, Equatable {
     var includePrereleases: Bool? = false
     var paused = false
 
+    func matchesSubscription(_ other: Self) -> Bool {
+        guard kind == other.kind, paused == other.paused else { return false }
+        if kind == "url" { return url?.trimmingCharacters(in: .whitespacesAndNewlines) == other.url?.trimmingCharacters(in: .whitespacesAndNewlines) }
+        func repositoryKey(_ value: String?) -> String {
+            var key = (value ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            if key.hasPrefix("https://github.com/") { key = String(key.dropFirst(19)) }
+            if key.hasSuffix("/") { key.removeLast() }
+            if key.hasSuffix(".git") { key = String(key.dropLast(4)) }
+            return key
+        }
+        return repositoryKey(repository) == repositoryKey(other.repository)
+            && (tagPrefix ?? "").trimmingCharacters(in: .whitespacesAndNewlines) == (other.tagPrefix ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            && (assetPattern ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == (other.assetPattern ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            && (includePrereleases ?? false) == (other.includePrereleases ?? false)
+    }
+
     static func directURL(_ url: String) -> Self {
         var config = Self()
         config.kind = "url"

@@ -196,6 +196,9 @@ private struct CloudSourceEntryRow: View {
             VStack(alignment: .leading, spacing: 5) {
                 Text(entry.title).font(.headline).lineLimit(2)
                 Text(entry.versionText).font(.subheadline).foregroundStyle(.secondary)
+                if let pattern = entry.config.assetPattern, !pattern.isEmpty {
+                    Text(pattern).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                }
                 Text(entry.statusText).font(.caption).foregroundStyle(entry.error == nil ? Color.secondary : Color.orange)
                 if let error = entry.error { Text(error.message).font(.caption).foregroundStyle(.secondary) }
             }
