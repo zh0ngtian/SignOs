@@ -35,25 +35,25 @@
       }
     }
   },
-    "Update check was cancelled. Tap Check to retry.": {
+    "Update check was cancelled. Pull down to retry.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Update check was cancelled. Tap Check to retry."
+            "value": "Update check was cancelled. Pull down to retry."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "更新检查已取消，请点击“检查”重试。"
+            "value": "更新检查已取消，请下拉重试。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "更新檢查已取消，請點擊 CHECK 重試。"
+            "value": "更新檢查已取消，請下拉重試。"
           }
         }
       }

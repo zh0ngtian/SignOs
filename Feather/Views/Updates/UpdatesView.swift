@@ -50,19 +50,6 @@ struct UpdatesView: View {
 			ScrollView {
 				VStack(alignment: .leading, spacing: WSSpacing.sectionGap) {
 					WSHeroHeader(eyebrow: "SignOs", title: "Updates")
-					HStack {
-						Spacer()
-						Button {
-							Task { await autoUpdateManager.checkNow(notifyWhenClean: false, syncManagedSources: true) }
-						} label: {
-							WSSearchCapsuleLabel(title: "Check", isLoading: _isChecking)
-								.frame(minHeight: 44)
-						}
-						.buttonStyle(.plain)
-						.disabled(_isChecking)
-						.accessibilityLabel(_isChecking ? String.localized("Checking") : String.localized("Check"))
-						.accessibilityIdentifier("updates.check")
-					}
 
 					if !_sortedUpdates.isEmpty {
 						_availableUpdates()

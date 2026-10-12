@@ -211,7 +211,7 @@ struct UpdateManagerRegression {
         precondition(!cancelled && !manager.isChecking)
         precondition(manager.updates == pendingUpdates, "Cancellation must retain pending updates")
         precondition(manager.lastCheckedDate == checkedDate, "Cancellation must not count as a completed check")
-        precondition(manager.checkIssues.count == 1 && manager.checkIssues[0].contains(String(localized: "Update check was cancelled. Tap Check to retry.")))
+        precondition(manager.checkIssues.count == 1 && manager.checkIssues[0].contains(String(localized: "Update check was cancelled. Pull down to retry.")))
         precondition(!manager.checkIssues.contains { $0.contains(String.localized("linked repository is unavailable. Refresh or restore its source in Sources.")) })
         FixtureProtocol.error = nil
         let retryCompleted = await manager.checkForUpdates(sources: [source], localApps: [local])
@@ -280,7 +280,7 @@ struct UpdateManagerRegression {
             throw CancellationError()
         })
         precondition(!cancelledPreflight && FixtureProtocol.requests.count == beforePreflightCancellation)
-        precondition(manager.checkIssues.last?.contains(String(localized: "Update check was cancelled. Tap Check to retry.")) == true)
+        precondition(manager.checkIssues.last?.contains(String(localized: "Update check was cancelled. Pull down to retry.")) == true)
 
         let remoteStore = CloudSourceStore(session: URLSession(configuration: configuration))
         var catalogRequests = 0

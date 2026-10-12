@@ -4,8 +4,6 @@ import CoreData
 struct SourcesView: View {
     @StateObject private var viewModel = SourcesViewModel.shared
     @State private var isAdding = false
-    @State private var syncing: Set<NSManagedObjectID> = []
-    @State private var syncError: String?
     @State private var refreshDates = UserDefaults.standard.dictionary(forKey: "SignOs.sourceRefreshDates") as? [String: Date] ?? [:]
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -37,9 +35,6 @@ struct SourcesView: View {
             .toolbar(.hidden, for: .navigationBar)
             .refreshable { await viewModel.fetchSources(sources, refresh: true) }
             .sheet(isPresented: $isAdding) { SourcesAddView() }
-            .alert("同步失败", isPresented: Binding(get: { syncError != nil }, set: { if !$0 { syncError = nil } })) {
-                Button("好", role: .cancel) { syncError = nil }
-            } message: { Text(syncError ?? "") }
         }
         .task(id: Array(sources)) { await viewModel.fetchSources(sources) }
         .onReceive(viewModel.$sources) { _ in
@@ -48,33 +43,26 @@ struct SourcesView: View {
     }
 
     private func sourceCard(_ source: AltSource) -> some View {
-        VStack(alignment: .trailing, spacing: WSSpacing.sm) {
-            ZStack(alignment: .trailing) {
-                NavigationLink { managementPage(source) } label: {
-                    HStack(spacing: WSSpacing.lg) {
-                        WSAppIcon(url: source.iconURL, size: 48, cornerRadius: 11)
-                            .accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(source.name ?? .localized("Source"))
-                                .font(.body.weight(.semibold)).foregroundStyle(.primary)
-                                .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
-                            Text(caption(source)).font(.caption).foregroundStyle(.secondary)
-                        }
-                        Spacer(minLength: 0)
-                        if !dynamicTypeSize.isAccessibilitySize { Color.clear.frame(width: 90) }
-                        Image(systemName: "chevron.forward")
-                            .font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
-                            .accessibilityHidden(true)
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
-                    .contentShape(Rectangle())
+        NavigationLink { managementPage(source) } label: {
+            HStack(spacing: WSSpacing.lg) {
+                WSAppIcon(url: source.iconURL, size: 48, cornerRadius: 11)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(source.name ?? .localized("Source"))
+                        .font(.body.weight(.semibold)).foregroundStyle(.primary)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
+                    Text(caption(source)).font(.caption).foregroundStyle(.secondary)
                 }
-                .buttonStyle(.plain)
-                .accessibilityHint("打开软件源管理页面")
-                if !dynamicTypeSize.isAccessibilitySize { syncButton(source).padding(.trailing, 24) }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.forward")
+                    .font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
             }
-            if dynamicTypeSize.isAccessibilitySize { syncButton(source) }
+            .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .accessibilityHint("打开软件源管理页面")
         .padding(WSSpacing.lg)
         .background(WSRadius.continuous(WSRadius.xl).fill(WSSurface.card))
     }
@@ -88,41 +76,14 @@ struct SourcesView: View {
         }
     }
 
-    private func syncButton(_ source: AltSource) -> some View {
-        Button { Task { await synchronize(source) } } label: {
-            WSSearchCapsuleLabel(title: "Sync", isLoading: syncing.contains(source.objectID))
-                .frame(minHeight: 44)
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(.primary)
-        .disabled(syncing.contains(source.objectID))
-        .accessibilityLabel("同步 \(source.name ?? .localized("Source"))")
-        .accessibilityIdentifier("sources.sync")
-    }
-
     private func caption(_ source: AltSource) -> String {
         guard let repository = viewModel.sources[source] else {
-            return viewModel.isFinished ? "无法刷新，点击同步重试" : "正在刷新…"
+            return viewModel.isFinished ? "无法刷新，下拉重试" : "正在刷新…"
         }
         let count = repository.apps.count
         let base = String.localized("%lld apps", arguments: count)
         guard let date = refreshDates[source.identifier ?? ""] else { return base }
         return base + " · " + date.formatted(.relative(presentation: .named))
-    }
-
-    @MainActor
-    private func synchronize(_ source: AltSource) async {
-        guard syncing.insert(source.objectID).inserted else { return }
-        defer { syncing.remove(source.objectID) }
-        do {
-            let issues = try await SourceSynchronization.synchronizeManagedSources([source])
-            if !issues.isEmpty { throw syncFailure(issues.joined(separator: "\n")) }
-            try await viewModel.refreshSource(source)
-        } catch { syncError = error.localizedDescription }
-    }
-
-    private func syncFailure(_ message: String) -> NSError {
-        NSError(domain: "CloudSource", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
     }
 }
 

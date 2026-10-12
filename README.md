@@ -450,13 +450,15 @@ URLs and official repository ID are accepted without stored identity.
 
 Updates reports source fetch, missing association and ambiguous subscription
 failures as an incomplete check; it does not show or notify “All Apps Up to Date”
-for an incomplete check. CHECK synchronizes all subscribed sources with uncached HTTP 200
+for an incomplete check. Pulling down on the Updates tab synchronizes all subscribed sources with uncached HTTP 200
 responses, publishes the source browsing cache, then compares versions from that same snapshot.
-For sources with saved management credentials, CHECK first starts remote synchronization and
+For sources with saved management credentials, this update check first starts remote synchronization and
 clears GitHub release caches and waits for parsing to finish; remote failures remain visible
 as an incomplete check.
 Cancelled checks retain pending updates and leave the source cache and completed-check date
-unchanged; they do not start automatic downloads and offer CHECK to retry.
+unchanged; they do not start automatic downloads and can be retried by pulling down again.
+The Updates tab has no separate Check button. Source cards have no Sync capsule;
+pull down on the Sources tab to refresh its catalog, or open a card to manage its source.
 Source fetch failures report their actual error (including HTTP status) without treating the source as removed.
 
 The production update manager and Core Data metadata writer regression covers

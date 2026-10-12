@@ -128,7 +128,7 @@ final class CloudSourceStore {
         let deadline = Date().addingTimeInterval(60)
         while snapshot?.entries.contains(where: { !$0.config.paused && $0.isWorking }) == true {
             guard Date() < deadline else {
-                throw NSError(domain: "CloudSource", code: 3, userInfo: [NSLocalizedDescriptionKey: "远端同步尚未完成，请稍后点击“检查”重试。"])
+                throw NSError(domain: "CloudSource", code: 3, userInfo: [NSLocalizedDescriptionKey: "远端同步尚未完成，请稍后在更新页下拉重试。"])
             }
             try await Task.sleep(for: .seconds(2))
             try await load()

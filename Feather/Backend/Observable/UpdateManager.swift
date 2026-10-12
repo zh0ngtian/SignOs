@@ -103,7 +103,7 @@ final class UpdateManager: ObservableObject {
 			return true
 		} catch {
 			// A cancelled refresh is incomplete, not evidence that its sources were removed.
-			let issue = String(localized: "Update check was cancelled. Tap Check to retry.")
+			let issue = String(localized: "Update check was cancelled. Pull down to retry.")
 			if !checkIssues.contains(issue) { checkIssues.append(issue) }
 			return false
 		}
