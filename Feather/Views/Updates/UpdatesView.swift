@@ -355,6 +355,22 @@ struct UpdatesView: View {
 
 	private func _download(_ update: AppUpdate) {
 		UIImpactFeedbackGenerator(style: .light).impactOccurred()
+		_performUpdate(update)
+	}
+
+	private func _performUpdate(_ update: AppUpdate) {
+		let apps: [any AppInfoPresentable] = _signedApps.map { $0 } + _importedApps.map { $0 }
+		if let cached = updateManager.downloadedApp(for: update, among: apps, isPackageAvailable: {
+			guard let directory = Storage.shared.getAppDirectory(for: $0) else { return false }
+			return FileManager.default.fileExists(atPath: directory.appendingPathComponent("Info.plist").path)
+		}) {
+			if let signed = cached as? Signed {
+				autoSignManager.enqueueInstall(app: signed)
+			} else {
+				autoSignManager.enqueue(app: cached, reason: .autoUpdate, force: true)
+			}
+			return
+		}
 		_ = DownloadManager.shared.startDownload(
 			from: update.downloadURL,
 			id: "SignOsManualUpdate_\(update.localUUID)",
@@ -365,11 +381,7 @@ struct UpdatesView: View {
 	private func _downloadAll(_ updates: [AppUpdate]) {
 		UIImpactFeedbackGenerator(style: .medium).impactOccurred()
 		for update in updates {
-			_ = DownloadManager.shared.startDownload(
-				from: update.downloadURL,
-				id: "SignOsManualUpdate_\(update.localUUID)",
-				sourceProvenance: update.sourceProvenance
-			)
+			_performUpdate(update)
 		}
 	}
 }

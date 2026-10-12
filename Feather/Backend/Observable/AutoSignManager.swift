@@ -34,6 +34,7 @@ final class AutoSignManager: ObservableObject {
 		var certificate: CertificatePair? = nil
 		var options: Options? = nil
 		var retryCount: Int = 0
+		var installOnly = false
 	}
 
 	@Published private(set) var queue: [Job] = []
@@ -87,6 +88,21 @@ final class AutoSignManager: ObservableObject {
 	}
 
 	// MARK: - Enqueueing
+
+	/// Reuse an already signed update without creating another signed copy.
+	func enqueueInstall(app: Signed) {
+		guard let uuid = app.uuid else { return }
+		if let versionID = Storage.shared.sourceMetadata(for: app)?.sourceVersionID {
+			let jobs = queue + (currentJob.map { [$0] } ?? [])
+			guard !jobs.contains(where: { job in
+				Storage.shared.sourceMetadata(for: job.appUUID)?.sourceVersionID == versionID
+			}) else { return }
+		}
+		enqueue(job: Job(
+			appUUID: uuid, reason: .autoUpdate,
+			appIdentifier: app.identifier, appName: app.name, installOnly: true
+		))
+	}
 
 	/// Queues an app for background signing.
 	func enqueue(
@@ -143,6 +159,7 @@ final class AutoSignManager: ObservableObject {
 		queue.append(job)
 
 		if !_isRunning {
+			_isRunning = true
 			Task(priority: .userInitiated) { await _run() }
 		}
 	}
@@ -150,7 +167,6 @@ final class AutoSignManager: ObservableObject {
 	// MARK: - Queue processing
 
 	private func _run() async {
-		_isRunning = true
 		defer { _isRunning = false }
 
 		while let job = queue.first {
@@ -164,6 +180,14 @@ final class AutoSignManager: ObservableObject {
 
 	private func _process(_ job: Job) async {
 		guard let app = _resolveApp(uuid: job.appUUID) else { return }
+
+		if job.installOnly {
+			if let signed = app as? Signed {
+				await _attemptSilentInstall(signed)
+				AutoUpdateManager.shared.updateBadgeFromState()
+			}
+			return
+		}
 
 		let options = job.options ?? OptionsManager.shared.options
 		let certificate = job.certificate ?? _certificate(for: app, options: options)

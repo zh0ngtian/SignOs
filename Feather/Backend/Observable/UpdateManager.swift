@@ -40,6 +40,30 @@ final class UpdateManager: ObservableObject {
 		guard let uuid = app.uuid else { return nil }
 		return updates[uuid]
 	}
+
+	/// Prefer a retained signed package, then an imported package of this source version.
+	/// Source versions can differ from the version inside the IPA or its signed copy.
+	func downloadedApp(
+		for update: AppUpdate,
+		among localApps: [AppInfoPresentable],
+		isPackageAvailable: (AppInfoPresentable) -> Bool
+	) -> AppInfoPresentable? {
+		let signedIdentifier = localApps.first { $0.uuid == update.localUUID }?.identifier ?? update.bundleIdentifier
+		let matches = localApps.filter { app in
+			guard let metadata = Storage.shared.sourceMetadata(for: app),
+				let sourceURL = metadata.sourceRepositoryURL,
+				metadata.sourceAppIdentifier == update.sourceProvenance.sourceAppIdentifier,
+				metadata.sourceAppVersion == update.remoteVersion,
+				app.identifier == (app.isSigned ? signedIdentifier : update.bundleIdentifier),
+				SourceRepositoryIdentity.matches(
+					storedURL: sourceURL, storedIdentifier: metadata.sourceRepositoryIdentifier,
+					currentURL: update.sourceURL, currentIdentifier: update.sourceProvenance.sourceRepositoryIdentifier
+				), isPackageAvailable(app)
+			else { return false }
+			return true
+		}
+		return matches.first { $0.isSigned } ?? matches.first
+	}
 	
 	func hasUpdate(for app: ASRepository.App, sourceURL: URL?) -> Bool {
 		guard let sourceURL, let identifier = app.id, let version = app.currentVersion else {

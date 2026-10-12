@@ -55,5 +55,6 @@ jobs:
           SIMULATOR_ID=$(xcrun simctl list devices available -j | python3 -c 'import json, sys; print(next(d["udid"] for ds in json.load(sys.stdin)["devices"].values() for d in ds if d["name"].startswith("iPhone")))')
           xcrun simctl bootstatus "$SIMULATOR_ID" -b
           python3 scripts/test_update_manager.py "$SIMULATOR_ID"
+          python3 scripts/test_auto_sign_manager.py "$SIMULATOR_ID"
           python3 scripts/test_download_manager_simulator.py "$SIMULATOR_ID"
           python3 scripts/test_install_cleanup_simulator.py "$SIMULATOR_ID"

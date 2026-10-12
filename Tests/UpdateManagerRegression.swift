@@ -150,6 +150,58 @@ struct UpdateManagerRegression {
         checkpoint("all-source synchronization before comparison with one request per source passed")
 
         checkpoint("repeat check and metadata repair passed")
+        // A completed download persists independently of the transient download task.
+        let update = manager.updates["museum"]!
+        let imported = LocalApp(uuid: "downloaded", version: "ipa-version", isSigned: false)
+        let signed = LocalApp(uuid: "signed-download", version: "signed-version")
+        let clone = LocalApp(uuid: "clone", identifier: bundle + ".clone")
+        for candidate in [imported, signed, clone] {
+            Storage.shared.addSourceMetadata(for: candidate.uuid!, kind: candidate.isSigned ? .signed : .imported,
+                                             provenance: update.sourceProvenance)
+        }
+        let packageRoot = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: packageRoot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: packageRoot) }
+        func packageURL(_ app: AppInfoPresentable) -> URL { packageRoot.appendingPathComponent(app.uuid!) }
+        func available(_ app: AppInfoPresentable) -> Bool { FileManager.default.fileExists(atPath: packageURL(app).path) }
+        try Data("completed import".utf8).write(to: packageURL(imported))
+        precondition(manager.downloadedApp(for: update, among: [local, imported], isPackageAvailable: available)?.uuid == imported.uuid,
+                     "Reuse imported source version even if the IPA's own version differs")
+        try Data("signed package".utf8).write(to: packageURL(signed))
+        try Data("clone".utf8).write(to: packageURL(clone))
+        precondition(manager.downloadedApp(for: update, among: [imported, clone, signed, local], isPackageAvailable: available)?.uuid == signed.uuid,
+                     "Prefer a ready signed package and never install a cloned identity")
+        let restarted = UpdateManager(session: URLSession(configuration: configuration))
+        precondition(restarted.downloadedApp(for: update, among: [signed, imported, local], isPackageAvailable: available)?.uuid == signed.uuid,
+                     "Reuse persists when the manager is recreated")
+        func record(version: String = update.remoteVersion, entry: String = update.sourceProvenance.sourceAppIdentifier,
+                    repositoryURL: URL = canonical, repositoryID: String? = officialID) {
+            Storage.shared.addSourceMetadata(for: signed.uuid!, kind: .signed, provenance: SourceAppProvenance(
+                sourceRepositoryURL: repositoryURL, sourceRepositoryIdentifier: repositoryID,
+                sourceRepositoryName: "Official", sourceAppIdentifier: entry, sourceAppName: "MuseumMuse",
+                sourceAppVersion: version, sourceAppVersionDate: nil,
+                sourceAppDownloadURL: URL(string: "https://example.com/changed-delivery-url.ipa")!))
+        }
+        record()
+        precondition(manager.downloadedApp(for: update, among: [signed], isPackageAvailable: available)?.uuid == signed.uuid,
+                     "A delivery URL change must not redownload the same source version")
+        record(repositoryURL: URL(string: "https://example.com/moved-source.json")!)
+        precondition(manager.downloadedApp(for: update, among: [signed], isPackageAvailable: available)?.uuid == signed.uuid)
+        record(version: "1.1.2")
+        precondition(manager.downloadedApp(for: update, among: [signed], isPackageAvailable: available) == nil)
+        record(entry: "different-subscription")
+        precondition(manager.downloadedApp(for: update, among: [signed], isPackageAvailable: available) == nil)
+        record(repositoryURL: URL(string: "https://example.com/unrelated-source.json")!, repositoryID: "unrelated")
+        precondition(manager.downloadedApp(for: update, among: [signed], isPackageAvailable: available) == nil)
+        record()
+        try FileManager.default.removeItem(at: packageURL(signed))
+        precondition(manager.downloadedApp(for: update, among: [signed, imported], isPackageAvailable: available)?.uuid == imported.uuid,
+                     "Missing signed files fall back to the completed import")
+        try FileManager.default.removeItem(at: packageURL(imported))
+        precondition(manager.downloadedApp(for: update, among: [signed, imported, local], isPackageAvailable: available) == nil,
+                     "Missing files must permit a fresh download")
+        for candidate in [imported, signed, clone] { Storage.shared.deleteSourceMetadata(for: candidate.uuid) }
+        checkpoint("download reuse: signed/imported, restart, source version, URL migration, variants, clones and missing files passed")
         let pendingUpdates = manager.updates
         let checkedDate = manager.lastCheckedDate
         FixtureProtocol.error = URLError(.cancelled)

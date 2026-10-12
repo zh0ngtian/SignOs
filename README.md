@@ -37,7 +37,8 @@ contributors for their work, this wouldn't exist without them.
 - Auto-update toggles per app and per source
 - Live download progress in Notification Center with speed and ETA
 - What's New text from the source in the update notification
-- Update All, Recently Updated, and home screen badge for pending updates
+- Update All reuses downloaded source versions: signed packages install directly, imported packages resume signing; only missing versions download again
+- Recently Updated and home screen badge for pending updates
 
 ### Background Signing
 - Serial signing queue — every import or download signs itself automatically
@@ -144,6 +145,14 @@ gh workflow run ios-regression.yml --repo zh0ngtian/SignOs --ref main
 ```
 
 该手动入口不替代改动所需的本地功能验收，也不包含依赖真机或私有配置的 OTA 验收。
+
+更新管理器回归还验证已下载版本复用、来源与订阅匹配、签名包优先及文件缺失回退。
+签名队列回归使用生产 `AutoSignManager.swift`，以可控签名与安装替身验证已有签名包
+直接安装、连续点击去重、串行安装及已导入包继续签名：
+
+```sh
+python3 scripts/test_auto_sign_manager.py <SIMULATOR_UDID>
+```
 
 下载管理器回归使用生产 `DownloadManager.swift` 和本地限速 HTTP 服务，验证重复调用
 只产生一个传输、暂停恢复复用原任务、取消行为及下载完成后的导入等待。签名、导入和
