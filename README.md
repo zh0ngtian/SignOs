@@ -36,7 +36,8 @@ contributors for their work, this wouldn't exist without them.
 - Skip This Version and Hold Updates per app
 - Auto-update toggles per app and per source
 - Live download progress in Notification Center with speed and ETA
-- What's New text from the source in the update notification
+- What's New text from the source in each Available Updates card and update notification;
+  multiline notes are shown in full, with a localized fallback when no notes are provided
 - Update All reuses downloaded source versions: signed packages install directly, imported packages resume signing; only missing versions download again
 - Recently Updated and home screen badge for pending updates
 
