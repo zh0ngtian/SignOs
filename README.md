@@ -337,6 +337,16 @@ GitHub Actions 构建与标签发布均成功。相同 CI 产物完成 Ad Hoc �
 SHA-256 为 `f3ed710e2c1a071a573885d12dde37abf428fb571b5c7ddadff7bfa3529cc7bd`。真机覆盖安装未在本次验证；
 实测记录见 [1.0.15 发布凭证](docs/plans/evidence/ota-publication-1.0.15-20261012.json)。
 
+2026-10-12 后续发布 1.0.16（17）：旧签名包与未签名包改为在安装结束时一起清理，
+服务器安装以进度出现后消失或归零为清理信号，配对安装以成功返回为信号；
+待安装或明确报错时保留文件，最新签名包始终保留供重试。手动签名的原包删除也延后，
+待清理记录支持重启后重试及重新签名。安装清理模拟器回归、OneView 回归与本地构建通过，
+GitHub Actions 构建及标签发布成功，同一 CI 产物完成 Ad Hoc 签名和固定 OTA 发布。
+已核对 Release 附件、固定入口、manifest、版本及完整 IPA 下载；签名包为 14,861,457 字节，
+SHA-256 为 `57b2262cf2d0ec0847930473fe1db18a2e98ba327eeedb4728df0422567bcfbc`。
+进度消失仍不能证明新版实际安装成功；真机覆盖安装未在本次验证。
+实测记录见 [1.0.16 发布凭证](docs/plans/evidence/ota-publication-1.0.16-20261012.json)。
+
 The installed 1.0.0 release is this project's upgrade baseline. The private
 configuration now uses `compatibilityIpa` plus `compatibilityIpaSha256`, with
 `firstInstall` removed. Preserve that signed IPA and do not reuse another app's

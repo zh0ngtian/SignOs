@@ -1,0 +1,37 @@
+{
+  "version": "1.0.16",
+  "buildNumber": "17",
+  "bundleId": "com.signos.app",
+  "signed": true,
+  "size": 14861457,
+  "sha256": "57b2262cf2d0ec0847930473fe1db18a2e98ba327eeedb4728df0422567bcfbc",
+  "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+  "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.0.16/latest.ipa",
+  "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.0.16/manifest.plist",
+  "publishedAt": "2026-10-12T02:43:17.778953+00:00",
+  "sourceCommit": "c06c1792ac6d3ed37166a0df87c7d1bb29ca72bd",
+  "unsignedIpaSha256": "aebde04b7095f2c3b8ff3d53708857ba8433cb5c34954ad17b3adf709b53f07b",
+  "githubReleaseUrl": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.0.16",
+  "buildRun": 38196363921,
+  "releaseRun": 38196872479,
+  "fixedIpaUrl": "https://192.168.123.79:8769/channels/signos/current/latest.ipa",
+  "httpsFullDownloadVerified": true,
+  "localQA": {
+    "version": "1.0.16",
+    "buildNumber": "17",
+    "sourceCommit": "c06c1792ac6d3ed37166a0df87c7d1bb29ca72bd",
+    "simulator": "iPhone 17 Pro / iOS 26.5",
+    "checks": [
+      "Simulator Debug build and launch passed",
+      "OneViewPhaseRegression: 6 passed",
+      "Production cleanup policy and storage deletion simulator regression passed with isolated Core Data and package files",
+      "New cleanup utility and storage integration compiled and passed under Swift 6",
+      "No progress before install and active progress retain old signed and imported packages",
+      "Disappearance or zero after positive progress triggers cleanup once",
+      "Persisted plans support retry after relaunch and carry imported packages through re-signing",
+      "Current and unrelated signed packages remain intact",
+      "Replacement toggle and delayed manual imported-package deletion verified"
+    ],
+    "physicalUpgradeVerified": false
+  }
+}
