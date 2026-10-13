@@ -14,8 +14,19 @@
 - [x] 替换刷新闭包的一处管理器引用；在同一模拟器确认刷新入口执行、检查完成且无取消提示。
 - [x] 运行更新管理器回归，检查同步顺序、取消传播、失败保留旧结果与重试。
 - [x] 完成设备 Release 构建、发布合同回归、工作流核对及 diff 检查。
-- [ ] 提交并 push 开发分支，登记 ready，等待协调器的 GitHub Release 与固定 OTA 共同凭证。
+- [x] 提交并 push 开发分支，登记 ready，等待协调器的 GitHub Release 与固定 OTA 共同凭证。
 
 功能验收为模拟器运行；不据此声称真机覆盖安装与数据保留已验证。诊断原始数据和 Debug 包留在仓库外，只提交不含设备或签名资料的核验摘要。
 
-本地验收摘要见 [核验记录](evidence/pull-refresh-cancellation-20261014.json)。独立只读审查确认同一 MainActor 单例、检查参数、直接 await、原有取消传播与进度显示均保留，无发布前阻塞问题。发布结果待协调器共同凭证补齐。
+本地验收摘要见 [核验记录](evidence/pull-refresh-cancellation-20261014.json)。独立只读审查确认同一 MainActor 单例、检查参数、直接 await、原有取消传播与进度显示均保留，无发布前阻塞问题。发布共同凭证见下节。
+
+## 发布验收（2026-10-14）
+
+已由协调器交付 1.1.9（构建 31），批次 `06ecd717-43c6-4e4e-8aef-d7b82f396d7c`。
+冻结提交 `7017b01af342d386e13c4556ffbfd2c6d1c856ed` 的
+[正式 main 构建](https://github.com/zh0ngtian/SignOs/actions/runs/38430616460)与
+[标签发布工作流](https://github.com/zh0ngtian/SignOs/actions/runs/38432787151)均成功；
+[GitHub Release](https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.9)三个附件与同提交的 CI 产物匹配。
+[固定 OTA 安装页](https://192.168.123.79:8769/channels/signos/current/install.html)、manifest、包身份、版本/构建号及完整下载散列已回验。
+现有正式仓库软件源订阅已同步，公开 1.1.9（31）及具体中文更新说明；原历史记录和签名凭证保留。
+[共享发布凭证](evidence/release-batch-1.1.9-20261014.json)记录两个渠道和软件源回验，不代表已完成真机覆盖安装。

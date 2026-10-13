@@ -1,0 +1,114 @@
+{
+  "id": "06ecd717-43c6-4e4e-8aef-d7b82f396d7c",
+  "project": "signos-production",
+  "scope": "96c87efa825ae59a58d467fb058a33fd710e4ced9bee0b003923625611c49047",
+  "frozen": {
+    "buildNumber": "31",
+    "environment": "production",
+    "manifestSha256": "1dd3f4859d7dda10f3f46d8555bbd5f24dc3b3e6efb6028a61d90a649aa37642",
+    "sha": "7017b01af342d386e13c4556ffbfd2c6d1c856ed",
+    "target": "com.signos.app",
+    "tasks": [
+      {
+        "id": "signos-pull-refresh-20261014",
+        "sha": "f0bc0916308bc9decceb62f2bb1a8c7f88ef79d6"
+      }
+    ],
+    "version": "1.1.9"
+  },
+  "results": {
+    "build": {
+      "buildNumber": "31",
+      "commit": "7017b01af342d386e13c4556ffbfd2c6d1c856ed",
+      "runId": 38430616460,
+      "sha256": "5c58f3d92744d4d942a640d1d70bbed690112cc76348c0fc56af60066820f58e",
+      "version": "1.1.9"
+    },
+    "github": {
+      "runId": 38432787151,
+      "sha256": "5c58f3d92744d4d942a640d1d70bbed690112cc76348c0fc56af60066820f58e",
+      "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.9"
+    },
+    "ota": {
+      "buildNumber": "31",
+      "bundleId": "com.signos.app",
+      "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.9/latest.ipa",
+      "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+      "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.9/manifest.plist",
+      "sha256": "c5e2c277869a8f1276d906ec1da7f39452aa19d8f401d30bbe9148db4c394a1a",
+      "signed": true,
+      "size": 14986999,
+      "sourceCommit": "7017b01af342d386e13c4556ffbfd2c6d1c856ed",
+      "version": "1.1.9"
+    },
+    "prepare": {
+      "buildNumber": "31",
+      "bundleIdentifier": "com.signos.app",
+      "inputFingerprint": "61ba44fc4db6ee65630dffbb32e915e223903edafad8947d0825bf2eb871f129",
+      "localValidation": "passed",
+      "version": "1.1.9"
+    },
+    "verify": {
+      "github": {
+        "runId": 38432787151,
+        "sha256": "5c58f3d92744d4d942a640d1d70bbed690112cc76348c0fc56af60066820f58e",
+        "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.9"
+      },
+      "httpsFullDownloadVerified": true,
+      "ota": {
+        "buildNumber": "31",
+        "bundleId": "com.signos.app",
+        "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.9/latest.ipa",
+        "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+        "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.9/manifest.plist",
+        "sha256": "c5e2c277869a8f1276d906ec1da7f39452aa19d8f401d30bbe9148db4c394a1a",
+        "signed": true,
+        "size": 14986999,
+        "sourceCommit": "7017b01af342d386e13c4556ffbfd2c6d1c856ed",
+        "version": "1.1.9"
+      }
+    }
+  },
+  "completedAt": 1791909830.1080692,
+  "coordinatorVersion": "0.1.4",
+  "recoveryChain": [],
+  "recoveryOf": null,
+  "tasks": [
+    {
+      "id": "signos-pull-refresh-20261014",
+      "sha": "f0bc0916308bc9decceb62f2bb1a8c7f88ef79d6"
+    }
+  ],
+  "functionalValidation": {
+    "scope": "应用页下拉刷新不因页面检查状态变化而取消；同一原有检查流程、参数与取消传播保持一致。",
+    "checks": [
+      "最新1.1.8代码在iOS27模拟器修复前复现取消，修复后下拉取得真实软件源中的1.1.8更新候选。",
+      "更新管理器回归通过同步顺序、单次获取、取消/重试、版本/来源身份、HTTP和JSON失败保留旧结果。",
+      "模拟器Debug及设备Release构建通过；协调器合并后1.1.9(31)本地构建与正式main/tag工作流通过。",
+      "11项适配器、7项产物、7项附件回归通过，工作流核对、独立只读代码审查及diff检查通过。"
+    ],
+    "limitations": [
+      "未进行真机覆盖安装或数据保留验收。"
+    ]
+  },
+  "postReleaseVerification": {
+    "version": "1.1.9",
+    "buildNumber": "31",
+    "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+    "fixedPageVerified": true,
+    "fixedManifestVerified": true,
+    "fullDownloadVerified": true,
+    "size": 14986999,
+    "sha256": "c5e2c277869a8f1276d906ec1da7f39452aa19d8f401d30bbe9148db4c394a1a",
+    "sourceCommit": "7017b01af342d386e13c4556ffbfd2c6d1c856ed"
+  },
+  "softwareSourceVerification": {
+    "sourceURL": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json",
+    "version": "1.1.9",
+    "buildNumber": "31",
+    "downloadURL": "https://github.com/zh0ngtian/SignOs/releases/download/v1.1.9/SignOs.ipa",
+    "sha256": "5c58f3d92744d4d942a640d1d70bbed690112cc76348c0fc56af60066820f58e",
+    "size": 14941503,
+    "changelogChinese": true
+  }
+}

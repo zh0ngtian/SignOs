@@ -697,3 +697,20 @@ SHA256SUMS 核对通过，更新日志已使用中文列出本版实际变化。
 固定 OTA 页面、manifest、完整 IPA 的版本 1.1.8、构建号 30 与 SHA-256 已在线回验。
 [共同批次凭证](docs/plans/evidence/release-batch-1.1.8-20261013.json) 记录冻结提交及两渠道结果。
 功能验收使用 iPhone 17e / iOS 26.5 模拟器；本次没有进行真机覆盖安装或数据保留验收。
+
+
+### 应用页下拉刷新取消修复（1.1.9 / 31）
+
+修复应用页下拉检查更新时，页面检查状态变化导致刷新任务被取消、显示「更新检查已取消」并保留旧版本结果的问题。
+刷新动作直接引用原有共享管理器，继续等待现有检查流程；进度显示、同步顺序和取消传播保留。
+最新代码在 iOS 27 模拟器完成修复前/后对照，并以合成本地 1.1.3 记录取得真实软件源中的 1.1.8 候选；
+更新管理器回归、Debug 与设备 Release 构建、发布合同检查及独立审查通过。
+
+协调器以 1.1.9（31）完成双渠道交付：冻结提交 `7017b01af342d386e13c4556ffbfd2c6d1c856ed` 的
+[main 构建](https://github.com/zh0ngtian/SignOs/actions/runs/38430616460)与
+[标签发布](https://github.com/zh0ngtian/SignOs/actions/runs/38432787151)均成功，
+[GitHub Release](https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.9)附件匹配同提交的 CI 产物。
+[固定 OTA 安装页](https://192.168.123.79:8769/channels/signos/current/install.html)、manifest 及完整 IPA 已回验；
+Ad Hoc 签名包为 14,986,999 字节，SHA-256 `c5e2c277869a8f1276d906ec1da7f39452aa19d8f401d30bbe9148db4c394a1a`。
+现有软件源已同步到 1.1.9（31），使用中文更新说明，未新增签名包归档渠道。
+[发布凭证](docs/plans/evidence/release-batch-1.1.9-20261014.json)记录实际验收范围；未进行真机覆盖安装和数据保留验收。
