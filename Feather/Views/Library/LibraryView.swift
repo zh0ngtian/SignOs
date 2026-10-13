@@ -86,7 +86,8 @@ struct LibraryView: View {
             }
             .background(WSSurface.background)
             .toolbar(.hidden, for: .navigationBar)
-            .refreshable { await checker.checkNow(notifyWhenClean: false, syncManagedSources: true) }
+            // Keep the refresh action independent of the changing view value.
+            .refreshable { await AutoUpdateManager.shared.checkNow(notifyWhenClean: false, syncManagedSources: true) }
             .sheet(isPresented: $importing) {
                 FileImporterRepresentableView(allowedContentTypes: [.ipa, .tipa], allowsMultipleSelection: true, onDocumentsPicked: { urls in
                     for url in urls {
