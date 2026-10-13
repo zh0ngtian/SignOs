@@ -171,6 +171,22 @@ gh workflow run ios-regression.yml --repo zh0ngtian/SignOs --ref main
 
 该手动入口不替代改动所需的本地功能验收，也不包含依赖真机或私有配置的 OTA 验收。
 
+添加软件源统一使用公开的 AltStore 格式 URL，无须管理 Token。需要管理时，进入已添加的
+软件源，点击右上角“软件源设置”齿轮，再填写管理 Token 并连接；Token 成功连接后保存在
+钥匙串。管理入口先识别管理服务的 HTTPS 源地址（`/source.json`、`/appstore` 或
+`/sources/<id>.json`），再通过公开 `/health` 返回的 `signos-source-aggregator` 服务标志
+确认管理能力，无须发送 Token；普通静态源不显示设置齿轮。服务无法确认时暂不显示，重新
+进入该源会再次检查。管理页不再提供“订阅到 SignOs”、“分享软件源地址”或二级
+“软件源设置”。软件源列表卡片可长按选择“移除软件源”，确认后移除，普通源也可使用。
+
+管理能力识别可单独回归：
+
+```sh
+xcrun swiftc Feather/Backend/CloudSource/CloudSourceModels.swift \
+  Tests/CloudSourceManagementRegression.swift -o /tmp/signos-management-regression
+/tmp/signos-management-regression
+```
+
 远端软件源的“添加订阅”支持一次选择同一 GitHub Release 的多个 IPA。每个附件都有独立的
 匹配规则、订阅 ID、同步状态和版本历史；解析成功后仍需逐项确认发布。同 Bundle ID 的
 不同变体继续按订阅 ID 区分。自动生成的规则若会命中其他附件，则保留精确文件名，需按实际

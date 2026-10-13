@@ -1,0 +1,258 @@
+{
+  "date": "2026-10-13",
+  "xcode": "27",
+  "simulator": "iPhone 17e / iOS 26.5",
+  "scope": "完整生产应用的界面验收；未进行真机安装。",
+  "checks": [
+    {
+      "name": "ios-simulator-build",
+      "status": "passed",
+      "evidence": "XcodeBuildMCP 编译完整 Debug 应用；构建日志 ** BUILD SUCCEEDED **。项目将 .app 输出到 _build/Applications，改为从实际路径安装并启动成功。"
+    },
+    {
+      "name": "management-capability-regression",
+      "status": "passed",
+      "evidence": "CloudSourceManagementRegression：兼容服务、三种同路径静态源404、其他服务/无效JSON、超时、无Token请求、非候选地址不探测；兼容服务断言先失败，再实现并通过。"
+    },
+    {
+      "name": "subscription-regression",
+      "status": "passed",
+      "evidence": "CloudSourceSubscriptionRegression：独立规则/订阅ID、连续修订号、部分重试、响应丢失、目录刷新失败；现有钥匙串保存/删除路径在本机回归中通过。"
+    },
+    {
+      "name": "source-access-regression",
+      "status": "passed",
+      "evidence": "SourceAccessRegression：启停、作用域取消、保留归档、延迟删除与迟到签名结果。"
+    },
+    {
+      "name": "runtime-ui",
+      "status": "passed",
+      "evidence": "添加页没有管理连接入口；实际HTTPS静态 /source.json 没有 source-settings；兼容服务有齿轮并可输入Token；连接后无订阅到SignOs、分享软件源地址、二级软件源设置；普通源卡片长按移除，二次确认后从列表消失；深色最大辅助字号可换行。"
+    },
+    {
+      "name": "adapter-regression",
+      "status": "passed",
+      "evidence": "python3 -B -m unittest discover -s Tests -p test_signos_release_adapter.py：7项通过。"
+    },
+    {
+      "name": "release-artifact-regression",
+      "status": "passed",
+      "evidence": "python3 -B -m unittest discover -s Tests -p test_release_artifact.py：7项通过。"
+    },
+    {
+      "name": "release-assets-regression",
+      "status": "passed",
+      "evidence": "python3 -B Tests/GitHubReleaseRegression.py：7项通过。"
+    },
+    {
+      "name": "workflow-review",
+      "status": "passed",
+      "evidence": "PyYAML解析 ios-build.yml / ios-regression.yml；正式工作流无改动，核对全历史检出、冻结检查、signos-production-release组、cancel-in-progress=false、queue=max；手动回归增加管理能力检测。"
+    },
+    {
+      "name": "code-review",
+      "status": "passed",
+      "evidence": "requesting-code-review 只读审查指出路径误判；加公开健康接口检测后复查通过，独立运行新增回归与diff检查通过。"
+    },
+    {
+      "name": "diff-check",
+      "status": "passed",
+      "evidence": "git diff --check：exit 0。"
+    }
+  ],
+  "limitations": [
+    "无签名的模拟器应用缺少钥匙串权限，连接已成功读取管理目录，但 Token 保存返回错误；本次未改动钥匙串实现，不宣称模拟器证明了 Token 持久化。现有本机 CloudSourceSubscriptionRegression 的保存路径通过。",
+    "管理服务无法确认时暂不显示齿轮；重新进入源重新检测。"
+  ],
+  "screenshots": [
+    "add-source.jpg",
+    "static-source.jpg",
+    "token.jpg",
+    "connected.jpg",
+    "dark-max-token.jpg"
+  ],
+  "runtimeSnapshots": [
+    {
+      "name": "add-source",
+      "targets": [
+        "e26|tap|button|SignOs Repository、1 个应用 · 12秒钟前||",
+        "e101|typeText|text-field||输入软件源链接|",
+        "e31|tap|button|可管理测试源、1 个应用 · 12秒钟前||",
+        "e36|tap|button|添加软件源||",
+        "e51|tap|tab|软件源|1|externaldrive.fill",
+        "e53|tap|tab|应用|0|square.stack.3d.up.fill",
+        "e55|tap|tab|设置|0|gearshape.fill",
+        "e83|tap|button|关闭||xmark",
+        "e110|tap|button|导入||",
+        "e116|tap|button|导出||",
+        "e135|tap|button|添加||",
+        "e142|tap|button|添加||",
+        "e150|tap|button|添加||",
+        "e158|tap|button|添加||",
+        "e166|tap|button|添加||"
+      ],
+      "text": [
+        "e24|text|text|SignOs||",
+        "e25|text|text|软件源||",
+        "e28|text|text|SignOs Repository||",
+        "e29|text|text|1 个应用 · 12秒钟前||",
+        "e105|text|text|仅支持 AltStore 格式的软件源。||",
+        "e33|text|text|可管理测试源||",
+        "e112|text|text|导入||",
+        "e34|text|text|1 个应用 · 12秒钟前||",
+        "e118|text|text|导出||",
+        "e38|text|text|添加软件源||",
+        "e123|text|text|支持从 KravaSign、MapleSign 和 ESign 导入。||",
+        "e133|text|text|Aidoku Source||",
+        "e134|text|text|https://raw.githubusercontent.com/Aidoku/Aidoku/altstore/apps.json||",
+        "e140|text|text|crystall1ne.dev||",
+        "e141|text|text|https://alt.crystall1ne.dev||",
+        "e148|text|text|Feather Repository||",
+        "e149|text|text|https://raw.githubusercontent.com/claration/Feather/refs/heads/main/app-repo.json||",
+        "e156|text|text|Flycast-iOS26||",
+        "e157|text|text|https://github.com/chachillie/Flycast-iOS/raw/main/flycast-ios.json||",
+        "e164|text|text|iTorrent Source||",
+        "e165|text|text|https://xitrix.github.io/iTorrent/AltStore.json||"
+      ]
+    },
+    {
+      "name": "static-source",
+      "targets": [
+        "e22|typeText|text-field||搜索|",
+        "e15|tap|button|返回||BackButton",
+        "e16|tap|button|普通静态测试源||",
+        "e19|tap|button|过滤||",
+        "e20|tap|button|||",
+        "e40|tap|button|安装||",
+        "e60|tap|tab|软件源|1|externaldrive.fill",
+        "e62|tap|tab|应用|0|square.stack.3d.up.fill",
+        "e64|tap|tab|设置|0|gearshape.fill"
+      ],
+      "text": [
+        "e38|text|text|测试应用||",
+        "e39|text|text|1.0.0 • 只用于界面验证||"
+      ]
+    },
+    {
+      "name": "token",
+      "targets": [
+        "e37|typeText|text-field||管理 Token|cloud-source-token",
+        "e15|tap|button|可管理测试源||BackButton",
+        "e52|tap|button|移除软件源||source-remove",
+        "e65|tap|tab|软件源|1|externaldrive.fill",
+        "e67|tap|tab|应用|0|square.stack.3d.up.fill",
+        "e69|tap|tab|设置|0|gearshape.fill"
+      ],
+      "text": [
+        "e33|text|text|服务 HTTPS 地址、https://localhost:19451||",
+        "e32|text|text|服务 HTTPS 地址||",
+        "e47|text|text|输入管理 Token 后，可以添加订阅和查看同步结果。||"
+      ]
+    },
+    {
+      "name": "connected",
+      "targets": [
+        "e15|tap|button|可管理测试源||BackButton",
+        "e33|tap|button|立即同步||",
+        "e53|tap|button|添加订阅||",
+        "e61|tap|button|移除软件源||source-remove",
+        "e80|tap|tab|软件源|1|externaldrive.fill",
+        "e82|tap|tab|应用|0|square.stack.3d.up.fill",
+        "e84|tap|tab|设置|0|gearshape.fill"
+      ],
+      "text": [
+        "e29|text|text|软件源、可管理测试源||",
+        "e28|text|text|软件源||",
+        "e35|text|text|立即同步||",
+        "e40|text|text|IPA 从原始地址直接下载。配置保存在远端，应用默认每小时检查一次更新。||",
+        "e49|text|text|添加 GitHub 仓库或 IPA 下载地址。||",
+        "e55|text|text|添加订阅||",
+        "e67|text|text|管理 Token 无法保存到钥匙串||"
+      ]
+    },
+    {
+      "name": "remove-menu",
+      "targets": [
+        "e26|tap|button|SignOs Repository、1 个应用 · 8秒钟前||",
+        "e31|tap|button|可管理测试源、1 个应用 · 8秒钟前||",
+        "e36|tap|button|普通静态测试源、1 个应用 · 8秒钟前||",
+        "e41|tap|button|添加软件源||",
+        "e56|tap|tab|软件源|1|externaldrive.fill",
+        "e58|tap|tab|应用|0|square.stack.3d.up.fill",
+        "e60|tap|tab|设置|0|gearshape.fill",
+        "e92|tap|button|移除软件源||trash"
+      ],
+      "text": [
+        "e24|text|text|SignOs||",
+        "e25|text|text|软件源||",
+        "e28|text|text|SignOs Repository||",
+        "e29|text|text|1 个应用 · 8秒钟前||",
+        "e33|text|text|可管理测试源||",
+        "e34|text|text|1 个应用 · 8秒钟前||",
+        "e38|text|text|普通静态测试源||",
+        "e39|text|text|1 个应用 · 8秒钟前||",
+        "e43|text|text|添加软件源||"
+      ]
+    },
+    {
+      "name": "remove-confirmation",
+      "targets": [
+        "e26|tap|button|SignOs Repository、1 个应用 · 2分钟前||",
+        "e31|tap|button|可管理测试源、1 个应用 · 2分钟前||",
+        "e36|tap|button|普通静态测试源、1 个应用 · 2分钟前||",
+        "e41|tap|button|添加软件源||",
+        "e56|tap|tab|软件源|1|externaldrive.fill",
+        "e58|tap|tab|应用|0|square.stack.3d.up.fill",
+        "e60|tap|tab|设置|0|gearshape.fill",
+        "e113|tap|button|移除软件源||"
+      ],
+      "text": [
+        "e24|text|text|SignOs||",
+        "e25|text|text|软件源||",
+        "e28|text|text|SignOs Repository||",
+        "e29|text|text|1 个应用 · 2分钟前||",
+        "e33|text|text|可管理测试源||",
+        "e34|text|text|1 个应用 · 2分钟前||",
+        "e38|text|text|普通静态测试源||",
+        "e39|text|text|1 个应用 · 2分钟前||",
+        "e43|text|text|添加软件源||",
+        "e101|text|text|移除软件源？||"
+      ]
+    },
+    {
+      "name": "removed",
+      "targets": [
+        "e25|tap|button|SignOs Repository、1 个应用 · 2分钟前||",
+        "e30|tap|button|可管理测试源、1 个应用 · 2分钟前||",
+        "e35|tap|button|添加软件源||",
+        "e50|tap|tab|软件源|1|externaldrive.fill",
+        "e52|tap|tab|应用|0|square.stack.3d.up.fill",
+        "e54|tap|tab|设置|0|gearshape.fill"
+      ],
+      "text": [
+        "e23|text|text|SignOs||",
+        "e24|text|text|软件源||",
+        "e27|text|text|SignOs Repository||",
+        "e28|text|text|1 个应用 · 2分钟前||",
+        "e32|text|text|可管理测试源||",
+        "e33|text|text|1 个应用 · 2分钟前||",
+        "e37|text|text|添加软件源||"
+      ]
+    },
+    {
+      "name": "dark-max-token",
+      "targets": [
+        "e44|typeText|text-field||管理 Token|cloud-source-token",
+        "e15|tap|button|可管理测试源||BackButton",
+        "e67|tap|tab|软件源|1|",
+        "e69|tap|tab|应用|0|",
+        "e71|tap|tab|设置|0|"
+      ],
+      "text": [
+        "e40|text|text|服务 HTTPS 地址、https://localhost:19451||",
+        "e39|text|text|服务 HTTPS 地址||",
+        "e54|text|text|输入管理 Token 后，可以添加订阅和查看同步结果。||"
+      ]
+    }
+  ]
+}
