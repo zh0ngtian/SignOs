@@ -1,0 +1,265 @@
+{
+  "date": "2026-10-13",
+  "batchReceipt": {
+    "completedAt": 1791855245.856134,
+    "coordinatorVersion": "0.1.3",
+    "frozen": {
+      "buildNumber": "25",
+      "environment": "production",
+      "manifestSha256": "e7c2adffb6859b0932950916e45cc5cdbe0da186682c969f18f1f9b40dc63759",
+      "sha": "a63cba491b3d2ac611f7de9cb15a7aec07d8d312",
+      "target": "com.signos.app",
+      "tasks": [
+        {
+          "id": "signos-install-button-colors",
+          "sha": "0edc9c3039b8b553a1816522bcc3f4c60862f20f"
+        },
+        {
+          "id": "signos-install-button-cache-repair",
+          "sha": "6a5901bf677e1f34acc78fa9a5c480dbb0cd551e"
+        },
+        {
+          "id": "signos-install-binary-cache-repair",
+          "sha": "3af403e7481cc6de7ed8c4c4f95a4b89d613f8c7"
+        }
+      ],
+      "version": "1.1.3"
+    },
+    "id": "e0ee500e-cc0d-4ec7-ba7d-dae6e30a35a8",
+    "project": "signos-production",
+    "recoveryChain": [
+      "e002276a-9548-44db-bdbf-ff0b08b2252c",
+      "3cb6ae09-62b2-47d8-b19f-5db45ab8f96a"
+    ],
+    "recoveryOf": "3cb6ae09-62b2-47d8-b19f-5db45ab8f96a",
+    "results": {
+      "build": {
+        "buildNumber": "25",
+        "commit": "a63cba491b3d2ac611f7de9cb15a7aec07d8d312",
+        "runId": 38331953189,
+        "sha256": "52fcb3b3706d90e40e2a1c931746fbfd88b50e411d1a3ee698cb5361e31e4af0",
+        "version": "1.1.3"
+      },
+      "github": {
+        "runId": 38332679878,
+        "sha256": "52fcb3b3706d90e40e2a1c931746fbfd88b50e411d1a3ee698cb5361e31e4af0",
+        "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.3"
+      },
+      "ota": {
+        "buildNumber": "25",
+        "bundleId": "com.signos.app",
+        "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.3/latest.ipa",
+        "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+        "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.3/manifest.plist",
+        "sha256": "67f9e1157501914f3adcd48888278aa0783cb6c33a7e9f66b4e7ec1a63484e53",
+        "signed": true,
+        "size": 14939189,
+        "sourceCommit": "a63cba491b3d2ac611f7de9cb15a7aec07d8d312",
+        "version": "1.1.3"
+      },
+      "prepare": {
+        "buildNumber": "25",
+        "bundleIdentifier": "com.signos.app",
+        "inputFingerprint": "d6c0f2a1967ff14cefcce97690997afc101695e223a14e1071ac8a2e8d39b183",
+        "localValidation": "passed",
+        "version": "1.1.3"
+      },
+      "verify": {
+        "github": {
+          "runId": 38332679878,
+          "sha256": "52fcb3b3706d90e40e2a1c931746fbfd88b50e411d1a3ee698cb5361e31e4af0",
+          "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.3"
+        },
+        "httpsFullDownloadVerified": true,
+        "ota": {
+          "buildNumber": "25",
+          "bundleId": "com.signos.app",
+          "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.3/latest.ipa",
+          "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+          "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.3/manifest.plist",
+          "sha256": "67f9e1157501914f3adcd48888278aa0783cb6c33a7e9f66b4e7ec1a63484e53",
+          "signed": true,
+          "size": 14939189,
+          "sourceCommit": "a63cba491b3d2ac611f7de9cb15a7aec07d8d312",
+          "version": "1.1.3"
+        }
+      }
+    },
+    "scope": "96c87efa825ae59a58d467fb058a33fd710e4ced9bee0b003923625611c49047",
+    "tasks": [
+      {
+        "id": "signos-install-button-colors",
+        "sha": "0edc9c3039b8b553a1816522bcc3f4c60862f20f",
+        "validation": {
+          "checkedAt": 1791854181.452239,
+          "checks": [
+            {
+              "evidence": "python3 -B -m unittest discover -s Tests -p test_signos_release_adapter.py: 7 passed on release baseline 4a4e19486f317ce7d1e102dadd0d44d1bda597e5",
+              "name": "adapter-regression",
+              "status": "passed"
+            },
+            {
+              "evidence": "python3 -B -m unittest discover -s Tests -p test_release_artifact.py: 7 passed",
+              "name": "release-artifact-regression",
+              "status": "passed"
+            },
+            {
+              "evidence": "python3 -B Tests/GitHubReleaseRegression.py: 7 passed",
+              "name": "release-assets-regression",
+              "status": "passed"
+            },
+            {
+              "evidence": "ios-build.yml YAML parsed; signos-production-release group, cancel-in-progress false, queue max, full history and both frozen-batch gates verified",
+              "name": "workflow-review",
+              "status": "passed"
+            },
+            {
+              "evidence": "2026-10-12 full application Debug build and launch via XcodeBuildMCP: Xcode 27, iPhone 17 Pro / iOS 26.5; recorded in commit 0edc9c3039b8b553a1816522bcc3f4c60862f20f/docs/plans/evidence/install-button-colors-20261012/verification.json",
+              "name": "ios-simulator-build",
+              "status": "passed"
+            },
+            {
+              "evidence": "2026-10-12 xcrun swiftc Feather/Utilities/OneViewPhase.swift Tests/OneViewPhaseRegression.swift then execute: 6 passed; implementation only replaces label styling",
+              "name": "one-view-phase-regression",
+              "status": "passed"
+            },
+            {
+              "evidence": "2026-10-12 production app binary with isolated idle/ready source fixtures; light/dark matching capsules and Accessibility XXXL list/detail verified. Screenshots retained in task commit.",
+              "name": "install-button-runtime",
+              "status": "passed"
+            },
+            {
+              "evidence": "git diff --check 0edc9c3^ 0edc9c3: exit 0",
+              "name": "diff-check",
+              "status": "passed"
+            }
+          ]
+        }
+      },
+      {
+        "id": "signos-install-button-cache-repair",
+        "sha": "6a5901bf677e1f34acc78fa9a5c480dbb0cd551e",
+        "validation": {
+          "checkedAt": 1791854333.8504388,
+          "checks": [
+            {
+              "evidence": "python3 -B -m unittest discover -s Tests -p test_signos_release_adapter.py: 7 passed on release baseline 4a4e19486f317ce7d1e102dadd0d44d1bda597e5",
+              "name": "adapter-regression",
+              "status": "passed"
+            },
+            {
+              "evidence": "python3 -B -m unittest discover -s Tests -p test_release_artifact.py: 7 passed",
+              "name": "release-artifact-regression",
+              "status": "passed"
+            },
+            {
+              "evidence": "python3 -B Tests/GitHubReleaseRegression.py: 7 passed",
+              "name": "release-assets-regression",
+              "status": "passed"
+            },
+            {
+              "evidence": "ios-build.yml YAML parsed; signos-production-release group, cancel-in-progress false, queue max, full history and both frozen-batch gates verified",
+              "name": "workflow-review",
+              "status": "passed"
+            },
+            {
+              "evidence": "2026-10-12 full application Debug build and launch via XcodeBuildMCP: Xcode 27, iPhone 17 Pro / iOS 26.5; recorded in commit 0edc9c3039b8b553a1816522bcc3f4c60862f20f/docs/plans/evidence/install-button-colors-20261012/verification.json",
+              "name": "ios-simulator-build",
+              "status": "passed"
+            },
+            {
+              "evidence": "2026-10-12 xcrun swiftc Feather/Utilities/OneViewPhase.swift Tests/OneViewPhaseRegression.swift then execute: 6 passed; implementation only replaces label styling",
+              "name": "one-view-phase-regression",
+              "status": "passed"
+            },
+            {
+              "evidence": "2026-10-12 production app binary with isolated idle/ready source fixtures; light/dark matching capsules and Accessibility XXXL list/detail verified. Screenshots retained in task commit.",
+              "name": "install-button-runtime",
+              "status": "passed"
+            },
+            {
+              "evidence": "git diff --check 0edc9c3^ 0edc9c3: exit 0",
+              "name": "diff-check",
+              "status": "passed"
+            },
+            {
+              "evidence": "Official LicensePlist 3.27.1 archive SHA-256 24e066b23da58275a89a83cae05bf40cad8a48faacf10facbfa5c350efe02608 matches pinned Package.swift; restored cache manifest and all variant executable paths verified. Parent batch retained.",
+              "name": "licenseplist-cache-recovery",
+              "status": "passed"
+            }
+          ]
+        }
+      },
+      {
+        "id": "signos-install-binary-cache-repair",
+        "sha": "3af403e7481cc6de7ed8c4c4f95a4b89d613f8c7",
+        "validation": {
+          "checkedAt": 1791854513.767433,
+          "checks": [
+            {
+              "evidence": "python3 -B -m unittest discover -s Tests -p test_signos_release_adapter.py: 7 passed on release baseline 4a4e19486f317ce7d1e102dadd0d44d1bda597e5",
+              "name": "adapter-regression",
+              "status": "passed"
+            },
+            {
+              "evidence": "python3 -B -m unittest discover -s Tests -p test_release_artifact.py: 7 passed",
+              "name": "release-artifact-regression",
+              "status": "passed"
+            },
+            {
+              "evidence": "python3 -B Tests/GitHubReleaseRegression.py: 7 passed",
+              "name": "release-assets-regression",
+              "status": "passed"
+            },
+            {
+              "evidence": "ios-build.yml YAML parsed; signos-production-release group, cancel-in-progress false, queue max, full history and both frozen-batch gates verified",
+              "name": "workflow-review",
+              "status": "passed"
+            },
+            {
+              "evidence": "2026-10-12 full application Debug build and launch via XcodeBuildMCP: Xcode 27, iPhone 17 Pro / iOS 26.5; recorded in commit 0edc9c3039b8b553a1816522bcc3f4c60862f20f/docs/plans/evidence/install-button-colors-20261012/verification.json",
+              "name": "ios-simulator-build",
+              "status": "passed"
+            },
+            {
+              "evidence": "2026-10-12 xcrun swiftc Feather/Utilities/OneViewPhase.swift Tests/OneViewPhaseRegression.swift then execute: 6 passed; implementation only replaces label styling",
+              "name": "one-view-phase-regression",
+              "status": "passed"
+            },
+            {
+              "evidence": "2026-10-12 production app binary with isolated idle/ready source fixtures; light/dark matching capsules and Accessibility XXXL list/detail verified. Screenshots retained in task commit.",
+              "name": "install-button-runtime",
+              "status": "passed"
+            },
+            {
+              "evidence": "git diff --check 0edc9c3^ 0edc9c3: exit 0",
+              "name": "diff-check",
+              "status": "passed"
+            },
+            {
+              "evidence": "Official LicensePlist 3.27.1 archive SHA-256 24e066b23da58275a89a83cae05bf40cad8a48faacf10facbfa5c350efe02608 matches pinned Package.swift; restored cache manifest and all variant executable paths verified. Parent batch retained.",
+              "name": "licenseplist-cache-recovery",
+              "status": "passed"
+            },
+            {
+              "evidence": "IDevice 0.1.57 official archive SHA-256 40cd5c769b60d1879a96c9caa27666037f9d5321844addec40ae99727b142d10 verified against pinned checksum; all declared variants of IDevice, LicensePlistBinary and OpenSSL now exist.",
+              "name": "all-binary-artifact-recovery",
+              "status": "passed"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "independentAcceptance": {
+    "bothWorkflowRuns": "success at frozen SHA",
+    "releaseAssets": [
+      "SHA256SUMS",
+      "SignOs.ipa",
+      "build-metadata.json"
+    ],
+    "fixedHttpsEntryAndManifest": "passed",
+    "originalButtonChangeIncluded": true,
+    "physicalUpgradeVerified": false
+  }
+}

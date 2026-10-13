@@ -1,7 +1,7 @@
 {
   "date": "2026-10-12",
   "baseCommit": "b6d72ba4e8c1f2640732eed02854dcf7164867b5",
-  "status": "development-ready; publication pending release coordination",
+  "status": "published: SignOs 1.1.3 (25)",
   "change": "Ready-to-install actions reuse the idle WSSearchCapsuleLabel, including padding, colors and 44pt minimum tap height. Download, signing and installation actions remain unchanged.",
   "validation": {
     "build": "Complete Debug iOS Simulator app build and launch succeeded with Xcode 27; iPhone 17 Pro / iOS 26.5",
@@ -16,5 +16,9 @@
     "physicalInstallation": "Not exercised; appearance-only change",
     "diffCheck": "Passed"
   },
-  "releaseGap": "Project release coordinator/shared queue/lock are not implemented; no main advancement, version increment, GitHub Release or OTA publication performed."
+  "developmentStatus": "development-ready; publication pending release coordination",
+  "releaseGapAtDevelopmentTime": "Project release coordinator/shared queue/lock are not implemented; no main advancement, version increment, GitHub Release or OTA publication performed.",
+  "publicationDate": "2026-10-13",
+  "publicationReceipt": "../release-batch-1.1.3-20261013.json",
+  "publicationBatch": "e0ee500e-cc0d-4ec7-ba7d-dae6e30a35a8"
 }

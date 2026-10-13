@@ -579,3 +579,25 @@ canonical 全局 AGENTS.md，项目配置和恢复命令见 [发布协调说明]
 failed。公开字段、CI run、产物散列及耗时分布见
 [共同发布凭证](docs/plans/evidence/release-batch-1.1.2-20261013.json)。
 本次改动为发布基础设施及其验证输入，未执行真机覆盖安装与数据保留验收。
+
+### 软件源安装按钮统一（1.1.3 / 25）
+
+2026-10-13：未下载与已有签名包待安装的“安装”按钮共用灰底、主题色文字的胶囊，
+颜色、内边距和至少 44pt 点击高度一致；点击仍分别执行获取包与直接安装。
+浅色、深色及大字号的生产组件模拟器截图验收和 6 项安装状态回归已通过。
+
+原始开发提交 `0edc9c3039b8b553a1816522bcc3f4c60862f20f` 经协调器整合后，
+因本机 LicensePlist 和 IDevice 缓存缺失产生两次 prepare 失败；按原固定依赖校验和
+恢复后，关联子批次 `e0ee500e-cc0d-4ec7-ba7d-dae6e30a35a8` 完成本地 Release
+构建与发布回归，冻结提交 `a63cba491b3d2ac611f7de9cb15a7aec07d8d312`。
+[main 构建](https://github.com/zh0ngtian/SignOs/actions/runs/38331953189)与
+[标签发布](https://github.com/zh0ngtian/SignOs/actions/runs/38332679878)均成功，
+[GitHub Release](https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.3)附件与同批次 CI
+产物校验通过，同一产物完成 Ad Hoc 签名和固定 OTA 发布。
+
+[固定 OTA 安装页](https://192.168.123.79:8769/channels/signos/current/install.html)、
+manifest、版本 / 构建号、完整下载和独立验签通过；签名包 14,939,189 字节，SHA-256 为
+`67f9e1157501914f3adcd48888278aa0783cb6c33a7e9f66b4e7ec1a63484e53`。
+原始任务为 recovered，两次失败批次及诊断保留。真机覆盖安装与数据保留未验证。
+[共同发布凭证](docs/plans/evidence/release-batch-1.1.3-20261013.json)记录参与提交、
+恢复链、冻结提交、两个 workflow run 和双渠道验收结果。
