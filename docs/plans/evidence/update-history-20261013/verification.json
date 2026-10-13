@@ -1,0 +1,52 @@
+{
+  "date": "2026-10-13",
+  "environment": "Xcode 27, iPhone 17 Pro / iOS 26.5 simulator, isolated production app copy and local fixture feed",
+  "checks": [
+    {
+      "name": "adapter-regression",
+      "status": "passed",
+      "evidence": "python3 -B -m unittest discover -s Tests -p test_signos_release_adapter.py: 7 tests passed"
+    },
+    {
+      "name": "release-artifact-regression",
+      "status": "passed",
+      "evidence": "python3 -B -m unittest discover -s Tests -p test_release_artifact.py: 7 tests passed"
+    },
+    {
+      "name": "release-assets-regression",
+      "status": "passed",
+      "evidence": "python3 -B Tests/GitHubReleaseRegression.py: 7 tests passed"
+    },
+    {
+      "name": "workflow-review",
+      "status": "passed",
+      "evidence": "ios-build.yml parsed with PyYAML; signos-production-release concurrency group, cancel-in-progress false, queue max, full history and freeze gates checked; workflow unchanged"
+    },
+    {
+      "name": "update-manager-regression",
+      "status": "passed",
+      "evidence": "python3 scripts/test_update_manager.py <booted iOS 26.5 simulator>: production UpdateManager/Core Data regression success marker; upgrade range, semantic sorting, duplicates, subscription isolation, source-version baseline, blank notes, missing dates, single step and legacy feed covered"
+    },
+    {
+      "name": "ios-simulator-build",
+      "status": "passed",
+      "evidence": "XcodeBuildMCP build_run_sim compiled the complete Debug Feather target on Xcode 27 / iPhone 17 Pro iOS 26.5; no compiler errors. Tool install followed an invalid product symlink; actual _build/Applications/SignOs.app installed and launched successfully with install_app_sim/launch_app_sim"
+    },
+    {
+      "name": "update-history-runtime",
+      "status": "passed",
+      "evidence": "Isolated copy of the complete built application with a local HTTP source and signed 1.1.2 fixture: 1.12.0, 1.10.0, 1.3.0 descending; dates and complete final lines shown, no current-version log. Light/dark screenshots and Accessibility XXXL scrolling confirm complete wrapping of dates and notes"
+    },
+    {
+      "name": "diff-check",
+      "status": "passed",
+      "evidence": "git diff --check: exit 0"
+    }
+  ],
+  "physicalInstallVerified": false,
+  "scope": "UI and update metadata only; no signing/install state change",
+  "notes": [
+    "Existing project warnings remain outside the changed files.",
+    "Accessibility XXXL verification covers release history wrapping and scrolling; the existing app header layout is unchanged."
+  ]
+}

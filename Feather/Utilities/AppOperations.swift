@@ -145,7 +145,9 @@ enum AppOperations {
         let candidate = AppUpdate(id: uuid, localUUID: uuid, localVersion: baseline.version, remoteVersion: version,
             appName: provenance.sourceAppName ?? baseline.name ?? bundle, bundleIdentifier: bundle,
             downloadURL: url, sourceURL: provenance.sourceRepositoryURL, sourceProvenance: provenance,
-            whatsNew: nil, managedIdentifier: baseline.identifier)
+            whatsNew: nil,
+            releaseHistory: [UpdateRelease(version: version, date: provenance.sourceAppVersionDate, notes: nil)],
+            managedIdentifier: baseline.identifier)
         UpdateManager.shared.selectCandidate(candidate, for: bundle)
         update(candidate, allowReplacement: true, downloadID: id)
     }

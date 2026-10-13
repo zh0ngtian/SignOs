@@ -36,7 +36,7 @@ def main():
         subprocess.run(common + ["-I", str(output), "-L", str(app), "-lAltSourceKit",
                         "-Xlinker", "-rpath", "-Xlinker", "@executable_path",
                         *[str(ROOT / source) for source in [
-                            "Feather/Utilities/AppVersion.swift", "Feather/Utilities/AppInventory.swift", "Feather/Utilities/SourcePolicy.swift",
+                            "Feather/Utilities/AppVersion.swift", "Feather/Utilities/UpdateRelease.swift", "Feather/Utilities/AppInventory.swift", "Feather/Utilities/SourcePolicy.swift",
                             "Feather/Utilities/SourceRepositoryIdentity.swift", "Feather/Utilities/SourceSubscriptionIdentity.swift",
                             "Feather/Backend/Storage/Storage+SourceMetadata.swift", "Feather/Backend/Observable/UpdateManager.swift",
                             "Feather/Backend/CloudSource/CloudSourceModels.swift", "Feather/Backend/CloudSource/CloudSourceStore.swift",

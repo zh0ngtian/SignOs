@@ -115,6 +115,51 @@ struct UpdateManagerRegression {
             UserDefaults.standard.removeObject(forKey: "SignOs.skippedVersions")
             UserDefaults.standard.removeObject(forKey: "SignOs.cloudSourceMigration.v2")
         }
+        // Source order and publication dates must not determine semantic version order.
+        var historyApp = app(version: "1.12.0")
+        historyApp["versions"] = [
+            ["version": "1.12.0", "date": "2026-10-10T08:30:00Z", "localizedDescription": "最新改进", "downloadURL": "https://example.com/latest.ipa"],
+            ["version": "1.3.0", "date": "2026-10-12T00:00:00Z", "localizedDescription": "中间改进"],
+            ["version": "1.3.0", "localizedDescription": "重复记录不能重复显示"],
+            ["version": "1.10.0", "localizedDescription": "  \n "],
+            ["version": "1.12.0-beta.1", "localizedDescription": "测试版改进"],
+            ["version": "1.1.2", "localizedDescription": "当前版本不能重复显示"],
+            ["version": "1.0.0", "localizedDescription": "旧版不能显示"],
+            ["version": "2.0.0", "localizedDescription": "目标之后的版本不能显示"],
+            ["version": "unknown", "localizedDescription": "不可比较版本不能混入"]
+        ]
+        var otherSubscription = app(version: "1.11.0", entry: "other-subscription", legacy: false)
+        otherSubscription["versions"] = [["version": "1.11.0", "localizedDescription": "其他订阅不能混入", "downloadURL": "https://example.com/other.ipa"]]
+        try fixture([historyApp, otherSubscription])
+        await manager.checkForUpdates(sources: [source], localApps: [local])
+        let history = manager.updates["museum"]!.releaseHistory
+        precondition(history.map(\.version) == ["1.12.0", "1.12.0-beta.1", "1.10.0", "1.3.0"], "Show the complete upgrade range in semantic descending order")
+        precondition(history.first?.notes == "最新改进" && history.last?.notes == "中间改进")
+        precondition(history[2].notes == nil && history[2].date == nil, "Keep releases with missing notes or dates")
+        precondition(history[0].date == ISO8601DateFormatter().date(from: "2026-10-10T08:30:00Z"))
+        precondition(manager.candidates[bundle]!.first { $0.remoteVersion == "1.11.0" }!.releaseHistory.first?.notes == "其他订阅不能混入")
+        let stored = Storage.shared.sourceMetadata(for: "museum")!
+        stored.sourceAppVersion = "1.3.0"
+        Storage.shared.saveContext()
+        await manager.checkForUpdates(sources: [source], localApps: [local])
+        precondition(manager.updates["museum"]!.releaseHistory.map(\.version) == ["1.12.0", "1.12.0-beta.1", "1.10.0"], "Use retained source version rather than IPA version as the baseline")
+        try fixture([app()])
+        stored.sourceAppVersion = "1.1.2"
+        Storage.shared.saveContext()
+        await manager.checkForUpdates(sources: [source], localApps: [local])
+        precondition(manager.updates["museum"]!.releaseHistory.map(\.version) == ["1.1.3"], "Single step updates still show one release")
+        var legacyApp = app()
+        legacyApp.removeValue(forKey: "versions")
+        legacyApp["version"] = "1.1.3"
+        legacyApp["downloadURL"] = "https://example.com/legacy.ipa"
+        legacyApp["versionDate"] = "2026-10-09T09:00:00Z"
+        legacyApp["versionDescription"] = "旧格式更新说明"
+        try fixture([legacyApp])
+        await manager.checkForUpdates(sources: [source], localApps: [local])
+        let legacyHistory = manager.updates["museum"]!.releaseHistory
+        precondition(legacyHistory.count == 1 && legacyHistory[0].notes == "旧格式更新说明" && legacyHistory[0].date != nil)
+        Storage.shared.reset()
+        checkpoint("upgrade release history completed")
         try fixture([app(), app(version: "9.0", entry: "museum-variant", legacy: false)])
         await manager.checkForUpdates(sources: [source], localApps: [local])
         checkpoint("first legacy check completed")
