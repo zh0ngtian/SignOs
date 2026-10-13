@@ -12,5 +12,13 @@
     "Official archive SHA-256 equals the pinned checksum",
     "Artifact info.json parses and every declared variant executable exists and is executable"
   ],
-  "recovery": "Submitted as a linked repair task; the coordinator retains the failed parent batch and repeats required local validation before freezing and publishing the child batch."
+  "recovery": "Submitted as a linked repair task; the coordinator retains the failed parent batch and repeats required local validation before freezing and publishing the child batch.",
+  "followup": {
+    "failedBatch": "3cb6ae09-62b2-47d8-b19f-5db45ab8f96a",
+    "repairTask": "signos-install-binary-cache-repair",
+    "failure": "LicensePlist passed; all four cached IDevice static libraries were missing despite their Info.plist existing",
+    "resolution": "Restored IDevice 0.1.57 from the existing official archive with pinned SHA-256; verified every declared variant across IDevice, LicensePlistBinary and OpenSSL before the next prepare",
+    "archiveUrl": "https://github.com/jkcoxson/idevice/releases/download/v0.1.57/IDevice.xcframework.zip",
+    "archiveSha256": "40cd5c769b60d1879a96c9caa27666037f9d5321844addec40ae99727b142d10"
+  }
 }
