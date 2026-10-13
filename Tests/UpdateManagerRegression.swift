@@ -138,6 +138,20 @@ struct UpdateManagerRegression {
         precondition(history[2].notes == nil && history[2].date == nil, "Keep releases with missing notes or dates")
         precondition(history[0].date == ISO8601DateFormatter().date(from: "2026-10-10T08:30:00Z"))
         precondition(manager.candidates[bundle]!.first { $0.remoteVersion == "1.11.0" }!.releaseHistory.first?.notes == "其他订阅不能混入")
+        // The source page obtains a package from provenance alone, without release notes.
+        // Selecting that provisional candidate must preserve the checked source snapshot.
+        let checkedUpdate = manager.updates["museum"]!
+        let provisional = AppUpdate(id: checkedUpdate.id, localUUID: checkedUpdate.localUUID,
+            localVersion: checkedUpdate.localVersion, remoteVersion: checkedUpdate.remoteVersion,
+            appName: checkedUpdate.appName, bundleIdentifier: checkedUpdate.bundleIdentifier,
+            downloadURL: checkedUpdate.downloadURL, sourceURL: checkedUpdate.sourceURL,
+            sourceProvenance: checkedUpdate.sourceProvenance, whatsNew: nil,
+            releaseHistory: [UpdateRelease(version: checkedUpdate.remoteVersion, date: nil, notes: nil)],
+            managedIdentifier: checkedUpdate.managedIdentifier)
+        manager.selectCandidate(provisional, for: bundle)
+        precondition(manager.updates["museum"]?.releaseHistory == history, "Source-page updates must preserve the complete checked history")
+        precondition(manager.updates["museum"]?.whatsNew == "最新改进", "Preserve the checked latest release notes as well")
+        UserDefaults.standard.removeObject(forKey: "SignOs.preferredUpdateSources")
         let stored = Storage.shared.sourceMetadata(for: "museum")!
         stored.sourceAppVersion = "1.3.0"
         Storage.shared.saveContext()
