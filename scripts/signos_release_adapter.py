@@ -66,8 +66,17 @@ class Adapter:
         return p.stdout.strip()
 
     def gh(self,args,missing=False):
-        out=self.cmd(['gh',*args],allow_missing=missing)
-        return json.loads(out) if out is not None else None
+        read_only=(len(args)==2 and args[0]=='api') or args[:2]==['release','list']
+        for attempt in range(3):
+            try:
+                out=self.cmd(['gh',*args],allow_missing=missing)
+                return json.loads(out) if out is not None else None
+            except RuntimeError as error:
+                transient=re.search(r'\b(EOF|connection reset by peer|TLS handshake timeout|i/o timeout)\b',str(error))
+                # Retry only read queries. Publishing actions retain their
+                # existing effect reconciliation and are never replayed here.
+                if not read_only or not transient or attempt==2:raise
+                time.sleep(attempt+1)
 
     def api(self,path,missing=False):return self.gh(['api',path],missing)
 

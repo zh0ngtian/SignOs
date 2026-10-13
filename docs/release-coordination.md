@@ -88,6 +88,26 @@ receipt 位于私有状态目录 `receipts/<batch-id>.json`，全部参与任务
 共享凭证副本只导出可公开字段到 `docs/plans/evidence/`；私有配置、设备信息和签名材料
 不进入 Git。队列、合批、触发 CI 都不代表交付完成，任一要求的渠道失败不能完成。
 
+### 未冻结批次的无效 SHA 登记更正（协调器 0.1.4+）
+
+`ready` 服务入口会在独立临时 Git 仓库核对精确远端 commit，不能以本地未 push 的对象
+代替。相同已接受请求可幂等重试，撤回后重新验证。若最新失败叶批次尚未冻结，并明确
+记录某任务 `not our ref <SHA>`，可显式登记更正：
+
+```sh
+~/.local/bin/releasectl register --project signos-production --task <correction-task-id> \
+  --repairs-batch <latest-failed-batch-id> --corrects-task <original-task-id>
+```
+
+服务再次确认原 SHA 远端不存在，更正 SHA 已推送后才接受 ready。新批次保留其他任务，
+把原任务/SHA与更正任务/SHA写入 manifest 和 receipt 的 `corrections`；原任务与失败
+批次历史不改写，成功后原任务 recovered 指向同一凭证。有效提交、其他失败和已冻结
+批次不能使用此例外；已冻结失败仍按原关联修复规则发布更高版本。
+
+SignOs 适配器对 `gh api` 的无参数 GET 和 `gh release list` 只读查询，在 EOF、连接重置
+或连接超时时最多尝试三次，间隔 1、2 秒。持续失败仍保留诊断并停止；鉴权错误、POST
+和发布操作不重放，继续按原阶段核对实际效果。此处理不移动标签，也不借用其他提交产物。
+
 ## 验收范围
 
 协调器的并发、有限窗口、锁代次隔离、冻结后新任务、冲突保留、响应丢失恢复与服务
@@ -105,3 +125,12 @@ receipt 位于私有状态目录 `receipts/<batch-id>.json`，全部参与任务
 本机按用户选定的登录启动模式部署，`gui/501/local.release-coordinator` 为运行中的
 LaunchAgent，`releasectl health` 返回 0.1.3。后续运行事实仍以 health、installation.json
 和 launchctl 实际状态为准。
+
+### 本机升级核验（2026-10-13）
+
+协调器已升级至 0.1.4，源码提交
+[b345d46c99549f0613f5a7f8f511871113862313](https://github.com/zh0ngtian/release-coordinator/commit/b345d46c99549f0613f5a7f8f511871113862313)。
+30 项本地回归和独立复查通过；[跨平台 CI](https://github.com/zh0ngtian/release-coordinator/actions/runs/38375751806)
+的 macOS/Linux、Python 3.9/3.13 四组成功。沿既有登录启动模式更新不可变运行时，
+health 返回 0.1.4，LaunchAgent 运行中，socket 权限 0600。更新前保存私有 SQLite 与
+状态快照；更新后原有任务及批次的 SHA、状态、冻结数据和错误逐字段核对一致。
