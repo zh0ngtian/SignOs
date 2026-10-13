@@ -20,7 +20,7 @@
     {
       "name": "workflow-review",
       "status": "passed",
-      "evidence": "ios-build.yml parsed with PyYAML; signs-production-release concurrency group, cancel-in-progress false, queue max, full history and freeze gates checked; workflow unchanged"
+      "evidence": "ios-build.yml parsed with PyYAML; signos-production-release concurrency group, cancel-in-progress false, queue max, full history and freeze gates checked; workflow unchanged"
     },
     {
       "name": "update-manager-regression",
