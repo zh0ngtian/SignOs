@@ -15,6 +15,16 @@
 3. [x] 修改 `Logger++.swift`、`ActivityLog.swift`、`FR.swift`、`DownloadManager.swift` 和启动入口；为独立下载回归编译脚本补入日志依赖。
 4. [x] 新增 `Feather/Views/Settings/Logs/LogsView.swift`；设置页加入入口。模拟器验收搜索、筛选、详情、分享、取消后文件清理、重启、清空及浅色/深色/大字号。
 5. [x] 更新 README 使用说明；独立代码审查，运行日志回归、下载回归、发布适配器/产物/附件回归和 `git diff --check`。
-6. [ ] push 开发分支并核对远端 SHA，以验证记录提交协调器 ready；读取成功批次凭证，核对最终提交、main / 标签 run、Release 和固定 OTA 入口及实际版本/构建号。
+6. [x] push 开发分支并核对远端 SHA，以验证记录提交协调器 ready；读取成功批次凭证，核对最终提交、main / 标签 run、Release 和固定 OTA 入口及实际版本/构建号。
 
 不修改安装完成判定、旧包保留策略或外部服务。模拟器验收不代表真机覆盖安装或数据保留验收。
+
+
+## 发布验收（2026-10-13）
+
+已交付 1.1.8（构建 30），共同批次 `f0b183e8-2724-4697-8d21-eebc40d88eef`。
+冻结提交 `43ffb38cfac897f8cd72e8d1e417559fc52f54d7` 的正式 main 构建和标签发布均成功，
+GitHub 三个附件与固定 OTA 页面、manifest、完整 IPA 下载、版本/构建号和 SHA-256 已核对。
+[共享发布凭证](evidence/release-batch-1.1.8-20261013.json) 保留来源和功能验收范围。
+独立审查修复了引号/转义凭据漏脱敏、后台 Core Data 名称读取和离开页面时的导出清理；
+模拟器验收补齐了搜索状态隐藏导航按钮时的「导出搜索结果」入口。

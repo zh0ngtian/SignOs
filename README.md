@@ -89,9 +89,7 @@ contributors for their work, this wouldn't exist without them.
 - AltStore-compatible sources, `signos://` URL scheme
 - Liquid Glass design on iOS 26, clean Apple-style interface everywhere
 
-## Install
-
-### 日志查看与导出
+## 日志查看与导出
 
 进入「设置 → 日志」查看启动、下载、导入、签名诊断和自动操作记录。列表按最新时间排序，
 支持搜索内容、分类和级别，也可通过「日志级别」筛选；点击记录查看完整正文，长按选择文字或
@@ -113,7 +111,7 @@ xcrun swiftc -swift-version 6 -warnings-as-errors \
 /tmp/signos-log-regression
 ```
 
-### 安装 SignOs
+## Install
 
 Download `SignOs.ipa` from [Releases](../../releases/latest) and sign
 it with SideStore, Sideloadly, AltStore, TrollStore or SignOs itself. New commits
@@ -686,3 +684,16 @@ SHA256SUMS 核对通过，更新日志已使用中文列出本版实际变化。
 `6a895c075c342c091317886876556479b270df9c2813032ab78084f452c11ee3`。
 四个关联任务共用 [成功子批次凭证](docs/plans/evidence/release-batch-1.1.7-20261013.json)，
 历史失败批次和产物保留。验收范围为本地回归与模拟器，未执行真机覆盖安装及数据保留验收。
+
+
+### 日志查看与导出发布核验（1.1.8 / 30）
+
+2026-10-13：新增「设置 → 日志」，支持诊断与活动记录查看、搜索、级别筛选、完整详情复制和
+当前结果文本导出。日志本机限量保存，凭据脱敏，旧活动只迁移一次，清空操作保留原活动页。
+日志核心严格 Swift 6 回归、真实下载管理器回归、完整模拟器构建和页面验收通过。
+[正式 main 构建](https://github.com/zh0ngtian/SignOs/actions/runs/38396474062) 与
+[标签发布](https://github.com/zh0ngtian/SignOs/actions/runs/38397939670) 均成功，
+[GitHub Release](https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.8) 三个附件已核对并填写具体中文更新说明。
+固定 OTA 页面、manifest、完整 IPA 的版本 1.1.8、构建号 30 与 SHA-256 已在线回验。
+[共同批次凭证](docs/plans/evidence/release-batch-1.1.8-20261013.json) 记录冻结提交及两渠道结果。
+功能验收使用 iPhone 17e / iOS 26.5 模拟器；本次没有进行真机覆盖安装或数据保留验收。

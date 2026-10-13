@@ -1,0 +1,107 @@
+{
+  "id": "f0b183e8-2724-4697-8d21-eebc40d88eef",
+  "project": "signos-production",
+  "scope": "96c87efa825ae59a58d467fb058a33fd710e4ced9bee0b003923625611c49047",
+  "frozen": {
+    "buildNumber": "30",
+    "environment": "production",
+    "manifestSha256": "fb4e2d7bb866835df978f8b37b18f0975d736118c3f732f41054c6ce327a146b",
+    "sha": "43ffb38cfac897f8cd72e8d1e417559fc52f54d7",
+    "target": "com.signos.app",
+    "tasks": [
+      {
+        "id": "signos-log-view-export-20261013",
+        "sha": "d71a31bdb80f01734b13c1550ffbc8a136490d6c"
+      }
+    ],
+    "version": "1.1.8"
+  },
+  "results": {
+    "build": {
+      "buildNumber": "30",
+      "commit": "43ffb38cfac897f8cd72e8d1e417559fc52f54d7",
+      "runId": 38396474062,
+      "sha256": "2a59d101ab2313622a98b979aa58c7c037bcf83ed86c1411096d057de7ccb819",
+      "version": "1.1.8"
+    },
+    "github": {
+      "runId": 38397939670,
+      "sha256": "2a59d101ab2313622a98b979aa58c7c037bcf83ed86c1411096d057de7ccb819",
+      "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.8"
+    },
+    "ota": {
+      "buildNumber": "30",
+      "bundleId": "com.signos.app",
+      "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.8/latest.ipa",
+      "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+      "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.8/manifest.plist",
+      "sha256": "fb631ea527514aa676e617413c4e100c3fb4f9ef6bcf26521cd012187723bc0a",
+      "signed": true,
+      "size": 14987302,
+      "sourceCommit": "43ffb38cfac897f8cd72e8d1e417559fc52f54d7",
+      "version": "1.1.8"
+    },
+    "prepare": {
+      "buildNumber": "30",
+      "bundleIdentifier": "com.signos.app",
+      "inputFingerprint": "ab6f0a97a655cec9ff1ffb02fb817c97c8987c899f459fd0772e52f12a975e06",
+      "localValidation": "passed",
+      "version": "1.1.8"
+    },
+    "verify": {
+      "github": {
+        "runId": 38397939670,
+        "sha256": "2a59d101ab2313622a98b979aa58c7c037bcf83ed86c1411096d057de7ccb819",
+        "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.8"
+      },
+      "httpsFullDownloadVerified": true,
+      "ota": {
+        "buildNumber": "30",
+        "bundleId": "com.signos.app",
+        "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.8/latest.ipa",
+        "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+        "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.8/manifest.plist",
+        "sha256": "fb631ea527514aa676e617413c4e100c3fb4f9ef6bcf26521cd012187723bc0a",
+        "signed": true,
+        "size": 14987302,
+        "sourceCommit": "43ffb38cfac897f8cd72e8d1e417559fc52f54d7",
+        "version": "1.1.8"
+      }
+    }
+  },
+  "completedAt": 1791894740.3810549,
+  "coordinatorVersion": "0.1.4",
+  "recoveryChain": [],
+  "recoveryOf": null,
+  "tasks": [
+    {
+      "id": "signos-log-view-export-20261013",
+      "sha": "d71a31bdb80f01734b13c1550ffbc8a136490d6c"
+    }
+  ],
+  "functionalValidation": {
+    "scope": "完整生产应用在 iPhone 17e / iOS 26.5 模拟器验收；未进行真机覆盖安装。",
+    "checks": [
+      "Swift 6 严格日志核心回归",
+      "完整 Debug 模拟器构建",
+      "真实下载管理器模拟器回归",
+      "搜索与级别筛选、完整详情及复制",
+      "级别和搜索结果 .txt 分享与临时文件清理",
+      "重启恢复、旧活动一次迁移和确认清空",
+      "浅色、深色、最大辅助字号",
+      "独立代码审查及复查",
+      "25 项发布工具回归"
+    ]
+  },
+  "postReleaseVerification": {
+    "version": "1.1.8",
+    "buildNumber": "30",
+    "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+    "fixedPageVerified": true,
+    "fixedManifestVerified": true,
+    "fullDownloadVerified": true,
+    "size": 14987302,
+    "sha256": "fb631ea527514aa676e617413c4e100c3fb4f9ef6bcf26521cd012187723bc0a",
+    "sourceCommit": "43ffb38cfac897f8cd72e8d1e417559fc52f54d7"
+  }
+}
