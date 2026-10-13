@@ -175,14 +175,8 @@ struct WSOneViewGetButton: View {
 				Button {
                     if let signed = _newestSigned() { autoSignManager.enqueueInstall(app: signed) }
 				} label: {
-					Text(.localized("Install"))
-						.lineLimit(0)
-						.font(.headline.bold())
-						.foregroundStyle(Color.white)
-						.padding(.horizontal, 20)
-						.padding(.vertical, 6)
-						.background(Color.accentColor)
-						.clipShape(Capsule())
+					WSSearchCapsuleLabel(title: "Install")
+						.frame(minHeight: 44)
 				}
 				.buttonStyle(.borderless)
 			case .installed:
