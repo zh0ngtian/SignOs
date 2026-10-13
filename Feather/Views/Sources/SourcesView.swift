@@ -4,6 +4,8 @@ import CoreData
 struct SourcesView: View {
     @StateObject private var viewModel = SourcesViewModel.shared
     @State private var isAdding = false
+    @State private var sourceToRemove: AltSource?
+    @State private var confirmsRemoval = false
     @ObservedObject private var access = SourceAccessManager.shared
     @State private var refreshDates = UserDefaults.standard.dictionary(forKey: "SignOs.sourceRefreshDates") as? [String: Date] ?? [:]
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -36,6 +38,14 @@ struct SourcesView: View {
             .toolbar(.hidden, for: .navigationBar)
             .refreshable { await viewModel.fetchSources(sources, refresh: true) }
             .sheet(isPresented: $isAdding) { SourcesAddView() }
+            .confirmationDialog("移除软件源？", isPresented: $confirmsRemoval, titleVisibility: .visible) {
+                Button("移除软件源", role: .destructive) {
+                    guard let source = sourceToRemove, !source.isDeleted else { return }
+                    access.setEnabled(false, for: source)
+                    Storage.shared.deleteSource(for: source)
+                    sourceToRemove = nil
+                }
+            }
         }
         .task(id: Array(sources)) { await viewModel.fetchSources(sources) }
         .onReceive(viewModel.$sources) { _ in
@@ -66,6 +76,12 @@ struct SourcesView: View {
         .accessibilityHint("浏览此软件源的全部应用")
         .padding(WSSpacing.lg)
         .background(WSRadius.continuous(WSRadius.xl).fill(WSSurface.card))
+        .contextMenu {
+            Button("移除软件源", systemImage: "trash", role: .destructive) {
+                sourceToRemove = source
+                confirmsRemoval = true
+            }
+        }
     }
 
     private func caption(_ source: AltSource) -> String {
@@ -76,17 +92,6 @@ struct SourcesView: View {
         let base = String.localized("%lld apps", arguments: count)
         guard let date = refreshDates[source.identifier ?? ""] else { return base }
         return base + " · " + date.formatted(.relative(presentation: .named))
-    }
-}
-
-struct SourceManagementView: View {
-    @ObservedObject var source: AltSource
-    @ObservedObject var viewModel: SourcesViewModel
-    var body: some View {
-        Form { SourceManagementSection(source: source, viewModel: viewModel) }
-            .navigationTitle("软件源设置")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar(.visible, for: .navigationBar)
     }
 }
 

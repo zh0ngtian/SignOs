@@ -41,6 +41,7 @@ struct SourceAppsView: View {
 	@Environment(\.dismiss) private var dismiss
 	@Environment(\.dynamicTypeSize) private var dynamicTypeSize
 	@State private var _searchText = ""
+	@State private var _managementEndpoint: URL?
 
 	private var _navigationTitle: String {
 		if object.count == 1 {
@@ -132,14 +133,11 @@ struct SourceAppsView: View {
 					_sortActions()
 				}
 			}
-			if object.count == 1, let source = object.first, !source.isDeleted {
+			if object.count == 1, let source = object.first, !source.isDeleted,
+				let endpoint = _managementEndpoint {
 				ToolbarItem(placement: .topBarTrailing) {
 					NavigationLink {
-						if let endpoint = CloudSourceEndpoint.managementURL(for: source.sourceURL) {
-							CloudSourceManagerView(source: source, managementAddress: endpoint.absoluteString)
-						} else {
-							SourceManagementView(source: source, viewModel: viewModel)
-						}
+						CloudSourceManagerView(source: source, managementAddress: endpoint.absoluteString)
 					} label: {
 						Label("软件源设置", systemImage: "gearshape")
 					}
@@ -152,6 +150,13 @@ struct SourceAppsView: View {
 		}
 		.task {
 			if _sourceContexts.isEmpty { await _refresh() }
+		}
+		.task(id: object.first?.sourceURL) {
+			_managementEndpoint = nil
+			guard object.count == 1, let source = object.first, !source.isDeleted else { return }
+			let endpoint = await CloudSourceEndpoint.verifiedManagementURL(for: source.sourceURL)
+			guard !Task.isCancelled, !source.isDeleted else { return }
+			_managementEndpoint = endpoint
 		}
 		.onReceive(NotificationCenter.default.publisher(for: .NSManagedObjectContextObjectsDidChange)) { _ in
 			if object.allSatisfy({ $0.isDeleted || $0.managedObjectContext == nil }) { dismiss() }

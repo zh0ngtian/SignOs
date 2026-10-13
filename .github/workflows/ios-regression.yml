@@ -72,6 +72,12 @@ jobs:
           "$BINARY"
           rm "$BINARY"
 
+          BINARY="$RUNNER_TEMP/signos-cloud-management"
+          xcrun swiftc Feather/Backend/CloudSource/CloudSourceModels.swift \
+            Tests/CloudSourceManagementRegression.swift -o "$BINARY"
+          "$BINARY"
+          rm "$BINARY"
+
       - name: Run update, download and installation cleanup simulator regressions
         run: |
           set -euo pipefail

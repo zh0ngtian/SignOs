@@ -147,7 +147,7 @@ struct CloudSourceCandidate: Codable, Identifiable {
 enum CloudSourceEndpoint {
     static let defaultURL = "https://signos-source-aggregator.305301890.workers.dev"
 
-    /// Only aggregator feed paths expose the source-specific management API.
+    /// Candidate feed paths; verify the service before exposing management UI.
     static func managementURL(for sourceURL: URL?) -> URL? {
         guard let sourceURL, sourceURL.scheme?.lowercased() == "https", sourceURL.host != nil,
               sourceURL.user == nil, sourceURL.password == nil else { return nil }
@@ -169,5 +169,20 @@ enum CloudSourceEndpoint {
             throw NSError(domain: "CloudSource", code: 1, userInfo: [NSLocalizedDescriptionKey: "请输入软件源服务的 HTTPS 地址，例如 https://example.workers.dev"])
         }
         return url
+    }
+
+    static func verifiedManagementURL(for sourceURL: URL?, session: URLSession = .shared) async -> URL? {
+        guard let endpoint = managementURL(for: sourceURL) else { return nil }
+        struct Health: Decodable { let service: String }
+        let request = URLRequest(url: endpoint.appendingPathComponent("health"),
+            cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 10)
+        do {
+            let (data, response) = try await session.data(for: request)
+            guard !Task.isCancelled, (response as? HTTPURLResponse)?.statusCode == 200,
+                  try JSONDecoder().decode(Health.self, from: data).service == "signos-source-aggregator" else { return nil }
+            return endpoint
+        } catch {
+            return nil
+        }
     }
 }
