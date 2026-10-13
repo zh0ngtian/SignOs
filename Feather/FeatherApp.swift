@@ -178,6 +178,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 		_ application: UIApplication,
 		didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
 	) -> Bool {
+		_ = ActivityLog.shared
+		Logger.misc.info("SignOs 启动：\(Bundle.main.version)（\(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?")）")
 		_createPipeline()
 		_createDocumentsDirectories()
 		ResetView.clearWorkCache()

@@ -20,6 +20,7 @@ enum FR {
 		completion: @escaping (Error?) -> Void
 	) {
 		Task.detached(priority: .userInitiated) {
+			AppLogger(category: "导入").info("开始导入：\(ipa.lastPathComponent)")
 			let handler = AppFileHandler(
 				file: ipa,
 				download: download,
@@ -32,11 +33,13 @@ enum FR {
 				try await handler.move()
 				try await handler.addToDatabase()
 				try? await handler.clean()
+				AppLogger(category: "导入").info("导入完成：\(ipa.lastPathComponent)")
 				await MainActor.run {
 					completion(nil)
 				}
 			} catch {
 				try? await handler.clean()
+				AppLogger(category: "导入").error("导入失败：\(ipa.lastPathComponent)\n\(error.localizedDescription)")
 				await MainActor.run {
 					completion(error)
 				}
@@ -52,12 +55,15 @@ enum FR {
 		completion: @escaping (Error?) -> Void
 	) {
         Task.detached(priority: .userInitiated) {
-            let error = await MainActor.run {
+            let (name, error) = await MainActor.run {
+                let name = app.name ?? app.identifier ?? "应用"
                 let error = AppOperations.signingError(for: app, certificate: certificate, targetIdentifier: options.appIdentifier)
                 if error == nil { SourceAccessManager.shared.beginUse(app) }
-                return error
+                return (name, error)
             }
+            AppLogger(category: "签名").info("开始签名：\(name)")
             if let error {
+                AppLogger(category: "签名").error("签名检查失败：\(name)\n\(error)")
                 await MainActor.run { completion(NSError(domain: "SignOs.Signing", code: 1, userInfo: [NSLocalizedDescriptionKey: error])) }
                 return
             }
@@ -69,12 +75,14 @@ enum FR {
 				try await handler.copy()
 				try await handler.modify()
 				try? await handler.clean()
+				AppLogger(category: "签名").info("签名完成：\(name)")
 				await MainActor.run {
                     SourceAccessManager.shared.endUse(app)
                     completion(nil)
                 }
             } catch {
                 try? await handler.clean()
+                AppLogger(category: "签名").error("签名失败：\(name)\n\(error.localizedDescription)")
                 await MainActor.run {
                     SourceAccessManager.shared.endUse(app)
                     completion(error)
