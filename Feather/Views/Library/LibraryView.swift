@@ -163,9 +163,8 @@ struct LibraryView: View {
             if let error = signer.installErrors[application.id] { Text(error).font(.footnote).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true) }
             if let download = download(for: application) { WSDownloadCard(download: download) }
             if scope == "updates", let update {
-                Divider()
-                Text(update.whatsNew?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? update.whatsNew! : "未提供更新说明")
-                    .font(.body).foregroundStyle(.primary).fixedSize(horizontal: false, vertical: true)
+                UpdateReleaseNotesView(releases: update.releaseHistory,
+                    sourceName: update.sourceProvenance.sourceRepositoryName ?? "软件源")
             }
         }
         .padding(WSSpacing.cardPadding)

@@ -20,6 +20,7 @@ struct AppUpdate: Identifiable, Equatable {
 	let sourceURL: URL
 	let sourceProvenance: SourceAppProvenance
 	let whatsNew: String?
+    let releaseHistory: [UpdateRelease]
     var managedIdentifier: String? = nil
 }
 
@@ -252,7 +253,9 @@ final class UpdateManager: ObservableObject {
                     choices.append(AppUpdate(id: uuid, localUUID: uuid, localVersion: local.version,
                         remoteVersion: version, appName: remote.currentName, bundleIdentifier: bundle,
                         downloadURL: downloadURL, sourceURL: url, sourceProvenance: provenance,
-                        whatsNew: remote.currentAppVersion?.localizedDescription, managedIdentifier: identifier))
+                        whatsNew: remote.currentAppVersion?.localizedDescription,
+                        releaseHistory: UpdateRelease.history(app: remote, installedVersion: baseline, targetVersion: version),
+                        managedIdentifier: identifier))
                 }
             }
             var seen = Set<String>()
