@@ -102,6 +102,7 @@ class DownloadManager: NSObject, ObservableObject {
 		download.task = task
 
 		downloads.append(download)
+		AppLogger(category: "下载").info("开始下载：\(url.absoluteString)")
 		task.resume()
 
 		#if !targetEnvironment(macCatalyst)
@@ -245,6 +246,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
 
 	func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
 		guard let download = getDownloadTask(by: downloadTask) else { return }
+		AppLogger(category: "下载").info("下载完成：\(download.fileName)")
 
 		let tempDirectory = FileManager.default.temporaryDirectory
 		let customTempDir = tempDirectory.appendingPathComponent("FeatherDownloads", isDirectory: true)
@@ -260,7 +262,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
 
 			try handlePachageFile(url: destinationURL, dl: download)
 		} catch {
-			print("Error handling downloaded file: \(error.localizedDescription)")
+			AppLogger(category: "下载").error("处理下载文件失败：\(error.localizedDescription)")
 		}
 	}
 
@@ -293,6 +295,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
 			return
 		}
 
+		AppLogger(category: "下载").error("下载结束：\(download.fileName)\n\(error?.localizedDescription ?? "未知错误")")
 		DispatchQueue.main.async {
 			self._removeProgressNotification(for: download)
 			if let index = self.getDownloadIndex(by: download.id) {

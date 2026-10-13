@@ -80,6 +80,7 @@ contributors for their work, this wouldn't exist without them.
 - Import and export folder support
 - Storage manager with superseded copy and duplicate cleanup
 - Activity timeline — every background action logged with timestamps
+- Local diagnostic logs with search, severity filters, full details and UTF-8 text export from Settings
 - Backup and restore for sources and preferences
 - Face ID lock
 - Home screen badge for pending updates
@@ -89,6 +90,30 @@ contributors for their work, this wouldn't exist without them.
 - Liquid Glass design on iOS 26, clean Apple-style interface everywhere
 
 ## Install
+
+### 日志查看与导出
+
+进入「设置 → 日志」查看启动、下载、导入、签名诊断和自动操作记录。列表按最新时间排序，
+支持搜索内容、分类和级别，也可通过「日志级别」筛选；点击记录查看完整正文，长按选择文字或
+点击「复制」。右上角导出按钮（搜索时使用「导出搜索结果」）通过系统分享菜单发送 `.txt` 文件或存储到「文件」，导出的是
+当前搜索与级别筛选结果，文件按时间正序排列，并包含版本、构建号、系统版本和导出时间。
+
+日志仅保存在设备本机，最多 1000 条或 2 MiB；单条正文最多 16 KiB，超限有截断标记。
+URL 凭据、查询参数、fragment 和常见 Token / 密码字段先脱敏；证书内容和设备 UDID 不收集。
+不截获第三方底层 stdout，所以此页不代表完整系统控制台。已有活动记录迁移一次，原「活动」页
+保留。更多操作中的「清空日志」需要确认，清空全部日志但不清空活动页或应用文件。
+损坏的日志文件保留副本；读写失败会显示提示，不把日志写入失败当成业务失败。
+
+日志核心回归可在 macOS 运行：
+
+```sh
+xcrun swiftc -swift-version 6 -warnings-as-errors \
+  Feather/Utilities/AppLogStore.swift Feather/Utilities/LogExportFile.swift \
+  Tests/AppLogRegression.swift -o /tmp/signos-log-regression
+/tmp/signos-log-regression
+```
+
+### 安装 SignOs
 
 Download `SignOs.ipa` from [Releases](../../releases/latest) and sign
 it with SideStore, Sideloadly, AltStore, TrollStore or SignOs itself. New commits

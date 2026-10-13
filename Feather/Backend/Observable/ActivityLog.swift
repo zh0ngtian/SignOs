@@ -65,10 +65,16 @@ final class ActivityLog: ObservableObject {
 		{
 			entries = decoded
 		}
+		AppLogStore.shared.importActivityHistory(entries.map {
+			AppLogEntry(date: $0.date, level: $0.kind == .failed ? .error : .info,
+				category: "活动", message: "\($0.kind.title) · \($0.app)\($0.detail.map { "\n\($0)" } ?? "")")
+		})
 	}
 
 	func log(_ kind: ActivityEntry.Kind, app: String, detail: String? = nil) {
 		let entry = ActivityEntry(date: Date(), kind: kind, app: app, detail: detail)
+		AppLogStore.shared.record(AppLogEntry(date: entry.date, level: kind == .failed ? .error : .info,
+			category: "活动", message: "\(kind.title) · \(app)\(detail.map { "\n\($0)" } ?? "")"))
 		entries.insert(entry, at: 0)
 		if entries.count > _maxEntries {
 			entries = Array(entries.prefix(_maxEntries))

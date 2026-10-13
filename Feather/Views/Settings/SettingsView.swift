@@ -245,6 +245,14 @@ extension SettingsView {
 				}
 			}
 
+			NavigationLink(destination: LogsView()) {
+				HStack(spacing: 12) {
+					WSIconTile(systemImage: "doc.text.magnifyingglass", color: .teal)
+					Text("日志")
+				}
+			}
+			.accessibilityIdentifier("settings-logs")
+
 			NavigationLink(destination: ActivityView()) {
 				HStack(spacing: 12) {
 					WSIconTile(systemImage: "clock.arrow.circlepath", color: .indigo)
