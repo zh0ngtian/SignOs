@@ -1,0 +1,134 @@
+{
+  "id": "c522e719-5cbb-4b87-a965-ef568536c7b8",
+  "scope": "96c87efa825ae59a58d467fb058a33fd710e4ced9bee0b003923625611c49047",
+  "project": "signos-production",
+  "coordinatorVersion": "0.1.3",
+  "frozen": {
+    "buildNumber": "27",
+    "environment": "production",
+    "manifestSha256": "38842d80ac03704d273a769292712d77db6f530f1cd600bbca099aefa1e7222e",
+    "sha": "b1a460ba3b65632d62b951ab61264c76f39a7ba4",
+    "target": "com.signos.app",
+    "tasks": [
+      {
+        "id": "signos-update-history-candidate-preservation-20261013",
+        "sha": "8c1eca3ab4ab2988d56da59ec5973fb7fe04b0de"
+      }
+    ],
+    "version": "1.1.5"
+  },
+  "recoveryOf": null,
+  "recoveryChain": [],
+  "results": {
+    "build": {
+      "buildNumber": "27",
+      "commit": "b1a460ba3b65632d62b951ab61264c76f39a7ba4",
+      "runId": 38371208139,
+      "sha256": "f81ad33a2b3d6c1d468efc1d259c5db142448c302d391eb37e3f84fb15978dba",
+      "version": "1.1.5"
+    },
+    "github": {
+      "runId": 38372584110,
+      "sha256": "f81ad33a2b3d6c1d468efc1d259c5db142448c302d391eb37e3f84fb15978dba",
+      "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.5"
+    },
+    "ota": {
+      "buildNumber": "27",
+      "bundleId": "com.signos.app",
+      "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.5/latest.ipa",
+      "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+      "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.5/manifest.plist",
+      "sha256": "45b6c92b00c75ea70db146a380ae8cbe990ce5f1e30e7e0820570d246af68462",
+      "signed": true,
+      "size": 14945639,
+      "sourceCommit": "b1a460ba3b65632d62b951ab61264c76f39a7ba4",
+      "version": "1.1.5"
+    },
+    "prepare": {
+      "buildNumber": "27",
+      "bundleIdentifier": "com.signos.app",
+      "inputFingerprint": "b87e11aff67c2c28138666e92c3def808530a4ea36020d4dd28aeb6b16d67a7e",
+      "localValidation": "passed",
+      "version": "1.1.5"
+    },
+    "verify": {
+      "github": {
+        "runId": 38372584110,
+        "sha256": "f81ad33a2b3d6c1d468efc1d259c5db142448c302d391eb37e3f84fb15978dba",
+        "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.5"
+      },
+      "httpsFullDownloadVerified": true,
+      "ota": {
+        "buildNumber": "27",
+        "bundleId": "com.signos.app",
+        "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.5/latest.ipa",
+        "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+        "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.5/manifest.plist",
+        "sha256": "45b6c92b00c75ea70db146a380ae8cbe990ce5f1e30e7e0820570d246af68462",
+        "signed": true,
+        "size": 14945639,
+        "sourceCommit": "b1a460ba3b65632d62b951ab61264c76f39a7ba4",
+        "version": "1.1.5"
+      }
+    }
+  },
+  "completedAt": 1791881756.2441752,
+  "schemaVersion": 1,
+  "exportedAtUTC": "2026-10-13T08:56:56.070573+00:00",
+  "tasks": [
+    {
+      "id": "signos-update-history-candidate-preservation-20261013",
+      "sha": "8c1eca3ab4ab2988d56da59ec5973fb7fe04b0de",
+      "validation": {
+        "checks": [
+          {
+            "name": "adapter-regression",
+            "status": "passed"
+          },
+          {
+            "name": "release-artifact-regression",
+            "status": "passed"
+          },
+          {
+            "name": "release-assets-regression",
+            "status": "passed"
+          },
+          {
+            "name": "workflow-review",
+            "status": "passed"
+          },
+          {
+            "name": "update-manager-regression",
+            "status": "passed"
+          },
+          {
+            "name": "ios-simulator-build",
+            "status": "passed"
+          },
+          {
+            "name": "update-history-runtime",
+            "status": "passed"
+          },
+          {
+            "name": "diff-check",
+            "status": "passed"
+          },
+          {
+            "name": "independent-code-review",
+            "status": "passed"
+          }
+        ]
+      }
+    }
+  ],
+  "deviceInstallationVerified": false,
+  "independentAcceptance": {
+    "version": "1.1.5",
+    "buildNumber": "27",
+    "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+    "manifestVerified": true,
+    "infoPlistVerified": true,
+    "fullHttpsIpaSha256": "45b6c92b00c75ea70db146a380ae8cbe990ce5f1e30e7e0820570d246af68462",
+    "size": 14945639
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "id": "8d1b8814-e5c2-47ff-860a-aac0b9e72366",
+  "scope": "96c87efa825ae59a58d467fb058a33fd710e4ced9bee0b003923625611c49047",
+  "project": "signos-production",
+  "coordinatorVersion": "0.1.3",
+  "frozen": {
+    "buildNumber": "26",
+    "environment": "production",
+    "manifestSha256": "8c7f7e42d08442b840eab2e6b12b7b8dc7f78934795245855630ac50ad1dac8f",
+    "sha": "7a024b79c3abc64ede87f51a03512b85f9f504a6",
+    "target": "com.signos.app",
+    "tasks": [
+      {
+        "id": "signos-update-history-20261013",
+        "sha": "dbde4939c29644068e30d900e927c7751107ac1e"
+      }
+    ],
+    "version": "1.1.4"
+  },
+  "recoveryOf": null,
+  "recoveryChain": [],
+  "results": {
+    "build": {
+      "buildNumber": "26",
+      "commit": "7a024b79c3abc64ede87f51a03512b85f9f504a6",
+      "runId": 38369653200,
+      "sha256": "7da4dcef05b1e9f0e618d0f3b76e804da863fbbca6dd7056022faff51c813f18",
+      "version": "1.1.4"
+    },
+    "github": {
+      "runId": 38370819534,
+      "sha256": "7da4dcef05b1e9f0e618d0f3b76e804da863fbbca6dd7056022faff51c813f18",
+      "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.4"
+    },
+    "ota": {
+      "buildNumber": "26",
+      "bundleId": "com.signos.app",
+      "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.4/latest.ipa",
+      "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+      "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.4/manifest.plist",
+      "sha256": "7c5ea5829c88de3fc5c069aeedb4abcee320fb81588ce2fbd2bbbd6939dacc7a",
+      "signed": true,
+      "size": 14944152,
+      "sourceCommit": "7a024b79c3abc64ede87f51a03512b85f9f504a6",
+      "version": "1.1.4"
+    },
+    "prepare": {
+      "buildNumber": "26",
+      "bundleIdentifier": "com.signos.app",
+      "inputFingerprint": "27ba0e2af6daea4f5d7e330e565c94b9ab5ea84b58f60fb1ade65ff0181c2dec",
+      "localValidation": "passed",
+      "version": "1.1.4"
+    },
+    "verify": {
+      "github": {
+        "runId": 38370819534,
+        "sha256": "7da4dcef05b1e9f0e618d0f3b76e804da863fbbca6dd7056022faff51c813f18",
+        "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.4"
+      },
+      "httpsFullDownloadVerified": true,
+      "ota": {
+        "buildNumber": "26",
+        "bundleId": "com.signos.app",
+        "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.4/latest.ipa",
+        "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+        "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.4/manifest.plist",
+        "sha256": "7c5ea5829c88de3fc5c069aeedb4abcee320fb81588ce2fbd2bbbd6939dacc7a",
+        "signed": true,
+        "size": 14944152,
+        "sourceCommit": "7a024b79c3abc64ede87f51a03512b85f9f504a6",
+        "version": "1.1.4"
+      }
+    }
+  },
+  "completedAt": 1791880837.433037,
+  "schemaVersion": 1,
+  "exportedAtUTC": "2026-10-13T08:56:56.070063+00:00",
+  "tasks": [
+    {
+      "id": "signos-update-history-20261013",
+      "sha": "dbde4939c29644068e30d900e927c7751107ac1e",
+      "validation": {
+        "checks": [
+          {
+            "name": "adapter-regression",
+            "status": "passed"
+          },
+          {
+            "name": "release-artifact-regression",
+            "status": "passed"
+          },
+          {
+            "name": "release-assets-regression",
+            "status": "passed"
+          },
+          {
+            "name": "workflow-review",
+            "status": "passed"
+          },
+          {
+            "name": "update-manager-regression",
+            "status": "passed"
+          },
+          {
+            "name": "ios-simulator-build",
+            "status": "passed"
+          },
+          {
+            "name": "update-history-runtime",
+            "status": "passed"
+          },
+          {
+            "name": "diff-check",
+            "status": "passed"
+          }
+        ]
+      }
+    }
+  ],
+  "deviceInstallationVerified": false
+}

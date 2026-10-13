@@ -601,3 +601,23 @@ manifest、版本 / 构建号、完整下载和独立验签通过；签名包 14
 原始任务为 recovered，两次失败批次及诊断保留。真机覆盖安装与数据保留未验证。
 [共同发布凭证](docs/plans/evidence/release-batch-1.1.3-20261013.json)记录参与提交、
 恢复链、冻结提交、两个 workflow run 和双渠道验收结果。
+
+### 可更新页跨版本日志与发布时间（1.1.5 / 27）
+
+2026-10-13：可更新卡片列出当前来源版本之后、目标版本以内的全部来源日志，
+按版本从新到旧排列，沿用现有分隔线；每条软件源右侧显示该版本发布时间。
+缺失日期或日志有明确占位，旧格式单版本源保持可用。软件源页面发起更新时复用
+匹配的已检查候选，保留跨版本日志。更新管理器回归、完整模拟器构建及浅色、深色、
+大字号界面验收通过，记录见 [界面验收](docs/plans/evidence/update-history-20261013/verification.json)
+和 [入口回归](docs/plans/evidence/update-history-20261013/candidate-preservation.json)。
+
+初版 1.1.4（26）与入口修复 1.1.5（27）由协调器分别冻结并完成双渠道发布，
+凭证见 [1.1.4](docs/plans/evidence/release-batch-1.1.4-20261013.json)
+和 [1.1.5](docs/plans/evidence/release-batch-1.1.5-20261013.json)。最终冻结提交
+`b1a460ba3b65632d62b951ab61264c76f39a7ba4` 的
+[main 构建](https://github.com/zh0ngtian/SignOs/actions/runs/38371208139)、
+[标签发布](https://github.com/zh0ngtian/SignOs/actions/runs/38372584110)均成功，
+[GitHub Release](https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.5)附件与同提交的 CI 产物一致；
+[固定 OTA 安装页](https://192.168.123.79:8769/channels/signos/current/install.html)、manifest、包版本与构建号、
+完整 HTTPS IPA 下载及 SHA-256 校验通过。签名包 14945639 字节，SHA-256 为
+`45b6c92b00c75ea70db146a380ae8cbe990ce5f1e30e7e0820570d246af68462`。本次功能按模拟器范围验收，未验证真机覆盖安装及数据保留。
