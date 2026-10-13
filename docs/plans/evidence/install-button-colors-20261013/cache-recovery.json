@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-13",
+  "failedBatch": "e002276a-9548-44db-bdbf-ff0b08b2252c",
+  "task": "signos-install-button-colors",
+  "repairTask": "signos-install-button-cache-repair",
+  "sourceCommit": "0edc9c3039b8b553a1816522bcc3f4c60862f20f",
+  "failure": "prepare / make iphoneos / LicensePlistBuildTool: cached LicensePlistBinary.artifactbundle missing info.json",
+  "resolution": "Restore the existing LicensePlist 3.27.1 binary artifact from its official archive, after verifying the checksum pinned by Package.swift. No dependency version, application logic, version or release workflow changed.",
+  "archiveUrl": "https://github.com/mono0926/LicensePlist/releases/download/3.27.1/LicensePlistBinary-macos.artifactbundle.zip",
+  "archiveSha256": "24e066b23da58275a89a83cae05bf40cad8a48faacf10facbfa5c350efe02608",
+  "checks": [
+    "Official archive SHA-256 equals the pinned checksum",
+    "Artifact info.json parses and every declared variant executable exists and is executable"
+  ],
+  "recovery": "Submitted as a linked repair task; the coordinator retains the failed parent batch and repeats required local validation before freezing and publishing the child batch."
+}
