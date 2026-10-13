@@ -96,4 +96,37 @@ class AdapterRecoveryTests(unittest.TestCase):
         self.assertEqual(version('1.1.0'),(1,1,0))
         with self.assertRaises(ValueError):version('v1.1.0')
 
+    def test_read_only_status_query_recovers_from_transient_eof(self):
+        with tempfile.TemporaryDirectory() as directory:
+            a=self.adapter(Path(directory));a.log=Path(directory)/'adapter.log'
+            replies=[subprocess.CompletedProcess([],1,'','Get "https://api.github.com/test": EOF\n'),
+                     subprocess.CompletedProcess([],0,'{"workflow_runs":[]}','')]
+            with patch('signos_release_adapter.subprocess.run',side_effect=replies) as run,patch('signos_release_adapter.time.sleep'):
+                self.assertEqual(a.api('repos/owner/repo/actions/runs'),{'workflow_runs':[]})
+            self.assertEqual(run.call_count,2)
+
+    def test_persistent_query_error_has_bounded_retries(self):
+        with tempfile.TemporaryDirectory() as directory:
+            a=self.adapter(Path(directory));a.log=Path(directory)/'adapter.log'
+            reply=subprocess.CompletedProcess([],1,'','Get "https://api.github.com/test": EOF\n')
+            with patch('signos_release_adapter.subprocess.run',return_value=reply) as run,patch('signos_release_adapter.time.sleep'):
+                with self.assertRaisesRegex(RuntimeError,'EOF'):a.api('repos/owner/repo/actions/runs')
+            self.assertEqual(run.call_count,3)
+
+    def test_mutating_request_is_not_retried_after_lost_response(self):
+        with tempfile.TemporaryDirectory() as directory:
+            a=self.adapter(Path(directory));a.log=Path(directory)/'adapter.log'
+            reply=subprocess.CompletedProcess([],1,'','Post "https://api.github.com/test": EOF\n')
+            with patch('signos_release_adapter.subprocess.run',return_value=reply) as run,patch('signos_release_adapter.time.sleep'):
+                with self.assertRaisesRegex(RuntimeError,'EOF'):a.gh(['api','repos/owner/repo/releases','--method','POST'])
+            self.assertEqual(run.call_count,1)
+
+    def test_authentication_failure_is_not_retried(self):
+        with tempfile.TemporaryDirectory() as directory:
+            a=self.adapter(Path(directory));a.log=Path(directory)/'adapter.log'
+            reply=subprocess.CompletedProcess([],1,'','HTTP 401: Bad credentials')
+            with patch('signos_release_adapter.subprocess.run',return_value=reply) as run,patch('signos_release_adapter.time.sleep'):
+                with self.assertRaisesRegex(RuntimeError,'401'):a.api('repos/owner/repo/actions/runs')
+            self.assertEqual(run.call_count,1)
+
 if __name__=='__main__':unittest.main()
