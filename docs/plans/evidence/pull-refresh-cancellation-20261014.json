@@ -1,0 +1,32 @@
+{
+  "date": "2026-10-14",
+  "baseCommit": "1fd3dd076776c5b265b66957199886713a9bc3db",
+  "clientInputVersion": "1.1.8",
+  "clientInputBuild": "30",
+  "runtime": "iOS 27.0 Simulator",
+  "before": {
+    "result": "更新检查已取消，请下拉重试。",
+    "caller": "SwiftUI.PlatformRefreshControlProxy.configuration.didSet -> swift_task_cancel"
+  },
+  "after": {
+    "result": "下拉检查完成，取得真实软件源中的 1.1.8 更新候选。",
+    "fixtureBaselineVersion": "1.1.3",
+    "targetVersion": "1.1.8",
+    "refreshConfigurationCancellationHits": 0
+  },
+  "checks": {
+    "simulatorDebugBuild": "passed",
+    "updateManagerRegression": "passed",
+    "iphoneosReleaseBuild": "passed",
+    "adapterRegression": 11,
+    "releaseArtifactRegression": 7,
+    "releaseAssetsRegression": 7,
+    "workflowReview": "passed",
+    "codeReview": "no blockers"
+  },
+  "scope": "一处刷新闭包改为直接引用同一共享管理器，避免捕获变化中的页面。",
+  "limitations": [
+    "UI 验收使用合成本地应用记录和真实公开软件源。",
+    "未进行真机覆盖安装或数据保留验收。"
+  ]
+}
