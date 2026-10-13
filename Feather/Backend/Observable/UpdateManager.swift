@@ -301,10 +301,16 @@ final class UpdateManager: ObservableObject {
 
     func selectCandidate(_ update: AppUpdate, for identifier: String) {
         guard SourcePolicy.isEnabled(url: update.sourceURL, identifier: update.sourceProvenance.sourceRepositoryIdentifier) else { return }
+        // Source-page downloads have only provenance. Keep the checked candidate's
+        // notes/history when choosing the same package for the same local baseline.
+        let selected = candidates[identifier]?.first {
+            $0.localUUID == update.localUUID && $0.localVersion == update.localVersion &&
+            $0.sourceProvenance.sourceVersionID == update.sourceProvenance.sourceVersionID
+        } ?? update
         var preferences = UserDefaults.standard.dictionary(forKey: "SignOs.preferredUpdateSources") as? [String: String] ?? [:]
-        preferences[identifier] = Self.preferenceKey(update)
+        preferences[identifier] = Self.preferenceKey(selected)
         UserDefaults.standard.set(preferences, forKey: "SignOs.preferredUpdateSources")
-        if AppVersion.compare(update.remoteVersion, update.localVersion ?? "") == .orderedDescending { updates[update.localUUID] = update }
+        if AppVersion.compare(selected.remoteVersion, selected.localVersion ?? "") == .orderedDescending { updates[selected.localUUID] = selected }
     }
 
     private func eligible(_ update: AppUpdate) -> Bool {
