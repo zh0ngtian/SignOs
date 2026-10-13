@@ -17,6 +17,6 @@
 - [x] 完整模拟器构建并验收添加页、普通源无齿轮及可移除、管理源 Token 页面、连接成功后的精简页面；检查深色与大字号。
 - [x] 完成发布协调器要求的适配器/产物/附件回归、工作流核对和 diff 检查。
 
-本地验证与截图见 [验收记录](evidence/source-management-entry-20261013/verification.json)。开发提交 push 后登记 ready，GitHub Release 与固定 OTA 的最终结果以发布协调器 batch receipt 为准。
+本地验证与截图见 [验收记录](evidence/source-management-entry-20261013/verification.json)。已由协调器以 1.1.7（29）完成 GitHub Release 与固定 OTA 双渠道交付，见 [共同发布凭证](evidence/release-batch-1.1.7-20261013.json)。错误 SHA 登记与网络查询失败的历史均保留，原任务 recovered 引用成功子批次；协调器升级与更正规则见 [发布协调说明](../release-coordination.md)。
 
 这是删除和收敛现有入口的改动，运行验收覆盖生产界面，不新增仅检查源码文本的测试。

@@ -637,3 +637,27 @@ manifest、版本 / 构建号、完整下载和独立验签通过；签名包 14
 [固定 OTA 安装页](https://192.168.123.79:8769/channels/signos/current/install.html)、manifest、包版本与构建号、
 完整 HTTPS IPA 下载及 SHA-256 校验通过。签名包 14945639 字节，SHA-256 为
 `45b6c92b00c75ea70db146a380ae8cbe990ce5f1e30e7e0820570d246af68462`。本次功能按模拟器范围验收，未验证真机覆盖安装及数据保留。
+
+
+### 软件源添加与管理入口收敛（1.1.7 / 29）
+
+2026-10-13：添加页仅负责通过公开 URL、导入或推荐源添加；需要管理时进入已添加源的
+设置填写 Token。普通静态源通过公开健康接口识别后隐藏齿轮；管理页移除“订阅到 SignOs”、
+“分享软件源地址”和二级“软件源设置”。源卡片可长按移除并二次确认。管理能力识别、订阅、
+源访问回归与浅色/深色/最大辅助字号的完整模拟器界面验收通过，见
+[界面记录](docs/plans/evidence/source-management-entry-20261013/verification.json)。
+
+错误 SHA 登记通过协调器 0.1.4 的显式更正恢复，原记录保持不变；1.1.6（28）的正式构建
+实际成功，但查询 GitHub 状态时遇到 EOF 导致批次停止。关联修复增加只读查询的有限重试，
+25 项发布回归与独立复查通过，以更高版本 1.1.7（29）交付。冻结提交
+`f8db33d0e87feee4bac4bfbdbc4408d43b561137` 的
+[main 构建](https://github.com/zh0ngtian/SignOs/actions/runs/38379410304)与
+[标签发布](https://github.com/zh0ngtian/SignOs/actions/runs/38380555679)均成功；
+[GitHub Release](https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.7)的 IPA、元数据和
+SHA256SUMS 核对通过，更新日志已使用中文列出本版实际变化。
+
+[固定 OTA 安装页](https://192.168.123.79:8769/channels/signos/current/install.html)、manifest、
+包版本/构建号及完整 HTTPS IPA 独立回验通过。签名包 14,938,624 字节，SHA-256 为
+`6a895c075c342c091317886876556479b270df9c2813032ab78084f452c11ee3`。
+四个关联任务共用 [成功子批次凭证](docs/plans/evidence/release-batch-1.1.7-20261013.json)，
+历史失败批次和产物保留。验收范围为本地回归与模拟器，未执行真机覆盖安装及数据保留验收。

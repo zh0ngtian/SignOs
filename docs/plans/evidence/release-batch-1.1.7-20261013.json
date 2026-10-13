@@ -1,0 +1,169 @@
+{
+  "id": "7f94aca6-3cbc-46ff-b609-911bf1076b55",
+  "project": "signos-production",
+  "scope": "96c87efa825ae59a58d467fb058a33fd710e4ced9bee0b003923625611c49047",
+  "frozen": {
+    "buildNumber": "29",
+    "environment": "production",
+    "manifestSha256": "a734c528e58373ad8b8fc3d17ae4b2697024039c4f45e21cba5c42d0bec68463",
+    "sha": "f8db33d0e87feee4bac4bfbdbc4408d43b561137",
+    "target": "com.signos.app",
+    "tasks": [
+      {
+        "id": "source-management-entry-sha-recovery-20261013",
+        "sha": "39fff5987891ba5556a77b94babfa3c48d394851"
+      },
+      {
+        "id": "source-management-entry-verified-correction-20261013",
+        "sha": "39fff5987891ba5556a77b94babfa3c48d394851"
+      },
+      {
+        "id": "source-management-github-query-recovery-20261013",
+        "sha": "c50ac69687d3874e0c5c162294fdce89a5d799a7"
+      }
+    ],
+    "version": "1.1.7"
+  },
+  "results": {
+    "build": {
+      "buildNumber": "29",
+      "commit": "f8db33d0e87feee4bac4bfbdbc4408d43b561137",
+      "runId": 38379410304,
+      "sha256": "dd0ec97fee2dfb171cdcc58ddff108422d23ad2454c6c917198a5dc021615600",
+      "version": "1.1.7"
+    },
+    "github": {
+      "runId": 38380555679,
+      "sha256": "dd0ec97fee2dfb171cdcc58ddff108422d23ad2454c6c917198a5dc021615600",
+      "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.7"
+    },
+    "ota": {
+      "buildNumber": "29",
+      "bundleId": "com.signos.app",
+      "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.7/latest.ipa",
+      "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+      "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.7/manifest.plist",
+      "sha256": "6a895c075c342c091317886876556479b270df9c2813032ab78084f452c11ee3",
+      "signed": true,
+      "size": 14938624,
+      "sourceCommit": "f8db33d0e87feee4bac4bfbdbc4408d43b561137",
+      "version": "1.1.7"
+    },
+    "prepare": {
+      "buildNumber": "29",
+      "bundleIdentifier": "com.signos.app",
+      "inputFingerprint": "854de2e32f502ef03b5ccc9b54ad2566860f984b220884da69f4f4e135faf321",
+      "localValidation": "passed",
+      "version": "1.1.7"
+    },
+    "verify": {
+      "github": {
+        "runId": 38380555679,
+        "sha256": "dd0ec97fee2dfb171cdcc58ddff108422d23ad2454c6c917198a5dc021615600",
+        "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.7"
+      },
+      "httpsFullDownloadVerified": true,
+      "ota": {
+        "buildNumber": "29",
+        "bundleId": "com.signos.app",
+        "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.7/latest.ipa",
+        "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+        "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.7/manifest.plist",
+        "sha256": "6a895c075c342c091317886876556479b270df9c2813032ab78084f452c11ee3",
+        "signed": true,
+        "size": 14938624,
+        "sourceCommit": "f8db33d0e87feee4bac4bfbdbc4408d43b561137",
+        "version": "1.1.7"
+      }
+    }
+  },
+  "coordinatorVersion": "0.1.4",
+  "recoveryOf": "aae36a40-b7e3-4356-9720-197b4127aa5c",
+  "recoveryChain": [
+    "f60268c4-3dd9-44aa-b469-878fb5d9350b",
+    "3a10d2d8-6d83-49f6-8727-710590a00099",
+    "aae36a40-b7e3-4356-9720-197b4127aa5c"
+  ],
+  "completedAt": 1791885765.2464168,
+  "corrections": [
+    {
+      "originalSha": "39fff5942a3da1125ab84584f106902ece2ebf3b",
+      "repairTaskId": "source-management-entry-verified-correction-20261013",
+      "replacementSha": "39fff5987891ba5556a77b94babfa3c48d394851",
+      "taskId": "source-management-entry-20261013"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "source-management-entry-sha-recovery-20261013",
+      "sha": "39fff5987891ba5556a77b94babfa3c48d394851"
+    },
+    {
+      "id": "source-management-entry-verified-correction-20261013",
+      "sha": "39fff5987891ba5556a77b94babfa3c48d394851"
+    },
+    {
+      "id": "source-management-github-query-recovery-20261013",
+      "sha": "c50ac69687d3874e0c5c162294fdce89a5d799a7"
+    }
+  ],
+  "taskStates": [
+    {
+      "id": "source-management-entry-20261013",
+      "state": "recovered",
+      "recovered_by": "7f94aca6-3cbc-46ff-b609-911bf1076b55",
+      "sha": "39fff5942a3da1125ab84584f106902ece2ebf3b"
+    },
+    {
+      "id": "source-management-entry-sha-recovery-20261013",
+      "state": "recovered",
+      "recovered_by": "7f94aca6-3cbc-46ff-b609-911bf1076b55",
+      "sha": "39fff5987891ba5556a77b94babfa3c48d394851"
+    },
+    {
+      "id": "source-management-entry-verified-correction-20261013",
+      "state": "recovered",
+      "recovered_by": "7f94aca6-3cbc-46ff-b609-911bf1076b55",
+      "sha": "39fff5987891ba5556a77b94babfa3c48d394851"
+    },
+    {
+      "id": "source-management-github-query-recovery-20261013",
+      "state": "complete",
+      "recovered_by": null,
+      "sha": "c50ac69687d3874e0c5c162294fdce89a5d799a7"
+    }
+  ],
+  "independentProbe": {
+    "version": "1.1.7",
+    "buildNumber": "29",
+    "bundleId": "com.signos.app",
+    "fullIPASha256": "6a895c075c342c091317886876556479b270df9c2813032ab78084f452c11ee3",
+    "size": 14938624,
+    "fixedInstallPage": "https://192.168.123.79:8769/channels/signos/current/install.html",
+    "fixedManifestVerified": true,
+    "httpsFullDownloadVerified": true,
+    "runs": [
+      {
+        "conclusion": "success",
+        "headSha": "f8db33d0e87feee4bac4bfbdbc4408d43b561137",
+        "status": "completed",
+        "url": "https://github.com/zh0ngtian/SignOs/actions/runs/38379410304"
+      },
+      {
+        "conclusion": "success",
+        "headSha": "f8db33d0e87feee4bac4bfbdbc4408d43b561137",
+        "status": "completed",
+        "url": "https://github.com/zh0ngtian/SignOs/actions/runs/38380555679"
+      }
+    ]
+  },
+  "chineseGitHubReleaseNotesVerified": true,
+  "localVerification": "本地回归与iOS 26.5模拟器界面验收通过；无签名模拟器未证明Token持久化，未执行真机覆盖安装或数据保留验收。",
+  "coordinatorUpgrade": {
+    "version": "0.1.4",
+    "sourceCommit": "b345d46c99549f0613f5a7f8f511871113862313",
+    "ciRun": 38375751806,
+    "startup": "login",
+    "statePreservationVerified": true
+  }
+}
