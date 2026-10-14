@@ -17,6 +17,12 @@ final class CertificatePair {}
 final class Signed: StoredPackage {
 	static func fetchRequest() -> NSFetchRequest<Signed> { NSFetchRequest(entityName: "Signed") }
 	var certificate: CertificatePair? { nil }
+	override func validateForDelete() throws {
+		if uuid == "database-failure", UserDefaults.standard.bool(forKey: "SignOsRegression.failDelete") {
+			throw CocoaError(.validationMissingMandatoryProperty)
+		}
+		try super.validateForDelete()
+	}
 }
 @objc(Imported)
 final class Imported: StoredPackage {
@@ -61,6 +67,11 @@ final class Storage {
     static var disabledSources = Set<String>()
     static func isSourceManaged(_ app: AppInfoPresentable) -> Bool { app.uuid.map { disabledSources.contains($0) } ?? false }
     static func isAllowed(_ app: AppInfoPresentable) -> Bool { !isSourceManaged(app) }
+    static func packages() -> [any AppInfoPresentable] {
+        let context = Storage.shared.context
+        return (try! context.fetch(Signed.fetchRequest())).map { $0 as any AppInfoPresentable }
+            + (try! context.fetch(Imported.fetchRequest())).map { $0 as any AppInfoPresentable }
+    }
 }
 
 @main
@@ -96,6 +107,7 @@ struct InstallPackageRetentionRegression {
 		let retention = InstallPackageRetention.shared
 		retention.schedule(for: "current", signed: ["old", "current"], imported: ["source"])
 		retention.schedule(for: "current", manuallyDeletedImports: ["source"])
+		precondition(retention.protectedPackageUUIDs == ["current", "old", "source"], "Manual cleanup must protect the complete pending install plan")
 		var tracker = InstallProgressTracker()
 		for progress in [nil, 0, nil, 0] as [Double?] {
 			precondition(!tracker.observe(progress), "A prompt/absent progress must not end installation")
@@ -108,6 +120,7 @@ struct InstallPackageRetentionRegression {
 		precondition(tracker.observe(nil), "Disappearing progress after it starts must end installation")
 		var victims: Set<String> = []
 		reloaded.installationEnded(for: "current", replaceOldVersions: true) { uuid, _ in victims.insert(uuid) }
+		precondition(reloaded.protectedPackageUUIDs.isEmpty, "Installation completion releases manual cleanup protection")
 		precondition(victims == ["old", "source"], "Never delete the current or unrelated signed package")
 		// Re-register the same plan to verify actual production Core Data and file deletion.
 		retention.schedule(for: "current", signed: ["old", "current"], imported: ["source"])
@@ -150,6 +163,47 @@ struct InstallPackageRetentionRegression {
         retention.schedule(for: "resigned", signed: ["disabled-signed"], imported: ["disabled-import"])
         storage.finishInstallCleanup(for: resigned)
         precondition(exists("disabled-signed", signed: true) && exists("disabled-import", signed: false), "An update from another source must preserve disabled-source archives")
-		print("InstallPackageRetentionRegression passed: pending/failed retention, progress end, persisted retry, paired completion, file/metadata cleanup, replacement toggle, manual signing")
+		let failed = try package("failed-delete", signed: true) as! Signed
+		let parent = FileManager.default.signed("failed-delete").deletingLastPathComponent()
+		try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: parent.path)
+		defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: parent.path) }
+		do {
+			try storage.deleteAppReportingErrors(for: failed)
+			preconditionFailure("A failed file deletion must be thrown to the cleanup UI")
+		} catch {
+			precondition(exists("failed-delete", signed: true) && !failed.isDeleted)
+			precondition(!storage.deletedMetadata.contains("failed-delete"), "Failed deletion preserves metadata for retry")
+		}
+		try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: parent.path)
+		try storage.deleteAppReportingErrors(for: failed)
+		precondition(!exists("failed-delete", signed: true))
+		let databaseFailure = try package("database-failure", signed: true) as! Signed
+		defaults.set(true, forKey: "SignOsRegression.failDelete")
+		defer { defaults.removeObject(forKey: "SignOsRegression.failDelete") }
+		do {
+			try storage.deleteAppReportingErrors(for: databaseFailure)
+			preconditionFailure("A real Core Data validation failure must be reported")
+		} catch {
+			precondition(!databaseFailure.isDeleted && storage.context.deletedObjects.isEmpty,
+				"The failed transaction must leave the shared context clean and the record available for retry")
+			try storage.context.save()
+			precondition(try! storage.context.fetch(Signed.fetchRequest()).contains { $0.uuid == "database-failure" })
+		}
+		defaults.set(false, forKey: "SignOsRegression.failDelete")
+		try storage.deleteAppReportingErrors(for: databaseFailure)
+		let direct = try package("direct-install", signed: true) as! Signed
+		direct.identifier = "direct.app"
+		let directOld = try package("direct-old", signed: true)
+		directOld.identifier = "direct.app"
+		storage.saveContext()
+		storage.protectPackagesAwaitingInstallation(for: direct)
+		let restart = InstallPackageRetention(defaults: defaults)
+		precondition(restart.protectedPackageUUIDs.isSuperset(of: ["direct-install", "direct-old"]),
+			"A direct install and its older siblings remain protected after restart")
+		var unexpectedlyDeleted: [String] = []
+		restart.installationEnded(for: "direct-install", replaceOldVersions: true) { uuid, _ in unexpectedlyDeleted.append(uuid) }
+		precondition(unexpectedlyDeleted.isEmpty && !restart.protectedPackageUUIDs.contains("direct-old"),
+			"Protection-only plans unlock after installation without changing automatic deletion preferences")
+		print("InstallPackageRetentionRegression passed: pending/failed retention, progress end, persisted retry, paired completion, file/metadata cleanup, replacement toggle, manual signing, manual cleanup protection and failure retry")
 	}
 }

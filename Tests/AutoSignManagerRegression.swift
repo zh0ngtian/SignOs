@@ -29,6 +29,7 @@ struct Metadata { let sourceVersionID: String }
     let context = NSManagedObjectContext(concurrencyType: .mainQueueConcurrencyType)
     var metadata: [String: Metadata] = [:]
     var cleaned: [String] = []
+    var protected: [String] = []
     init() {
         let model = NSManagedObjectModel()
         model.entities = [("Signed", ["uuid", "identifier", "name", "version", "date"]),
@@ -48,6 +49,7 @@ struct Metadata { let sourceVersionID: String }
     func sourceMetadata(for app: AppInfoPresentable) -> Metadata? { app.uuid.flatMap { metadata[$0] } }
     func sourceMetadata(for uuid: String) -> Metadata? { metadata[uuid] }
     func finishInstallCleanup(for app: AppInfoPresentable) { cleaned.append(app.uuid!) }
+    func protectPackagesAwaitingInstallation(for app: AppInfoPresentable) { protected.append(app.uuid!) }
     func getCertificate(from app: AppInfoPresentable) -> CertificatePair? { nil }
     func getAllCertificates() -> [CertificatePair] { [] }
     func getCertificate(for index: Int) -> CertificatePair? { nil }
@@ -150,6 +152,7 @@ extension UIApplication { static func topViewController() -> UIViewController? {
         ArchiveHandler.finish()
         try await waitUntil { manager.currentJob == nil && manager.queue.isEmpty }
         precondition(Storage.shared.cleaned == ["first", "second"])
+        precondition(Storage.shared.protected == ["first", "second"], "Direct installs register durable package protection before preparing archives")
         precondition(manager.confirmedInstallUUIDs == ["first", "second"])
 
         let imported = Imported(context: Storage.shared.context)

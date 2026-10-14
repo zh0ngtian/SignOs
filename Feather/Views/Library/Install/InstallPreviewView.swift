@@ -130,6 +130,7 @@ struct InstallPreviewView: View {
 			return
 		}
 				
+        if !isSharing { Storage.shared.protectPackagesAwaitingInstallation(for: app) }
         SourceAccessManager.shared.beginUse(app)
 		Task.detached(priority: .userInitiated) {
             defer { Task { @MainActor in SourceAccessManager.shared.endUse(app) } }

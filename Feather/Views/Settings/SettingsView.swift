@@ -29,12 +29,8 @@ struct WSIconTile: View {
 
 // MARK: - View
 struct SettingsView: View {
-	@AppStorage("SignOs.autoDeleteOldVersions") private var _autoDeleteOldVersions: Bool = true
 	@AppStorage("SignOs.biometricLock") private var _biometricLock: Bool = false
 	@AppStorage("SignOs.defaultTab") private var _defaultTabRaw: String = TabEnum.sources.rawValue
-	@AppStorage("SignOs.badgeUpdates") private var _badgeUpdates: Bool = false
-	@StateObject private var autoUpdateManager = AutoUpdateManager.shared
-	@StateObject private var autoSignManager = AutoSignManager.shared
 
 	// MARK: Body
 	var body: some View {
@@ -42,7 +38,6 @@ struct SettingsView: View {
 			Form {
 				_profile()
 				_general()
-				_automation()
 				_data()
 				_signing()
 				_appearance()
@@ -103,128 +98,6 @@ extension SettingsView {
 			Text(.localized("General"))
 		} footer: {
 			Text(.localized("The tab SignOs opens every time you launch it."))
-		}
-	}
-
-	@ViewBuilder
-	private func _automation() -> some View {
-		Section {
-			Toggle(isOn: Binding(
-				get: { autoUpdateManager.isAutoUpdateEnabled },
-				set: { autoUpdateManager.isAutoUpdateEnabled = $0 }
-			)) {
-				HStack(spacing: 12) {
-					WSIconTile(systemImage: "arrow.triangle.2.circlepath", color: .blue)
-					Text(.localized("Update Automatically"))
-				}
-			}
-			.tint(.accentColor)
-
-			Picker(selection: Binding(
-				get: { Int(autoUpdateManager.intervalHours) },
-				set: { autoUpdateManager.intervalHours = Double($0) }
-			)) {
-				Text(.localized("Hourly")).tag(1)
-				Text(.localized("Every 3 Hours")).tag(3)
-				Text(.localized("Every 6 Hours")).tag(6)
-				Text(.localized("Every 12 Hours")).tag(12)
-				Text(.localized("Daily")).tag(24)
-			} label: {
-				HStack(spacing: 12) {
-					WSIconTile(systemImage: "clock", color: .indigo)
-					Text(.localized("Check Interval"))
-				}
-			}
-
-			Picker(selection: Binding(
-				get: { autoUpdateManager.isWifiOnly },
-				set: { autoUpdateManager.isWifiOnly = $0 }
-			)) {
-				Text(.localized("Any Connection")).tag(false)
-				Text(.localized("Wi-Fi Only")).tag(true)
-			} label: {
-				HStack(spacing: 12) {
-					WSIconTile(systemImage: "wifi", color: .cyan)
-					Text(.localized("Download Over"))
-				}
-			}
-
-			Picker(selection: Binding(
-				get: { autoUpdateManager.isNightWindowOnly },
-				set: { autoUpdateManager.isNightWindowOnly = $0 }
-			)) {
-				Text(.localized("Anytime")).tag(false)
-				Text(.localized("Night Only")).tag(true)
-			} label: {
-				HStack(spacing: 12) {
-					WSIconTile(systemImage: "moon.stars.fill", color: .purple)
-					Text(.localized("Active Window"))
-				}
-			}
-
-			Toggle(isOn: Binding(
-				get: { autoSignManager.isAutoSignEnabled },
-				set: { autoSignManager.isAutoSignEnabled = $0 }
-			)) {
-				HStack(spacing: 12) {
-					WSIconTile(systemImage: "signature", color: .green)
-					Text(.localized("Auto-Sign Imported Apps"))
-				}
-			}
-			.tint(.accentColor)
-
-			Toggle(isOn: Binding(
-				get: { autoUpdateManager.isAutoRenewEnabled },
-				set: { autoUpdateManager.isAutoRenewEnabled = $0 }
-			)) {
-				HStack(spacing: 12) {
-					WSIconTile(systemImage: "checkmark.seal.fill", color: .teal)
-					Text(.localized("Keep Apps Signed"))
-				}
-			}
-			.tint(.accentColor)
-
-			Toggle(isOn: Binding(
-				get: { autoUpdateManager.isSelfHealEnabled },
-				set: { autoUpdateManager.isSelfHealEnabled = $0 }
-			)) {
-				HStack(spacing: 12) {
-					WSIconTile(systemImage: "arrow.clockwise.heart", color: .mint)
-					Text(.localized("Self-Heal Revoked Apps"))
-				}
-			}
-			.tint(.accentColor)
-
-			Toggle(isOn: $_autoDeleteOldVersions) {
-				HStack(spacing: 12) {
-					WSIconTile(systemImage: "arrow.3.trianglepath", color: .orange)
-					Text(.localized("Replace Old Versions"))
-				}
-			}
-			.tint(.accentColor)
-
-			Toggle(isOn: Binding(
-				get: { autoUpdateManager.notificationsEnabled },
-				set: { autoUpdateManager.notificationsEnabled = $0 }
-			)) {
-				HStack(spacing: 12) {
-					WSIconTile(systemImage: "bell.fill", color: .red)
-					Text(.localized("Notifications"))
-				}
-			}
-			.tint(.accentColor)
-
-			Toggle(isOn: $_badgeUpdates) {
-				HStack(spacing: 12) {
-					WSIconTile(systemImage: "app.badge.fill", color: .mint)
-					Text(.localized("Badge App Icon"))
-				}
-			}
-			.tint(.accentColor)
-		} header: {
-			Text(.localized("Automation"))
-		} footer: {
-			Text(.localized("SignOs checks your repositories and installs updates in the background, keeping your apps fresh and working. With a paired device, installs happen with no interaction at all."))
 		}
 	}
 
