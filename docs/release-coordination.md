@@ -40,6 +40,22 @@
 不能把尚未执行的检查标成通过。`--urgent` 跳过合批等待，`--separate` 要求独立批次，
 两者都不跳过原有验收要求。不涉及构建 / 发布的文档任务按原规则直接提交。
 
+## 中文日志必填与冻结
+
+SignOs 的任务就绪验证 JSON 必须同时提供 releaseNotes。每个参与任务都填写本任务实际变化；合批汇总并去重，版本与构建号仍由协调器分配。示例：
+
+```json
+{"checks":[{"name":"adapter-regression","status":"passed","evidence":"实际验证结果"}],"releaseNotes":{"language":"zh-Hans","changes":["修复软件源禁用后缺少重新启用入口的问题"]}}
+```
+
+校验要求非空条目、简体中文语言标记及具体中文说明（至少四个汉字），拒绝纯英文、TODO/TBD 和“修复已知问题”等常见占位。变更内容是否准确仍由任务复核负责。所有任务缺失或不合格时，prepare 在版本分配、构建与发布前报错，不生成替代日志。
+
+通用协调器的冻结清单只保存固定公开字段，SignOs prepare 因此生成项目专用的 .release-notes.json，记录批次、已分配版本/构建号与任务 ID、SHA、公开变更说明，由正常 freeze 一并提交。CI 校验该文件与 .release-batch.json 的批次、版本及任务身份一致，build-metadata.json 保存 releaseNotesSha256，CI 产物包含 release-notes.json。标签发布复验文件散列；适配器还核对产物日志与冻结工作树文件完全相同。
+
+GitHub Release 与 OTA 共用同一中文变更日志渲染函数；GitHub 正文另附中文安装及校验说明，现有软件源继续从 Release 同步。发布验收检查实际 GitHub 正文与 OTA notes，IPA 校验缓存不能绕过日志检查。恢复已有 OTA 暂存包时，在激活固定渠道前检查日志，错误暂存包及证据保留，按既有修复流程处理。
+
+修改后的本地必要验证包含 python3 -B -m unittest discover -s Tests -p 'test_release_notes.py'；prepare 也会自动运行它。完整设计与验证范围见 [中文更新日志契约](plans/chinese-release-notes.md)。
+
 ## 批次与适配器
 
 `scripts/signos_release_adapter.py` 实现以下阶段，协调器逐阶段先 check、执行缺失动作，

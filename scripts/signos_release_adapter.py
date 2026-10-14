@@ -18,6 +18,7 @@ import uuid
 
 from find_release_artifact import find_artifact
 from prepare_github_release import prepare_release
+from release_notes import task_notes, make_notes, load_notes, changelog, verify_log
 
 
 def atomic(path, value):
@@ -88,7 +89,18 @@ class Adapter:
     def frozen(self):return self.data['frozen']
     def tag(self):return 'v'+self.frozen()['version']
 
+    def release_notes(self):
+        manifest=json.loads((self.root/'.release-batch.json').read_text())
+        record=load_notes(self.root/'.release-notes.json',manifest)
+        expected=self.frozen()
+        if record["batchId"]!=self.data["id"] or record["version"]!=expected["version"] or record["buildNumber"]!=expected["buildNumber"]:
+            raise ValueError("冻结中文更新日志不属于当前发布批次")
+        if record["tasks"]!=task_notes(self.data["tasks"]):
+            raise ValueError("冻结中文更新日志与任务就绪记录不一致")
+        return record
+
     def prepare(self):
+        task_notes(self.data.get("tasks"))  # Reject before version reservation, build or publication.
         path=self.artifacts/'prepared.json'
         if path.exists():prepared=json.loads(path.read_text())
         else:
@@ -113,6 +125,8 @@ class Adapter:
         p.write_text(re.sub(r'^FEATHER_PROJECT_VERSION=.+$', 'FEATHER_PROJECT_VERSION='+prepared['version'],text,flags=re.M))
         p=self.root/'Feather.xcodeproj/project.pbxproj'
         p.write_text(re.sub(r'CURRENT_PROJECT_VERSION = \d+;', 'CURRENT_PROJECT_VERSION = '+prepared['buildNumber']+';',p.read_text()))
+        notes=make_notes(self.data["tasks"],self.data["id"],prepared["version"],prepared["buildNumber"])
+        atomic(self.root/".release-notes.json",notes)
         before=fingerprint(self.root)
         marker=self.artifacts/'local-validation.json'
         if not marker.exists() or json.loads(marker.read_text())['fingerprint']!=before:
@@ -120,6 +134,7 @@ class Adapter:
             self.cmd(['python3','-B','-m','unittest','discover','-s','Tests','-p','test_release_artifact.py'])
             self.cmd(['python3','-B','-m','unittest','discover','-s','Tests','-p','test_signos_release_adapter.py'])
             self.cmd(['python3','-B','Tests/GitHubReleaseRegression.py'])
+            self.cmd(['python3','-B','-m','unittest','discover','-s','Tests','-p','test_release_notes.py'])
             self.cmd(['make','iphoneos'])
             with zipfile.ZipFile(self.root/'packages/SignOs.ipa') as archive:
                 info=plistlib.loads(archive.read('Payload/SignOs.app/Info.plist'))
@@ -151,8 +166,12 @@ class Adapter:
         raise RuntimeError('Timed out waiting for exact-commit CI; resume will inspect the existing run')
 
     def ci_package(self):
+        self.release_notes()
         def validate(target):
             prepare_release(target,self.tag(),self.frozen()['sha'])
+            self.release_notes()
+            if (target/'release-notes.json').read_bytes()!=(self.root/'.release-notes.json').read_bytes():
+                raise ValueError('CI artifact Chinese notes differ from the frozen file')
             meta=json.loads((target/'build-metadata.json').read_text())
             if meta['buildNumber']!=self.frozen()['buildNumber']:raise ValueError('Frozen build number differs from CI artifact')
             if meta.get('batchId')!=self.data['id'] or meta.get('batchManifestSha256')!=self.frozen()['manifestSha256']:
@@ -188,6 +207,7 @@ class Adapter:
                                      'version':metadata['version'],'buildNumber':metadata['buildNumber']}}
 
     def run_build(self):
+        self.release_notes()
         sha=self.frozen()['sha']
         self.cmd(['git','fetch','origin','main'])
         remote=self.cmd(['git','rev-parse','origin/main'])
@@ -209,6 +229,7 @@ class Adapter:
         release=self.api(f'repos/{self.repository}/releases/tags/{self.tag()}',missing=True)
         if not release or release['draft']:return {'done':False}
         if not {'SignOs.ipa','build-metadata.json','SHA256SUMS'}<={a['name'] for a in release['assets']}:return {'done':False}
+        verify_log(release.get('body'),self.release_notes())
         runs=[r for r in self.runs(self.tag()) if r['status']=='completed' and r['conclusion']=='success']
         if not runs:return {'done':False}
         asset_state=[{k:a.get(k) for k in ('id','name','size','updated_at','digest')} for a in release['assets']]
@@ -222,6 +243,7 @@ class Adapter:
         downloaded_sums=(target/'SHA256SUMS').read_text()
         ci,meta=self.ci_package()
         (target/'release-batch.json').write_bytes((ci/'release-batch.json').read_bytes())
+        (target/'release-notes.json').write_bytes((ci/'release-notes.json').read_bytes())
         prepare_release(target,self.tag(),self.frozen()['sha'])
         if (target/'SignOs.ipa').read_bytes()!=(ci/'SignOs.ipa').read_bytes() or (target/'build-metadata.json').read_bytes()!=(ci/'build-metadata.json').read_bytes():
             raise ValueError('Release assets differ from the exact frozen CI artifact')
@@ -249,7 +271,8 @@ class Adapter:
         tags=self.cmd(['git','tag','--list',tag])
         if tags:
             if self.cmd(['git','rev-list','-n','1',tag])!=sha:raise ValueError('Existing tag points to another commit; published tags cannot move')
-        else:self.cmd(['git','tag','-a',tag,sha,'-m','SignOs '+self.frozen()['version']])
+        self.release_notes()
+        if not tags:self.cmd(['git','tag','-a',tag,sha,'-m','SignOs '+self.frozen()['version']])
         remote=self.cmd(['git','ls-remote','origin','refs/tags/'+tag])
         if not remote:self.cmd(['git','push','origin','refs/tags/'+tag])
         minimum=0
@@ -266,6 +289,7 @@ class Adapter:
         expected=self.frozen()
         if current['version']!=expected['version'] or current['buildNumber']!=expected['buildNumber']:return None
         if current.get('signed') is not True or current['bundleId']!='com.signos.app':raise ValueError('Unexpected OTA identity')
+        verify_log(current.get('notes'),self.release_notes(),exact=True)
         cached=self.artifacts/'ota-receipt.json'
         public_keys=['version','buildNumber','bundleId','signed','size','sha256','installUrl','downloadUrl','manifestUrl']
         if cached.exists():
@@ -301,9 +325,10 @@ class Adapter:
         return {'done':receipt is not None,'result':receipt or {}}
 
     def run_ota(self):
+        notes=changelog(self.release_notes())
         target,meta=self.ci_package()
         args=['python3',self.options['ota_publisher'],'--config',str(self.private),'--ipa',str(target/'SignOs.ipa'),
-              '--version',self.frozen()['version'],'--build-number',self.frozen()['buildNumber'],'--notes','SignOs coordinated release batch '+self.data['id']]
+              '--version',self.frozen()['version'],'--build-number',self.frozen()['buildNumber'],'--notes',notes]
         plan=self.cmd([*args,'--plan']);atomic(self.artifacts/'ota-plan.json',json.loads(plan))
         output=Path(self.config['outputRoot'])/self.frozen()['version']
         intent=self.artifacts/'ota-input.json'
@@ -316,6 +341,7 @@ class Adapter:
             sys.path.insert(0,str(Path(self.options['ota_publisher']).parent))
             from ios_ota import check_package, stage_local, activate_staged, verify_published
             stage=output/'ota';receipt=check_package(stage)
+            verify_log(receipt.get('notes'),self.release_notes(),exact=True)
             signed=output/'signed.ipa'
             if hashlib.sha256(signed.read_bytes()).hexdigest()!=receipt['sha256']:raise ValueError('Staged signature package mismatch')
             self.cmd(['python3',str(Path(self.options['ota_publisher']).with_name('ios_sign.py')),'--verify-ipa',str(signed)])

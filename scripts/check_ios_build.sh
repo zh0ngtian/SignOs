@@ -80,6 +80,7 @@ if manifest.exists():
     batch = json.loads(subprocess.check_output(['python3', 'scripts/check_release_batch.py', metadata['commit']], text=True))
     metadata.update(batch)
     (output / 'release-batch.json').write_bytes(manifest.read_bytes())
+    (output / 'release-notes.json').write_bytes(Path('.release-notes.json').read_bytes())
 report = json.dumps(metadata, indent=2) + '\n'
 (output / 'build-metadata.json').write_text(report)
 print(report)

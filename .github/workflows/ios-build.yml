@@ -24,6 +24,8 @@ on:
       - 'scripts/check_ios_build.sh'
       - 'scripts/find_release_artifact.py'
       - 'scripts/prepare_github_release.py'
+      - 'scripts/release_notes.py'
+      - 'Tests/test_release_notes.py'
       - 'Tests/test_signos_release_adapter.py'
       - 'scripts/check_release_batch.py'
       - 'scripts/signos_release_adapter.py'
@@ -53,6 +55,8 @@ on:
       - 'scripts/check_ios_build.sh'
       - 'scripts/find_release_artifact.py'
       - 'scripts/prepare_github_release.py'
+      - 'scripts/release_notes.py'
+      - 'Tests/test_release_notes.py'
       - 'Tests/test_signos_release_adapter.py'
       - 'scripts/check_release_batch.py'
       - 'scripts/signos_release_adapter.py'
@@ -120,6 +124,7 @@ jobs:
             ${{ runner.temp }}/signos-ios-build/SignOs.ipa
             ${{ runner.temp }}/signos-ios-build/build-metadata.json
             ${{ runner.temp }}/signos-ios-build/release-batch.json
+            ${{ runner.temp }}/signos-ios-build/release-notes.json
           if-no-files-found: error
           retention-days: 14
           overwrite: true
@@ -178,7 +183,7 @@ jobs:
         with:
           name: SignOs ${{ github.ref_name }}
           body_path: release/release-notes.md
-          generate_release_notes: true
+          generate_release_notes: false
           fail_on_unmatched_files: true
           files: |
             release/SignOs.ipa

@@ -742,3 +742,7 @@ Ad Hoc 签名包为 14,986,999 字节，SHA-256 `c5e2c277869a8f1276d906ec1da7f39
 本地模拟器和 iphoneos Release 构建、SourceAccess 与安装阶段回归、独立复核通过；iOS 27.0 模拟器验收了两向切换、状态提示和重启持久化。批次 `bebb8e35-503f-4094-a455-40275d736f19` 的冻结提交 `769df76610e881971fa3a974a3caa24e39c80db0` 已通过 main 构建与整个标签工作流，并完成 GitHub Release / OTA 同产物发布、完整下载及独立验签。固定入口、manifest 和 Release 附件再次回验一致；真机覆盖安装与数据保留未验证。详见 [1.1.13 批次发布凭证](docs/plans/evidence/release-batch-1.1.13-20261014.json) 和 [菜单验收记录](docs/plans/evidence/source-enable-menu-20261014/verification.json)。
 
 2026-10-14 补齐 1.1.13 的具体中文更新说明：原自动发布只有英文模板与 OTA 批次说明，中文变更未同步到发布渠道。现已修改本版 GitHub Release 正文并同步现有软件源订阅，普通与兼容清单的客户端 User-Agent 回验通过；原 IPA 摘要、下载地址、应用元信息和验包信息保留，版本与标签未变。OTA 批次说明本次未修改，日志输入及发布校验机制待确认后调整。
+
+### 中文更新日志发布门槛
+
+SignOs 发布任务必须在 ready 的验证 JSON 中填写具体中文 releaseNotes；所有参与任务都需要提供，缺失、纯英文或已知笼统占位会在版本分配和构建前报错。日志随冻结提交保存在 .release-notes.json，CI 产物与 build-metadata.json 绑定其 SHA-256。GitHub Release、OTA 共用同一变更日志，软件源从 Release 同步；实际日志不符时，即使 IPA 校验命中缓存，也不能验收完成。暂存包恢复同样在渠道激活前校验日志。填写格式与验证命令见 [发布协调说明](docs/release-coordination.md#中文日志必填与冻结)。
