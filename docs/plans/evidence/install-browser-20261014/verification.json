@@ -1,0 +1,39 @@
+{
+  "date": "2026-10-14",
+  "scope": "安装中转网页关闭；未执行真机 OTA 安装或覆盖安装",
+  "implementation": ["InstallationBrowserSession", "InstallationBrowserPresentation", "AutoSignManager", "InstallPreviewView"],
+  "checks": [
+    {"name": "installation-browser-simulator", "status": "passed", "evidence": "Swift 6 warnings-as-errors 编译生产会话、UIKit 呈现、原生 InstallerStatusViewModel 与 SwiftUI Safari wrapper；iPhone 17 Pro / iOS 26.5，12 个受控状态及生命周期场景通过。regression.log 与前后截图保存在同目录。"},
+    {"name": "installation-cleanup-simulator", "status": "passed", "evidence": "python3 -B scripts/test_install_cleanup_simulator.py：保留待安装/失败包、安装结束清理、持久化重试、配对安装、手动清理保护及失败重试通过。"},
+    {"name": "one-view-phase", "status": "passed", "evidence": "OneViewPhaseRegression：6 项通过。"},
+    {"name": "iphoneos-build", "status": "passed", "evidence": "make iphoneos：Release BUILD SUCCEEDED，生成 packages/SignOs.ipa。"},
+    {"name": "simulator-build-launch", "status": "passed", "evidence": "XcodeBuildMCP Debug simulator build 通过；安装 _build/Applications/SignOs.app 并启动 com.signos.app，原生软件源页面截图 full-app-launch.png 已核验。"},
+    {"name": "adapter-regression", "status": "passed", "evidence": "test_signos_release_adapter.py：14 项通过。"},
+    {"name": "release-artifact-regression", "status": "passed", "evidence": "test_release_artifact.py：7 项通过。"},
+    {"name": "release-assets-regression", "status": "passed", "evidence": "Tests/GitHubReleaseRegression.py：7 项通过。"},
+    {"name": "release-notes-regression", "status": "passed", "evidence": "test_release_notes.py：13 项通过。"},
+    {"name": "workflow-review", "status": "passed", "evidence": "审查 ios-build.yml：Feather/** 与 Tests/**.swift 涵盖本次客户端变更，冻结 main 构建、标签复用产物及共用发布并发组保持生效。"},
+    {"name": "diff-check", "status": "passed", "evidence": "git diff --check 与模拟器 runner Python AST 语法检查通过。"}
+  ],
+  "scenarios": [
+    "请求 manifest 保留确认页",
+    "短暂失焦再恢复前台保留确认页",
+    "自动入口取包后关闭，不修改安装状态",
+    "后台返回关闭残留自动安装页",
+    "installing/completed/broken 均关闭中转页",
+    "页面呈现动画期间取包也能关闭",
+    "Done 解除页面监听",
+    "不关闭与安装无关的 Safari 页",
+    "手动 SwiftUI sheet 取包后关闭",
+    "手动 SwiftUI sheet 后台返回关闭"
+  ],
+  "limits": [
+    "回归直接驱动生产状态发布者与受控生命周期通知，真实呈现 Safari 和 SwiftUI sheet；没有在模拟器执行 itms-services 安装。",
+    "真机不可用，真实系统安装确认、真机覆盖安装与数据保留需后续设备验收。",
+    "关闭网页不证明安装完成，本地 server、包保留及安装重试契约保持不变。"
+  ],
+  "releaseNotes": {"language": "zh-Hans", "changes": [
+    "修复自动与手动安装开始取包后仍停留在 127.0.0.1 黑屏中转网页的问题",
+    "从后台返回 SignOs 时自动关闭残留安装网页并恢复原生页面，保留系统确认与安装重试入口"
+  ]}
+}

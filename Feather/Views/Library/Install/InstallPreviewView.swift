@@ -17,7 +17,7 @@ struct InstallPreviewView: View {
 	@AppStorage("Feather.useShareSheetForArchiving") private var _useShareSheet: Bool = false
 	@AppStorage("Feather.installationMethod") private var _installationMethod: Int = 0
 	@AppStorage("Feather.serverMethod") private var _serverMethod: Int = InstallationDefaults.serverMethod
-	@State private var _isWebviewPresenting = false
+	@StateObject private var browserSession: InstallationBrowserSession
 	
 	var app: AppInfoPresentable
 	@StateObject var viewModel: InstallerStatusViewModel
@@ -30,6 +30,7 @@ struct InstallPreviewView: View {
 		self.isSharing = isSharing
 		let viewModel = InstallerStatusViewModel(isIdevice: UserDefaults.standard.integer(forKey: "Feather.installationMethod") == 1)
 		self._viewModel = StateObject(wrappedValue: viewModel)
+		self._browserSession = StateObject(wrappedValue: InstallationBrowserSession(viewModel: viewModel))
 		self._installer = StateObject(wrappedValue: try! ServerInstaller(app: app, viewModel: viewModel))
 	}
 	
@@ -52,7 +53,7 @@ struct InstallPreviewView: View {
 		.background(Color(UIColor.secondarySystemBackground))
 		.cornerRadius(cornerRadius)
 		.padding()
-		.sheet(isPresented: $_isWebviewPresenting) {
+		.sheet(isPresented: $browserSession.isPresented) {
 			SafariRepresentableView(url: installer.pageEndpoint).ignoresSafeArea()
 		}
 		.onReceive(viewModel.$status) { newStatus in
@@ -61,12 +62,8 @@ struct InstallPreviewView: View {
 					if _serverMethod == 0 {
 						UIApplication.shared.open(URL(string: installer.iTunesLink)!)
 					} else if _serverMethod == 1 {
-						_isWebviewPresenting = true
+						browserSession.present()
 					}
-				}
-				
-				if case .sendingPayload = newStatus, _serverMethod == 1 {
-					_isWebviewPresenting = false
 				}
 				
 				switch newStatus {

@@ -53,6 +53,7 @@ final class AutoSignManager: ObservableObject {
 	private static var _liveInstallers: [ServerInstaller] = []
     private static var installLeases: [String: String] = [:]
     private static var installObservers: [String: AnyCancellable] = [:]
+    private static var installBrowsers: [UUID: InstallationBrowserPresentation] = [:]
 
 	private init() {
 		UIDevice.current.isBatteryMonitoringEnabled = true
@@ -388,7 +389,11 @@ final class AutoSignManager: ObservableObject {
 						NSLocalizedDescriptionKey: String.localized("Couldn't show the installation page. Tap Install to try again.")
 					])
 				}
-				presenter.present(SFSafariViewController(url: installer.pageEndpoint), animated: true)
+				let browser = InstallationBrowserPresentation(url: installer.pageEndpoint, viewModel: viewModel) {
+					Self.installBrowsers.removeValue(forKey: installer.id)
+				}
+				Self.installBrowsers[installer.id] = browser
+				browser.present(from: presenter)
 			} else {
 				guard let url = URL(string: installer.iTunesLink), await UIApplication.shared.open(url) else {
 					throw NSError(domain: "SignOs.Install", code: 2, userInfo: [
