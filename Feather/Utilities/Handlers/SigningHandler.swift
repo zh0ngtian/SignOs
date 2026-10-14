@@ -174,6 +174,9 @@ final class SigningHandler: NSObject {
         await MainActor.run {
             AppOperations.preserveSigningIdentities()
             SourceAccessManager.shared.recordSignedResult(input: _app.uuid, output: _uuid)
+			let identifier = Bundle(url: appUrl)?.bundleIdentifier
+			let related = AppOperations.packages().filter { identifier != nil && $0.identifier == identifier }.compactMap(\.uuid)
+			InstallPackageRetention.shared.scheduleAfterSigning(for: _uuid, protected: related + (_app.uuid.map { [$0] } ?? []))
         }
 		if _options.post_deleteAppAfterSigned, !_app.isSigned, let importedUUID = _app.uuid {
 			await MainActor.run {

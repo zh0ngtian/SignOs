@@ -311,6 +311,7 @@ final class AutoSignManager: ObservableObject {
 	/// "tap to install" notification that completes on open.
 	private func _attemptSilentInstall(_ app: Signed) async {
 		guard AppOperations.isAllowed(app), currentJob.map({ !suppressedJobs.contains($0.id) }) ?? true else { return }
+		Storage.shared.protectPackagesAwaitingInstallation(for: app)
 		currentPhase = "正在安装"
 		if let identifier = app.identifier { installErrors.removeValue(forKey: identifier) }
 		let method = UserDefaults.standard.integer(forKey: "Feather.installationMethod")

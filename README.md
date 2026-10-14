@@ -71,7 +71,6 @@ contributors for their work, this wouldn't exist without them.
 - Sources can be disabled locally while retaining packages; disabled archives remain visible and are excluded from signing, installation and automatic cleanup
 - Single-app and batch certificate replacement reuses local packages without changing app versions
 - Simplified Chinese throughout app controls, settings, status messages and notifications; source sync and update actions share Search's capsule style
-- Automatic update and signing preferences in Settings
 - OneView install — Get (or Update for a detected source update), download progress with speed, signing and Open on one screen
 - Rich app pages with screenshots, What's New, version history and permissions
 - App Store-style Settings with icon tiles
@@ -89,6 +88,30 @@ contributors for their work, this wouldn't exist without them.
 - Certificates manager with revocation checking
 - AltStore-compatible sources, `signos://` URL scheme
 - Liquid Glass design on iOS 26, clean Apple-style interface everywhere
+
+## 存储空间清理
+
+「设置 → 存储空间 → 清理」提供移除旧版本副本、移除重复导入和清空归档。
+三个入口在没有可清理内容时仍可点击并提示「无需清理」；有内容时先确认数量，
+完成后显示实际结果并刷新空间统计，失败显示原因且可重试。
+
+旧副本按同 Bundle ID 的签名日期判断，保留最新可用包；重复导入只清理已有
+同来源、同订阅、同版本可用签名副本的包，手动导入按相同且非空版本判定。
+已启用软件源的包参与清理；禁用来源、正在处理以及持久化待安装记录中的
+包继续保留，安装结束信号后解除保护。未知来源版本的历史包不按手动重复包删除。
+清空归档仅删除 Documents/Archives 下导出的 IPA 等归档内容，保留目录、证书和应用包，
+清理本地包不会卸载桌面应用。
+
+设置页不再展示「自动化」分组，已有自动化偏好值及后台行为继续保留。
+清理策略与文件操作回归：
+
+```sh
+xcrun swiftc -swift-version 6 -warnings-as-errors \
+  Feather/Utilities/StorageCleanup.swift Feather/Utilities/InstallPackageRetention.swift \
+  Tests/StorageCleanupRegression.swift \
+  -o /tmp/signos-storage-cleanup-regression
+/tmp/signos-storage-cleanup-regression
+```
 
 ## 日志查看与导出
 

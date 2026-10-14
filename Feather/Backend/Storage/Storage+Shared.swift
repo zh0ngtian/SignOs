@@ -23,19 +23,57 @@ extension Storage {
 	
 	func deleteApp(for app: AppInfoPresentable) {
 		do {
-			if let url = getUuidDirectory(for: app) {
-				if FileManager.default.fileExists(atPath: url.path) { try FileManager.default.removeItem(at: url) }
-			}
-			deleteSourceMetadata(for: app.uuid)
-			if let object = app as? NSManagedObject {
-				context.delete(object)
-			}
+			try _deleteAppFilesAndRecord(for: app)
 			saveContext()
         } catch {
             NSLog("SignOs package cleanup failed: %@", error.localizedDescription)
         }
 	}
 	
+	/// Report file/database failures to manual cleanup instead of claiming success.
+	func deleteAppReportingErrors(for app: AppInfoPresentable) throws {
+		// Persist pending edits first; failed deletions must never leak into viewContext.
+		try context.save()
+		guard let object = app as? NSManagedObject, let coordinator = context.persistentStoreCoordinator else {
+			throw NSError(domain: "SignOs.StorageCleanup", code: 1, userInfo: [NSLocalizedDescriptionKey: "无法访问应用数据库。"])
+		}
+		let transaction = NSManagedObjectContext(concurrencyType: .mainQueueConcurrencyType)
+		transaction.persistentStoreCoordinator = coordinator
+		defer { transaction.reset() }
+		let victim = try transaction.existingObject(with: object.objectID)
+		if coordinator.managedObjectModel.entitiesByName["AppSourceMetadata"] != nil, let uuid = app.uuid {
+			let request = NSFetchRequest<NSManagedObject>(entityName: "AppSourceMetadata")
+			request.predicate = NSPredicate(format: "appUUID == %@", uuid)
+			try transaction.fetch(request).forEach(transaction.delete)
+		}
+		transaction.delete(victim)
+		transaction.processPendingChanges()
+		let changes: [AnyHashable: Any] = [
+			NSDeletedObjectsKey: transaction.deletedObjects.map(\.objectID),
+			NSUpdatedObjectsKey: transaction.updatedObjects.map(\.objectID)
+		]
+		if let url = getUuidDirectory(for: app), FileManager.default.fileExists(atPath: url.path) {
+			try FileManager.default.removeItem(at: url)
+		}
+		try transaction.save()
+		NSManagedObjectContext.mergeChanges(fromRemoteContextSave: changes, into: [context])
+	}
+
+	private func _deleteAppFilesAndRecord(for app: AppInfoPresentable) throws {
+		if let url = getUuidDirectory(for: app), FileManager.default.fileExists(atPath: url.path) {
+			try FileManager.default.removeItem(at: url)
+		}
+		deleteSourceMetadata(for: app.uuid)
+		if let object = app as? NSManagedObject { context.delete(object) }
+	}
+
+	@MainActor
+	func protectPackagesAwaitingInstallation(for app: AppInfoPresentable) {
+		guard app.isSigned, let uuid = app.uuid else { return }
+		let related = AppOperations.packages().filter { app.identifier != nil && $0.identifier == app.identifier }.compactMap(\.uuid)
+		InstallPackageRetention.shared.beginInstallation(for: uuid, protected: related)
+	}
+
 	@MainActor
 	func finishInstallCleanup(for app: AppInfoPresentable) {
 		guard app.isSigned, let uuid = app.uuid,
