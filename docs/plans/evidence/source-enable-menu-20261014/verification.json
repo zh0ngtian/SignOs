@@ -1,0 +1,20 @@
+{
+  "date": "2026-10-14",
+  "feature": "软件源卡片长按启用与禁用",
+  "simulator": "iOS 27.0",
+  "testBundleIdentifier": "com.signos.source-enable-qa",
+  "checks": {
+    "enabledMenuShowsDisable": true,
+    "disabledMenuShowsEnable": true,
+    "removeMenuPreserved": true,
+    "disabledCaptionAppears": true,
+    "reenableClearsCaption": true,
+    "disabledStatePersistsAfterRelaunch": true,
+    "enabledStatePersistsAfterRelaunch": true,
+    "sourceAccessRegressionPassed": true,
+    "oneViewPhaseRegressionPassed": true,
+    "simulatorBuildPassed": true,
+    "iphoneosReleaseBuildPassed": true
+  },
+  "physicalOverlayInstallAndDataRetentionVerified": false
+}
