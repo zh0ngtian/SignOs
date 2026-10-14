@@ -218,7 +218,7 @@ class Adapter:
             if previous['assets']==asset_state and previous['commit']==self.frozen()['sha']:
                 return {'done':True,'result':previous['result']}
         target=self.artifacts/'github';target.mkdir(exist_ok=True)
-        self.cmd(['gh','release','download',self.tag(),'-R',self.repository,'-D',str(target),'--clobber'])
+        self.download_verified_release(target)
         downloaded_sums=(target/'SHA256SUMS').read_text()
         ci,meta=self.ci_package()
         (target/'release-batch.json').write_bytes((ci/'release-batch.json').read_bytes())
@@ -231,6 +231,17 @@ class Adapter:
         result={'url':release['html_url'],'runId':runs[0]['id'],'sha256':meta['sha256']}
         atomic(cache,{'assets':asset_state,'commit':self.frozen()['sha'],'result':result})
         return {'done':True,'result':result}
+
+    def download_verified_release(self,target):
+        # Called only after REST assets and the exact tag workflow are verified.
+        # GitHub's CLI lookup can briefly lag a newly published REST release.
+        for attempt in range(3):
+            try:
+                self.cmd(['gh','release','download',self.tag(),'-R',self.repository,'-D',str(target),'--clobber'])
+                return
+            except RuntimeError as error:
+                if 'release not found' not in str(error) or attempt==2:raise
+                time.sleep(attempt+1)
 
     def run_github(self):
         tag=self.tag();sha=self.frozen()['sha']

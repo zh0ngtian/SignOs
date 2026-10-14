@@ -129,4 +129,48 @@ class AdapterRecoveryTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError,'401'):a.api('repos/owner/repo/actions/runs')
             self.assertEqual(run.call_count,1)
 
+    def test_verified_new_release_download_recovers_from_visibility_delay(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);a=self.adapter(root);ci=root/'ci';ci.mkdir();commands=[]
+            ipa=b'ipa';metadata=b'{}';digest=hashlib.sha256(ipa).hexdigest()
+            (ci/'SignOs.ipa').write_bytes(ipa);(ci/'build-metadata.json').write_bytes(metadata);(ci/'release-batch.json').write_text('{}')
+            a.api=lambda *args,**kw:{'draft':False,'html_url':'https://example.invalid/release','assets':[{'name':n} for n in ['SignOs.ipa','build-metadata.json','SHA256SUMS']]}
+            a.runs=lambda branch:[{'id':1,'status':'completed','conclusion':'success'}];a.ci_package=lambda:(ci,{'sha256':digest})
+            def cmd(args):
+                commands.append(args)
+                if len(commands)==1:raise RuntimeError('gh exited 1: release not found')
+                target=Path(args[args.index('-D')+1]);(target/'SignOs.ipa').write_bytes(ipa);(target/'build-metadata.json').write_bytes(metadata)
+                (target/'SHA256SUMS').write_text(digest+'  SignOs.ipa\n'+hashlib.sha256(metadata).hexdigest()+'  build-metadata.json\n')
+                return ''
+            a.cmd=cmd
+            with patch('signos_release_adapter.prepare_release'),patch('signos_release_adapter.time.sleep'):
+                try:result=a.check_github()
+                except RuntimeError:result=None
+            self.assertIsNotNone(result,'a verified published release must tolerate one CLI visibility miss')
+            self.assertTrue(result['done']);self.assertEqual(len(commands),2)
+
+    def test_release_download_visibility_retries_are_bounded(self):
+        with tempfile.TemporaryDirectory() as directory:
+            a=self.adapter(Path(directory));commands=[]
+            a.api=lambda *args,**kw:{'draft':False,'assets':[{'name':n} for n in ['SignOs.ipa','build-metadata.json','SHA256SUMS']]}
+            a.runs=lambda branch:[{'id':1,'status':'completed','conclusion':'success'}]
+            def cmd(args):
+                commands.append(args);raise RuntimeError('gh exited 1: release not found')
+            a.cmd=cmd
+            with patch('signos_release_adapter.time.sleep'):
+                with self.assertRaisesRegex(RuntimeError,'release not found'):a.check_github()
+            self.assertEqual(len(commands),3)
+
+    def test_release_download_authentication_error_is_not_retried(self):
+        with tempfile.TemporaryDirectory() as directory:
+            a=self.adapter(Path(directory));commands=[]
+            a.api=lambda *args,**kw:{'draft':False,'assets':[{'name':n} for n in ['SignOs.ipa','build-metadata.json','SHA256SUMS']]}
+            a.runs=lambda branch:[{'id':1,'status':'completed','conclusion':'success'}]
+            def cmd(args):
+                commands.append(args);raise RuntimeError('gh exited 1: HTTP 401 Bad credentials')
+            a.cmd=cmd
+            with patch('signos_release_adapter.time.sleep'):
+                with self.assertRaisesRegex(RuntimeError,'401'):a.check_github()
+            self.assertEqual(len(commands),1)
+
 if __name__=='__main__':unittest.main()

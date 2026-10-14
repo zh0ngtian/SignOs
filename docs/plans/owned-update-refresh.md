@@ -39,3 +39,6 @@ SwiftUI 布局重绘中的 `PlatformRefreshControlProxy.configuration.didSet` �
 开发提交 `315ed9daadf475ee52a8c8aa562021b1dfcec25e` 已 push 并被协调器接受。
 首批 `b0328d94-5ad5-4071-9eeb-dbf48559460a` 在 prepare 的本地构建阶段失败，默认 SwiftPM 缓存保留了目录及状态记录，但 35 个依赖检出缺少 `Package.swift` 等源码；此时未冻结提交、未推进 main、未发布标签。
 逐包按 `Package.resolved` 核对完整缓存的 Git revision 后恢复默认缓存，旧不完整目录与诊断留在仓库外；没有改变依赖版本或客户端代码。关联恢复任务为 `signos-owned-refresh-cache-repair-20261014`，发布版本及批次仍只由协调器决定。
+
+关联批次 `0be3ded8-2c5e-4a64-83dd-95125eeab09c` 已冻结 1.1.10（32），正式 main 构建成功，GitHub 标签及附件已发布。在附件验收时，REST 已能读取完整 Release，但 CLI 下载短暂返回 `release not found`，协调器因此失败，OTA 尚未更新。
+为这条已经确认发布的只读下载添加最多三次尝试（间隔 1、2 秒）；认证、校验和等其他错误及所有发布写操作不重试。新增回归先出现两条行为失败，后验证恢复、次数上限及认证失败不重试。新关联任务 `signos-owned-refresh-release-read-repair-20261014` 保留既有标签和两个失败批次，由协调器分配后续版本并交付两个渠道。
