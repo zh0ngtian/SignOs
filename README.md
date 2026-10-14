@@ -145,6 +145,23 @@ locally for each change. GitHub Release packages require separate signing before
 `app-repo.json` describes the upstream public 1.0.0 channel and is not updated
 by this build-check workflow.
 
+## 安装后返回界面
+
+Semi Local 安装中的 `127.0.0.1` Safari 页面用于触发系统安装确认。
+自动安装与手动安装都会在系统开始取包后关闭该中转页；退出到后台再返回 SignOs 时，
+残留安装页也会关闭并恢复原生页面。系统确认弹窗造成的短暂失焦不会单独触发关闭。
+关闭网页不代表安装成功，不停止本地取包服务，也不触发旧包清理；安装重试入口保留。
+
+生产关闭逻辑、UIKit 自动入口与 SwiftUI 手动 sheet 的模拟器回归：
+
+```sh
+python3 -B scripts/test_install_browser_simulator.py <booted-simulator-udid> \
+  --evidence /tmp/signos-install-browser-evidence
+```
+
+回归使用真实生产会话与页面呈现、受控安装状态及生命周期通知，不在模拟器中执行 OTA 安装。
+证据见 [安装页返回验收](docs/plans/evidence/install-browser-20261014/verification.json)。
+
 ## Building
 
 ```

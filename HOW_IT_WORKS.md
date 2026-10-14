@@ -29,6 +29,14 @@ still required; automatic signing and prompting do not mean silent installation.
 
 Opening `itms-services` requests an installation; it does not confirm success. Streaming progress only measures IPA delivery. OneView therefore keeps the signed archive actionable as Install until installation is confirmed, and server-based OTA retains the retry action.
 
+For Semi Local installation, the Safari page is only a trampoline to the system
+installation prompt. Both automatic and manual installs close it when the system
+starts fetching the IPA, enters installation, or reports a terminal status. If the
+user backgrounds SignOs and returns, any remaining installation page closes and
+the original native screen is restored. Temporary inactivity from a system prompt
+alone does not close the page. Dismissal does not change installation status, stop
+the local server, clean up packages, or remove the retry action.
+
 Signing no longer deletes the previous signed archive or its imported package.
 With **Replace Old Versions** enabled, cleanup runs after server installation
 progress has appeared and then disappears (or returns to zero), or after a paired
