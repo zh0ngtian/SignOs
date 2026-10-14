@@ -1,17 +1,16 @@
 {
   "schemaVersion": 1,
-  "batchId": "ec25ba0f-26fd-4afe-b621-f0447a203647",
+  "batchId": "97eb194a-471c-40c4-a4ac-f406dc984f3d",
   "language": "zh-Hans",
-  "version": "1.1.15",
-  "buildNumber": "37",
+  "version": "1.1.16",
+  "buildNumber": "38",
   "tasks": [
     {
-      "id": "signos-chinese-release-notes-20261014",
-      "sha": "7f5fc5242c8112bc12cb2a046eeff49a8fdbd6b5",
+      "id": "install-web-dismiss-20261014",
+      "sha": "873397f4d4fa03105474c9827fa8bed4af8a925a",
       "changes": [
-        "发布准备阶段强制要求每个参与任务提供具体中文更新日志，缺失、纯英文或已知占位说明会在版本分配和构建前被拦截。",
-        "更新日志与冻结任务、版本及 CI 产物散列绑定，GitHub Release 和 OTA 自动使用同一份中文变更说明。",
-        "加强实际日志验收，IPA 校验缓存不能绕过日志检查；中断恢复时，日志不符的暂存包不能激活固定渠道。"
+        "修复自动与手动安装开始取包后仍停留在 127.0.0.1 黑屏中转网页的问题",
+        "从后台返回 SignOs 时自动关闭残留安装网页并恢复原生页面，保留系统确认与安装重试入口"
       ]
     }
   ]
