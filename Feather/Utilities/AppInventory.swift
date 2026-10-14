@@ -8,7 +8,7 @@ struct ManagedApplication: Identifiable {
 }
 
 enum AppInventory {
-    static func applications(_ packages: [any AppInfoPresentable]) -> [ManagedApplication] {
+    static func applications(_ packages: [any AppInfoPresentable], sourceUpdateDates: [String: Date] = [:]) -> [ManagedApplication] {
         Dictionary(grouping: packages, by: { $0.identifier ?? $0.uuid ?? "unknown" })
             .map { key, values in
                 ManagedApplication(id: key, packages: values.sorted {
@@ -16,6 +16,15 @@ enum AppInventory {
                     return ($0.uuid ?? "") < ($1.uuid ?? "")
                 })
             }
-            .sorted { ($0.primary.name ?? $0.id).localizedStandardCompare($1.primary.name ?? $1.id) == .orderedAscending }
+            .sorted {
+                let leftDate = sourceUpdateDates[$0.id]
+                let rightDate = sourceUpdateDates[$1.id]
+                if leftDate != rightDate {
+                    if let leftDate, let rightDate { return leftDate > rightDate }
+                    return leftDate != nil
+                }
+                let comparison = ($0.primary.name ?? $0.id).localizedStandardCompare($1.primary.name ?? $1.id)
+                return comparison == .orderedSame ? $0.id < $1.id : comparison == .orderedAscending
+            }
     }
 }

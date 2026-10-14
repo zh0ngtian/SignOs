@@ -20,7 +20,8 @@ struct LibraryView: View {
     private var imported: FetchedResults<Imported>
 
     private var applications: [ManagedApplication] {
-        AppInventory.applications(signed.map { $0 as any AppInfoPresentable } + imported.map { $0 as any AppInfoPresentable })
+        AppInventory.applications(signed.map { $0 as any AppInfoPresentable } + imported.map { $0 as any AppInfoPresentable },
+            sourceUpdateDates: updates.sourceUpdateDates)
     }
     private var pending: Int { applications.filter { $0.installed == nil }.count }
     private var filtered: [ManagedApplication] {

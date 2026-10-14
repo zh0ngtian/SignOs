@@ -66,6 +66,7 @@ contributors for their work, this wouldn't exist without them.
   and source removal; configuration backup, management access and local subscription sections are omitted
 - Search across every source with recent searches (tab currently hidden; implementation retained)
 - Applications combines Library and Updates, groups retained packages by Bundle ID, and exposes version/source/certificate history in app details
+- Applications sorts current source releases by publication date, newest first, across all filters; apps without publication dates appear last
 - Pull down Applications to synchronize enabled subscribed sources and check updates from the same fresh data
 - Sources can be disabled locally while retaining packages; disabled archives remain visible and are excluded from signing, installation and automatic cleanup
 - Single-app and batch certificate replacement reuses local packages without changing app versions

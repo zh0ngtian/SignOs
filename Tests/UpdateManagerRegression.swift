@@ -115,6 +115,49 @@ struct UpdateManagerRegression {
             UserDefaults.standard.removeObject(forKey: "SignOs.skippedVersions")
             UserDefaults.standard.removeObject(forKey: "SignOs.cloudSourceMigration.v2")
         }
+        // Application cards follow source publication dates, independently of local signing dates.
+        let older = LocalApp(uuid: "older", name: "Alpha", identifier: "com.example.older", version: "1.1.3", date: .distantFuture)
+        let newer = LocalApp(uuid: "newer", name: "Zulu", identifier: "com.example.newer", version: "1.0", isSigned: false, date: .distantPast)
+        let unknown = LocalApp(uuid: "unknown", name: "Aardvark", identifier: "com.example.unknown", source: nil, date: .distantFuture)
+        func datedApp(_ local: LocalApp, date: String) -> [String: Any] {
+            var remote = app()
+            remote["bundleIdentifier"] = local.identifier!
+            remote["versions"] = [["version": "1.1.3", "date": date, "downloadURL": "https://example.com/app.ipa"],
+                                  ["version": "0.9", "date": "2099-01-01T00:00:00Z"]]
+            return remote
+        }
+        try fixture([datedApp(older, date: "2026-10-10T08:30:00Z"), datedApp(newer, date: "2026-10-13T08:30:00Z")])
+        await manager.checkForUpdates(sources: [source], localApps: [unknown, older, newer])
+        let sortedApplications = AppInventory.applications([unknown, older, newer], sourceUpdateDates: manager.sourceUpdateDates)
+        precondition(sortedApplications.map(\.id) == [newer.identifier!, older.identifier!, unknown.identifier!], "Sort all cards by current source publication date, with unknown dates last")
+        precondition(manager.update(for: older) == nil && manager.sourceUpdateDates[older.identifier!] != nil, "Up-to-date applications still have source dates")
+        precondition(sortedApplications.first?.installed == nil, "Pending applications participate in the same sorting")
+        manager.setHeld(true, for: newer.identifier!)
+        await manager.checkForUpdates(sources: [source], localApps: [unknown, older, newer])
+        precondition(manager.update(for: newer) == nil && manager.sourceUpdateDates[newer.identifier!] != nil, "Holding updates must not remove sorting dates")
+        manager.setHeld(false, for: newer.identifier!)
+        var alternate = datedApp(older, date: "2026-10-14T08:30:00Z")
+        alternate["appID"] = "alternate"
+        alternate["legacyDefault"] = false
+        try fixture([datedApp(older, date: "2026-10-10T08:30:00Z"), alternate, datedApp(newer, date: "2026-10-13T08:30:00Z")])
+        await manager.checkForUpdates(sources: [source], localApps: [unknown, older, newer])
+        precondition(AppInventory.applications([unknown, newer, older], sourceUpdateDates: manager.sourceUpdateDates).map(\.id) == [older.identifier!, newer.identifier!, unknown.identifier!], "Refresh reorders cards using the latest current source candidate date")
+        SourcePolicy.keys(url: source.sourceURL, identifier: officialID).forEach { key in
+            UserDefaults.standard.set([key + "|" + SourceSubscriptionIdentity.key(bundleIdentifier: older.identifier!, subscriptionID: "alternate")], forKey: "SignOs.deletedSubscriptions")
+            manager.sourceAvailabilityChanged()
+            precondition(manager.sourceUpdateDates[older.identifier!] == ISO8601DateFormatter().date(from: "2026-10-10T08:30:00Z"), "Deleted subscriptions do not contribute dates")
+            UserDefaults.standard.removeObject(forKey: "SignOs.deletedSubscriptions")
+        }
+        let sameName = LocalApp(uuid: "same-name", name: "Alpha", identifier: "com.example.alpha")
+        let equalDates = [older.identifier!: Date(timeIntervalSince1970: 100), sameName.identifier!: Date(timeIntervalSince1970: 100)]
+        precondition(AppInventory.applications([older, sameName], sourceUpdateDates: equalDates).map(\.id) == [sameName.identifier!, older.identifier!], "Equal dates and names have a stable Bundle ID order")
+        UserDefaults.standard.set(SourcePolicy.keys(url: source.sourceURL, identifier: officialID), forKey: "SignOs.disabledSources")
+        manager.sourceAvailabilityChanged()
+        precondition(manager.sourceUpdateDates.isEmpty, "Disabled sources must not contribute publication dates")
+        UserDefaults.standard.removeObject(forKey: "SignOs.disabledSources")
+        Storage.shared.reset()
+        checkpoint("application source publication sorting completed")
+
         // Source order and publication dates must not determine semantic version order.
         var historyApp = app(version: "1.12.0")
         historyApp["versions"] = [
@@ -138,6 +181,7 @@ struct UpdateManagerRegression {
         precondition(history[2].notes == nil && history[2].date == nil, "Keep releases with missing notes or dates")
         precondition(history[0].date == ISO8601DateFormatter().date(from: "2026-10-10T08:30:00Z"))
         precondition(manager.candidates[bundle]!.first { $0.remoteVersion == "1.11.0" }!.releaseHistory.first?.notes == "其他订阅不能混入")
+        precondition(manager.sourceUpdateDates[bundle] == history[0].date, "Older release history dates must not determine application ordering")
         // The source page obtains a package from provenance alone, without release notes.
         // Selecting that provisional candidate must preserve the checked source snapshot.
         let checkedUpdate = manager.updates["museum"]!
