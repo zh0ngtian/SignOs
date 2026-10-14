@@ -1,0 +1,175 @@
+{
+  "userApproved": "2026-10-14; checks owned by manager and resilient to both redraw and page switching",
+  "baseline": {
+    "version": "1.1.9",
+    "build": "31",
+    "commit": "7017b01af342d386e13c4556ffbfd2c6d1c856ed",
+    "productionSDK": "iOS26.5; Xcode26.6"
+  },
+  "sdkControl": "Only simulator Mach-O linked SDK metadata changed to26.5; not a complete rebuild with Xcode26.6. Formal publication will compile with its configured toolchain.",
+  "rootCause": "SwiftUI PlatformRefreshControlProxy.configuration.didSet calls swift_task_cancel during redraw in old-SDK compatibility path; task pointers match failed check. Page detach/reattach also cancels a view-owned check.",
+  "repair": "AutoUpdateManager owns UpdateCheckCoordinator and check task on MainActor. View cancellation leaves that task running. Same-mode callers await it; manual synchronization follows an ordinary active check.",
+  "plainRefresh": {
+    "requestedAtUTC": "2026-10-14T01:18:54.715Z",
+    "completed": true,
+    "lastCheckUTC": "2026-10-14 01:19:05.636289",
+    "latestActivity": [
+      {
+        "kind": "checked",
+        "date": 813633545.637756,
+        "app": "SignOs",
+        "detail": "找到 1 项"
+      }
+    ],
+    "managedJobs": [
+      {
+        "status": "succeeded",
+        "createdAt": "2026-10-14T01:18:56.931Z",
+        "finishedAt": "2026-10-14T01:18:57.736Z"
+      },
+      {
+        "status": "succeeded",
+        "createdAt": "2026-10-14T01:18:57.414Z",
+        "finishedAt": "2026-10-14T01:18:58.511Z"
+      },
+      {
+        "status": "succeeded",
+        "createdAt": "2026-10-14T01:18:57.663Z",
+        "finishedAt": "2026-10-14T01:18:59.040Z"
+      },
+      {
+        "status": "succeeded",
+        "createdAt": "2026-10-14T01:18:57.933Z",
+        "finishedAt": "2026-10-14T01:18:59.664Z"
+      },
+      {
+        "status": "succeeded",
+        "createdAt": "2026-10-14T01:18:58.489Z",
+        "finishedAt": "2026-10-14T01:19:02.207Z"
+      },
+      {
+        "status": "succeeded",
+        "createdAt": "2026-10-14T01:18:58.694Z",
+        "finishedAt": "2026-10-14T01:19:02.787Z"
+      },
+      {
+        "status": "succeeded",
+        "createdAt": "2026-10-14T01:18:59.271Z",
+        "finishedAt": "2026-10-14T01:19:02.870Z"
+      }
+    ],
+    "managedJobCount": 7
+  },
+  "pageSwitchRefresh": {
+    "requestedAtUTC": "2026-10-14T01:20:02.761Z",
+    "completed": true,
+    "lastCheckUTC": "2026-10-14 01:20:12.492985",
+    "latestActivity": [
+      {
+        "detail": "找到 1 项",
+        "kind": "checked",
+        "date": 813633612.493445,
+        "app": "SignOs"
+      }
+    ],
+    "managedJobs": [
+      {
+        "status": "succeeded",
+        "createdAt": "2026-10-14T01:20:04.665Z",
+        "finishedAt": "2026-10-14T01:20:05.393Z"
+      },
+      {
+        "status": "succeeded",
+        "createdAt": "2026-10-14T01:20:05.539Z",
+        "finishedAt": "2026-10-14T01:20:05.842Z"
+      },
+      {
+        "status": "succeeded",
+        "createdAt": "2026-10-14T01:20:05.836Z",
+        "finishedAt": "2026-10-14T01:20:06.453Z"
+      },
+      {
+        "status": "succeeded",
+        "createdAt": "2026-10-14T01:20:06.099Z",
+        "finishedAt": "2026-10-14T01:20:07.767Z"
+      },
+      {
+        "status": "succeeded",
+        "createdAt": "2026-10-14T01:20:07.049Z",
+        "finishedAt": "2026-10-14T01:20:09.894Z"
+      },
+      {
+        "status": "succeeded",
+        "createdAt": "2026-10-14T01:20:07.289Z",
+        "finishedAt": "2026-10-14T01:20:10.479Z"
+      },
+      {
+        "status": "succeeded",
+        "createdAt": "2026-10-14T01:20:08.276Z",
+        "finishedAt": "2026-10-14T01:20:10.562Z"
+      }
+    ],
+    "managedJobCount": 7
+  },
+  "checks": [
+    {
+      "name": "owned-check-regression",
+      "status": "passed",
+      "evidence": "python3 scripts/test_auto_update_check.py: original check phase compiled and failed five behavior assertions; new scheduling passed cancellation, coalescing, manual synchronization and retry under Swift 6 warnings-as-errors."
+    },
+    {
+      "name": "update-manager-regression",
+      "status": "passed",
+      "evidence": "python3 scripts/test_update_manager.py: iOS Simulator completed production synchronization, URLSession/task cancellation, retry, provenance and source comparison regressions."
+    },
+    {
+      "name": "simulator-release-build",
+      "status": "passed",
+      "evidence": "XcodeBuildMCP build_sim with configuration Release succeeded; pre-existing project warnings remain."
+    },
+    {
+      "name": "simulator-refresh-acceptance",
+      "status": "passed",
+      "evidence": "Same Release simulator app with LC_BUILD_VERSION SDK26.5 control: repeated pulls while staying on Applications and pull/switch Sources/return both completed exactly seven managed synchronization jobs with checked-success activity and no cancellation issue."
+    },
+    {
+      "name": "iphoneos-build",
+      "status": "passed",
+      "evidence": "make iphoneos TMP=/private/tmp/signos-pull-refresh-release succeeded; local IPA ZIP/identity verification passed. Initial default temporary dependency cache was incomplete; retry used existing complete dependency cache."
+    },
+    {
+      "name": "adapter-regression",
+      "status": "passed",
+      "evidence": "python3 -m unittest Tests.test_signos_release_adapter Tests.test_release_artifact: 18 tests passed, comprising 11 adapter and 7 artifact tests."
+    },
+    {
+      "name": "release-artifact-regression",
+      "status": "passed",
+      "evidence": "Same unittest command: all 7 release artifact checks passed."
+    },
+    {
+      "name": "release-assets-regression",
+      "status": "passed",
+      "evidence": "python3 Tests/GitHubReleaseRegression.py: 7 tests passed."
+    },
+    {
+      "name": "workflow-review",
+      "status": "passed",
+      "evidence": "Formal main/tag publication concurrency group, cancel-in-progress false and queue max preserved; owned-check test added to the manual regression workflow."
+    },
+    {
+      "name": "independent-review",
+      "status": "passed",
+      "evidence": "Readonly reviewer found no blocking issues and reran owned-check regression plus diff check successfully."
+    },
+    {
+      "name": "diff-check",
+      "status": "passed",
+      "evidence": "git diff --check passed."
+    }
+  ],
+  "limits": [
+    "Simulator acceptance does not prove physical device installation/data preservation.",
+    "Formal CI SDK26.5 artifact runtime acceptance on physical device remains outside this local simulator evidence."
+  ]
+}
