@@ -27,3 +27,11 @@ iOS 构建和文档同步；push 开发提交并提交协调器 ready，读取�
 及 1 个导出归档；其余 8 个最新/新版本/禁用/待安装包与关联记录、证书保留。
 总计从 53 KB 刷新到 36 KB，确认取消不删除，空清理可点击并显示结果。
 本次真机不可用，安装保护以模拟器与生产策略回归验收，不宣称真机覆盖安装或数据保留。
+
+交付：1.1.14（构建 36），冻结提交 `739e6eb75c6395f98de20dbdbd820973f788240e`。
+[正式 main 构建](https://github.com/zh0ngtian/SignOs/actions/runs/38510535396) 与
+[标签发布](https://github.com/zh0ngtian/SignOs/actions/runs/38511372108) 均成功，
+[GitHub Release](https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.14) 附件验收完成；
+[固定 OTA 安装页](https://192.168.123.79:8769/channels/signos/current/install.html)、manifest、
+包版本/构建号及完整 IPA SHA-256 已再次经 HTTPS 核对。共同凭证公开副本见
+[发布凭证](evidence/release-batch-1.1.14-20261014.json)。

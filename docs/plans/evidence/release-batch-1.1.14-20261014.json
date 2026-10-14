@@ -1,0 +1,148 @@
+{
+  "id": "9582bff3-1dfa-4b0f-ac46-e0fe3ae1aa25",
+  "project": "signos-production",
+  "scope": "96c87efa825ae59a58d467fb058a33fd710e4ced9bee0b003923625611c49047",
+  "frozen": {
+    "buildNumber": "36",
+    "environment": "production",
+    "manifestSha256": "66ed078b3b47f27b2437a000fa731ef0913a9d668e0fc4ce8411b5afb218780c",
+    "sha": "739e6eb75c6395f98de20dbdbd820973f788240e",
+    "target": "com.signos.app",
+    "tasks": [
+      {
+        "id": "settings-storage-cleanup-20261014",
+        "sha": "8e58c51e7e7694408c84b79362f3a78f4f23644a"
+      }
+    ],
+    "version": "1.1.14"
+  },
+  "results": {
+    "build": {
+      "buildNumber": "36",
+      "commit": "739e6eb75c6395f98de20dbdbd820973f788240e",
+      "runId": 38510535396,
+      "sha256": "b798838647e1d88b52463521d05cae6a97cf0a90a1398c1dffa27d2eb1397288",
+      "version": "1.1.14"
+    },
+    "github": {
+      "runId": 38511372108,
+      "sha256": "b798838647e1d88b52463521d05cae6a97cf0a90a1398c1dffa27d2eb1397288",
+      "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.14"
+    },
+    "ota": {
+      "buildNumber": "36",
+      "bundleId": "com.signos.app",
+      "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.14/latest.ipa",
+      "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+      "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.14/manifest.plist",
+      "sha256": "1f1c0a33ff8c6e223d584a6e936bf955dea886fc563aae2abd5dbb1a893f457c",
+      "signed": true,
+      "size": 15010880,
+      "sourceCommit": "739e6eb75c6395f98de20dbdbd820973f788240e",
+      "version": "1.1.14"
+    },
+    "prepare": {
+      "buildNumber": "36",
+      "bundleIdentifier": "com.signos.app",
+      "inputFingerprint": "86bfd95e6b3622b19123accb661a867c4e5ba6bd6b974592671f83b15baabf57",
+      "localValidation": "passed",
+      "version": "1.1.14"
+    },
+    "verify": {
+      "github": {
+        "runId": 38511372108,
+        "sha256": "b798838647e1d88b52463521d05cae6a97cf0a90a1398c1dffa27d2eb1397288",
+        "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.14"
+      },
+      "httpsFullDownloadVerified": true,
+      "ota": {
+        "buildNumber": "36",
+        "bundleId": "com.signos.app",
+        "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.14/latest.ipa",
+        "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+        "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.14/manifest.plist",
+        "sha256": "1f1c0a33ff8c6e223d584a6e936bf955dea886fc563aae2abd5dbb1a893f457c",
+        "signed": true,
+        "size": 15010880,
+        "sourceCommit": "739e6eb75c6395f98de20dbdbd820973f788240e",
+        "version": "1.1.14"
+      }
+    }
+  },
+  "completedAt": 1791952013.737634,
+  "coordinatorVersion": "0.1.4",
+  "changeNotes": [
+    "移除设置页「自动化」选项组，保留原有自动化偏好与后台行为。",
+    "补齐移除旧版本副本、移除同版本重复导入、清空导出归档三项功能，提供删除确认、空内容与错误反馈，按实际成功数统计并刷新空间。",
+    "已启用来源参与清理，禁用来源、正在处理及待安装包保留；补齐手动签名、直接安装、连续签名和历史保留计划的保护与解除。"
+  ],
+  "localValidation": {
+    "checks": [
+      {
+        "name": "adapter-regression",
+        "status": "passed",
+        "evidence": "python3 -m unittest Tests.test_signos_release_adapter Tests.test_release_artifact: 21 tests passed (includes adapter and artifact suites)."
+      },
+      {
+        "name": "release-artifact-regression",
+        "status": "passed",
+        "evidence": "Tests.test_release_artifact passed in the 21-test combined run."
+      },
+      {
+        "name": "release-assets-regression",
+        "status": "passed",
+        "evidence": "python3 Tests/GitHubReleaseRegression.py: 7 tests passed."
+      },
+      {
+        "name": "workflow-review",
+        "status": "passed",
+        "evidence": "Reviewed current ios-build.yml; git diff --exit-code -- .github/workflows/ios-build.yml passed; workflow unchanged."
+      },
+      {
+        "name": "storage-cleanup-regression",
+        "status": "passed",
+        "evidence": "swiftc -swift-version 6 -warnings-as-errors StorageCleanup.swift InstallPackageRetention.swift StorageCleanupRegression.swift; executable passed source/version/clone/missing-package/archive/partial-failure cases, legacy JSON preservation, repeated signatures, restart and independent outstanding automatic installs."
+      },
+      {
+        "name": "installation-retention-regression",
+        "status": "passed",
+        "evidence": "python3 scripts/test_install_cleanup_simulator.py: production retention and storage passed pending/failed/progress/restart/paired/manual cases, real file permission failure/retry, real Core Data validation failure/retry, direct-install durable protection."
+      },
+      {
+        "name": "auto-sign-queue-regression",
+        "status": "passed",
+        "evidence": "python3 scripts/test_auto_sign_manager.py: direct install without resigning, durable protection registration, queue serialization/deduplication, signing-result reuse and cancellation passed."
+      },
+      {
+        "name": "oneview-phase-regression",
+        "status": "passed",
+        "evidence": "swiftc OneViewPhase.swift OneViewPhaseRegression.swift: 6 passed."
+      },
+      {
+        "name": "settings-storage-runtime",
+        "status": "passed",
+        "evidence": "Actual app on isolated iOS 26.5 simulator: automation group absent; all three empty cleanup entries clickable with result; confirmation cancellation preserved packages. 10 seeded packages: exactly one enabled old signed copy, one matching source-version import and one export archive deleted. Eight latest/new-version/disabled/pending packages and metadata plus certificate retained. Verified filesystem and SQLite, total usage 53 KB to 36 KB."
+      },
+      {
+        "name": "iphoneos-release-build",
+        "status": "passed",
+        "evidence": "make iphoneos TMP=/tmp/SignOs-settings-cleanup exit 0, BUILD SUCCEEDED; packages/SignOs.ipa checked com.signos.app, development input version 1.1.13 build 35. Coordinator must allocate final batch version and verify frozen CI artifact."
+      },
+      {
+        "name": "code-review",
+        "status": "passed",
+        "evidence": "Independent final review found no remaining concrete deletion or retention issue after fixes; git diff --check passed."
+      },
+      {
+        "name": "device-validation-scope",
+        "status": "passed",
+        "evidence": "Physical iPhone unavailable in devicectl; simulator validation used as project permits. Does not claim physical OTA overwrite installation or data retention."
+      },
+      {
+        "name": "simulator-build",
+        "status": "passed",
+        "evidence": "Final committed tree: XcodeBuildMCP build_sim, Debug iphonesimulator, CODE_SIGNING_ALLOWED=NO -onlyUsePackageVersionsFromResolvedFile -skipPackagePluginValidation; build succeeded 10.9 seconds. Runtime app installed through real _build/Applications/SignOs.app bundle path."
+      }
+    ]
+  }
+}

@@ -29,7 +29,7 @@ contributors for their work, this wouldn't exist without them.
 - Repository URL migrations keep existing app update links when the fetched source
   retains the same nonempty repository identifier. Legacy records without an
   identifier continue to require the original URL.
-- Background update checks on a schedule you pick (hourly to daily)
+- Background update checks use retained scheduling preferences (hourly to daily)
 - Updates download, sign and install themselves with zero interaction
 - Auto-fire install prompts and Tap-to-install notifications
 - Fully silent installs with the paired device (tunnel) method
