@@ -1,0 +1,106 @@
+{
+  "id": "bebb8e35-503f-4094-a455-40275d736f19",
+  "project": "signos-production",
+  "scope": "96c87efa825ae59a58d467fb058a33fd710e4ced9bee0b003923625611c49047",
+  "completedAt": 1791950099.162648,
+  "coordinatorVersion": "0.1.4",
+  "frozen": {
+    "buildNumber": "35",
+    "environment": "production",
+    "manifestSha256": "16128a626feac79f0fe110ee4fcd027ec5077176a95f68c7b28bd148274b5bf0",
+    "sha": "769df76610e881971fa3a974a3caa24e39c80db0",
+    "target": "com.signos.app",
+    "tasks": [
+      {
+        "id": "source-enable-menu-20261014",
+        "sha": "0b0cbeba659124b4c2516146f1d7dc37eb010eb0"
+      }
+    ],
+    "version": "1.1.13"
+  },
+  "results": {
+    "build": {
+      "buildNumber": "35",
+      "commit": "769df76610e881971fa3a974a3caa24e39c80db0",
+      "runId": 38507846918,
+      "sha256": "2b4e6f259f02fa9e2a2d8fd916a6e0b8c115c5c7eacc186f5a5d5dae24ab0c83",
+      "version": "1.1.13"
+    },
+    "github": {
+      "runId": 38508645923,
+      "sha256": "2b4e6f259f02fa9e2a2d8fd916a6e0b8c115c5c7eacc186f5a5d5dae24ab0c83",
+      "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.13"
+    },
+    "ota": {
+      "buildNumber": "35",
+      "bundleId": "com.signos.app",
+      "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.13/latest.ipa",
+      "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+      "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.13/manifest.plist",
+      "sha256": "78849748bc1331546632de5c6d0d9ab01e16f58e2d9fa46c1c32f57aa317e153",
+      "signed": true,
+      "size": 14992100,
+      "sourceCommit": "769df76610e881971fa3a974a3caa24e39c80db0",
+      "version": "1.1.13"
+    },
+    "prepare": {
+      "buildNumber": "35",
+      "bundleIdentifier": "com.signos.app",
+      "inputFingerprint": "6b08cfc39e67e34f39e98587bb77b142402e922a637c185824cb90c5cfbb3ce1",
+      "localValidation": "passed",
+      "version": "1.1.13"
+    },
+    "verify": {
+      "github": {
+        "runId": 38508645923,
+        "sha256": "2b4e6f259f02fa9e2a2d8fd916a6e0b8c115c5c7eacc186f5a5d5dae24ab0c83",
+        "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.13"
+      },
+      "httpsFullDownloadVerified": true,
+      "ota": {
+        "buildNumber": "35",
+        "bundleId": "com.signos.app",
+        "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.13/latest.ipa",
+        "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+        "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.13/manifest.plist",
+        "sha256": "78849748bc1331546632de5c6d0d9ab01e16f58e2d9fa46c1c32f57aa317e153",
+        "signed": true,
+        "size": 14992100,
+        "sourceCommit": "769df76610e881971fa3a974a3caa24e39c80db0",
+        "version": "1.1.13"
+      }
+    }
+  },
+  "changeNotes": [
+    "补齐软件源卡片长按菜单的“启用软件源”与“禁用软件源”，根据当前本机状态切换操作，修复已禁用的软件源无法主动恢复的问题。",
+    "重新启用自动检查更新；禁用保留本地包，菜单保留移除确认入口，并补充辅助功能操作提示。"
+  ],
+  "localValidation": {
+    "date": "2026-10-14",
+    "feature": "软件源卡片长按启用与禁用",
+    "simulator": "iOS 27.0",
+    "testBundleIdentifier": "com.signos.source-enable-qa",
+    "checks": {
+      "enabledMenuShowsDisable": true,
+      "disabledMenuShowsEnable": true,
+      "removeMenuPreserved": true,
+      "disabledCaptionAppears": true,
+      "reenableClearsCaption": true,
+      "disabledStatePersistsAfterRelaunch": true,
+      "enabledStatePersistsAfterRelaunch": true,
+      "sourceAccessRegressionPassed": true,
+      "oneViewPhaseRegressionPassed": true,
+      "simulatorBuildPassed": true,
+      "iphoneosReleaseBuildPassed": true
+    },
+    "physicalOverlayInstallAndDataRetentionVerified": false
+  },
+  "postPublicationVerification": {
+    "mainBuildAndTagWorkflowSucceeded": true,
+    "releaseAttachmentDigestMatchesCI": true,
+    "fixedHttpsMetadataMatchesReceipt": true,
+    "fixedIpaHeadMatchesReceipt": true,
+    "versionedManifestBuildAndIdentityMatchesReceipt": true
+  },
+  "acceptanceScope": "iOS 27.0 模拟器运行验收菜单双向切换、禁用提示变化、两种状态重启持久化及移除入口保留；本地 iphoneos Release、相关回归及独立代码复核通过。协调器完成同一冻结提交的 CI、GitHub Release、OTA 完整下载和独立验签；真机覆盖安装与数据保留未验证。"
+}

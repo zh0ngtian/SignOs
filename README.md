@@ -734,3 +734,9 @@ Ad Hoc 签名包为 14,986,999 字节，SHA-256 `c5e2c277869a8f1276d906ec1da7f39
 [固定 OTA 安装页](https://192.168.123.79:8769/channels/signos/current/install.html)、manifest、版本与完整签名 IPA HTTPS 下载回验通过，签名包为 14,991,846 字节，SHA-256 `0d35f323fab3dd09a99ff1ea591e15c842b5a8d6d33aefa14696f298c3eef2b2`。
 现有软件源同步到 1.1.12（34），本版具体中文日志和原 CI IPA 完整散列已通过实际客户端 User-Agent 的 HTTPS 回验。
 [共同发布凭证](docs/plans/evidence/release-batch-1.1.12-20261014.json)保留实际验证结果；本次未进行真机覆盖安装和数据保留验收。
+
+### 2026-10-14 软件源主动启用与禁用
+
+1.1.13（构建 35）补齐软件源卡片长按菜单的“启用软件源”／“禁用软件源”，菜单根据当前本机状态切换。已有禁用状态保留，升级后可直接长按启用，无须删除后重加；重新启用自动检查更新，禁用保留本地包，移除确认入口仍在。辅助功能提示补充了长按操作说明。
+
+本地模拟器和 iphoneos Release 构建、SourceAccess 与安装阶段回归、独立复核通过；iOS 27.0 模拟器验收了两向切换、状态提示和重启持久化。批次 `bebb8e35-503f-4094-a455-40275d736f19` 的冻结提交 `769df76610e881971fa3a974a3caa24e39c80db0` 已通过 main 构建与整个标签工作流，并完成 GitHub Release / OTA 同产物发布、完整下载及独立验签。固定入口、manifest 和 Release 附件再次回验一致；真机覆盖安装与数据保留未验证。详见 [1.1.13 批次发布凭证](docs/plans/evidence/release-batch-1.1.13-20261014.json) 和 [菜单验收记录](docs/plans/evidence/source-enable-menu-20261014/verification.json)。
