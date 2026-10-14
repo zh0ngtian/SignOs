@@ -725,3 +725,12 @@ Ad Hoc 签名包为 14,986,999 字节，SHA-256 `c5e2c277869a8f1276d906ec1da7f39
 正式 Xcode 26.6 / iOS 26.5 SDK 的 main 与标签工作流成功，GitHub Release 和固定 OTA（1.1.11/33）共同交付，完整下载及签名回验通过。
 软件源同包同步现会更新已编辑的日志，40 项服务回归及真实 HTTPS 中文日志回验通过；历史和已验证包散列保留。
 详情与实际范围见[实施及验收记录](docs/plans/owned-update-refresh.md)和[共享发布凭证](docs/plans/evidence/release-batch-1.1.11-20261014.json)。
+
+### 2026-10-14 应用按软件源更新时间排序
+
+1.1.12（构建 34）将应用 Tab 改为按软件源当前版本的发布时间从新到旧排列，全部、可更新、待安装和搜索结果共用顺序。多源应用取启用且未删除订阅的当前候选中最新的发布时间；不使用本地导入、重新签名或历史旧版本日期。缺少日期的应用置后，同日期按名称和 Bundle ID 稳定排列。
+模拟器完整应用构建、启动及真实更新管理器排序回归通过，覆盖已是最新版、暂停更新、多源刷新、来源关闭和删除订阅。
+冻结提交 `1697e4fcc63020597e0a95662a8244f45344c3ec` 的 [main 构建](https://github.com/zh0ngtian/SignOs/actions/runs/38503192501)与[标签发布](https://github.com/zh0ngtian/SignOs/actions/runs/38503970102)均成功；[GitHub Release](https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.12)附件与同提交 CI 产物一致。
+[固定 OTA 安装页](https://192.168.123.79:8769/channels/signos/current/install.html)、manifest、版本与完整签名 IPA HTTPS 下载回验通过，签名包为 14,991,846 字节，SHA-256 `0d35f323fab3dd09a99ff1ea591e15c842b5a8d6d33aefa14696f298c3eef2b2`。
+现有软件源同步到 1.1.12（34），本版具体中文日志和原 CI IPA 完整散列已通过实际客户端 User-Agent 的 HTTPS 回验。
+[共同发布凭证](docs/plans/evidence/release-batch-1.1.12-20261014.json)保留实际验证结果；本次未进行真机覆盖安装和数据保留验收。

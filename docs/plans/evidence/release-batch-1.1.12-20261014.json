@@ -1,0 +1,128 @@
+{
+  "id": "229207d4-c1de-4372-a09a-6b6233fd000a",
+  "project": "signos-production",
+  "scope": "96c87efa825ae59a58d467fb058a33fd710e4ced9bee0b003923625611c49047",
+  "frozen": {
+    "buildNumber": "34",
+    "environment": "production",
+    "manifestSha256": "3e6c4fc94435a1348c7bc86fafda9e4d69701ccfe0f739ff124f99cbfac0c1af",
+    "sha": "1697e4fcc63020597e0a95662a8244f45344c3ec",
+    "target": "com.signos.app",
+    "tasks": [
+      {
+        "id": "applications-source-date-sort",
+        "sha": "e5658736de73b4a11b60b6e41a60b2268def9015"
+      }
+    ],
+    "version": "1.1.12"
+  },
+  "results": {
+    "build": {
+      "buildNumber": "34",
+      "commit": "1697e4fcc63020597e0a95662a8244f45344c3ec",
+      "runId": 38503192501,
+      "sha256": "01933b714ec763cee48820ba5878cf15fd4dabb64c4fda8bbe5cbb502aa49ce5",
+      "version": "1.1.12"
+    },
+    "github": {
+      "runId": 38503970102,
+      "sha256": "01933b714ec763cee48820ba5878cf15fd4dabb64c4fda8bbe5cbb502aa49ce5",
+      "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.12"
+    },
+    "ota": {
+      "buildNumber": "34",
+      "bundleId": "com.signos.app",
+      "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.12/latest.ipa",
+      "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+      "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.12/manifest.plist",
+      "sha256": "0d35f323fab3dd09a99ff1ea591e15c842b5a8d6d33aefa14696f298c3eef2b2",
+      "signed": true,
+      "size": 14991846,
+      "sourceCommit": "1697e4fcc63020597e0a95662a8244f45344c3ec",
+      "version": "1.1.12"
+    },
+    "prepare": {
+      "buildNumber": "34",
+      "bundleIdentifier": "com.signos.app",
+      "inputFingerprint": "9481b779c4e27c10e107bbdde4bc67982decda2d72d03cd791dd54be8cfb42d2",
+      "localValidation": "passed",
+      "version": "1.1.12"
+    },
+    "verify": {
+      "github": {
+        "runId": 38503970102,
+        "sha256": "01933b714ec763cee48820ba5878cf15fd4dabb64c4fda8bbe5cbb502aa49ce5",
+        "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.12"
+      },
+      "httpsFullDownloadVerified": true,
+      "ota": {
+        "buildNumber": "34",
+        "bundleId": "com.signos.app",
+        "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.12/latest.ipa",
+        "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+        "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.12/manifest.plist",
+        "sha256": "0d35f323fab3dd09a99ff1ea591e15c842b5a8d6d33aefa14696f298c3eef2b2",
+        "signed": true,
+        "size": 14991846,
+        "sourceCommit": "1697e4fcc63020597e0a95662a8244f45344c3ec",
+        "version": "1.1.12"
+      }
+    }
+  },
+  "changeNotes": [
+    "应用 Tab 按软件源当前版本的发布时间从新到旧排列，全部、可更新、待安装和搜索结果共用顺序。",
+    "多源应用取启用且未删除订阅的当前候选中最新的发布日期；不使用导入、签名或旧版本日志日期。",
+    "缺少发布日期的应用置后；日期相同按名称和 Bundle ID 稳定排序。"
+  ],
+  "localValidation": {
+    "checks": [
+      {
+        "name": "adapter-regression",
+        "status": "passed",
+        "evidence": "python3 -m unittest Tests.test_signos_release_adapter Tests.test_release_artifact: 21 tests passed (includes adapter and artifact checks)"
+      },
+      {
+        "name": "release-artifact-regression",
+        "status": "passed",
+        "evidence": "python3 -m unittest Tests.test_signos_release_adapter Tests.test_release_artifact: 21 tests passed"
+      },
+      {
+        "name": "release-assets-regression",
+        "status": "passed",
+        "evidence": "python3 Tests/GitHubReleaseRegression.py: 7 tests passed"
+      },
+      {
+        "name": "workflow-review",
+        "status": "passed",
+        "evidence": "Reviewed .github/workflows/ios-build.yml source/test path triggers, shared release concurrency and frozen artifact reuse; workflow files unchanged (git diff --exit-code passed)"
+      },
+      {
+        "name": "source-date-sort-regression",
+        "status": "passed",
+        "evidence": "python3 scripts/test_update_manager.py 240244F5-0BEC-4553-A346-32F7D5AD34FC: full runtime regression passed including current source dates, all/pending/up-to-date/held, multiversion history exclusion, multi-source refresh, disabled/deleted sources, unknown dates and deterministic ties. Old alphabetical behavior failed the ordering precondition before implementation."
+      },
+      {
+        "name": "simulator-build",
+        "status": "passed",
+        "evidence": "XcodeBuildMCP build_sim Feather Debug iOS Simulator: SUCCEEDED, no errors; existing project warnings. App installed and launched on iOS 26.5 iPhone 17 Pro."
+      },
+      {
+        "name": "diff-check",
+        "status": "passed",
+        "evidence": "git diff --check passed; exact remote branch SHA verified e5658736de73b4a11b60b6e41a60b2268def9015"
+      }
+    ]
+  },
+  "acceptanceScope": "模拟器构建及真实 UpdateManager/AppInventory 排序回归、main/标签工作流、GitHub 附件、Ad Hoc 验签和 OTA HTTPS 完整下载回验；未验证真机覆盖安装及数据保留。",
+  "sourceVerification": {
+    "entryId": "ba9c4295-207b-433a-b191-2c8908964159",
+    "version": "1.1.12",
+    "buildNumber": "34",
+    "notes": "SignOs 1.1.12（构建 34）\n\n- 应用 Tab 改为按软件源当前版本的发布时间从新到旧排列，全部、可更新、待安装和搜索结果共用顺序。\n- 多源应用采用启用且未删除订阅的当前候选中最新的发布日期；已是最新版、暂停更新和跳过版本的应用仍参与日期排序。\n- 排序不使用本地导入、重新签名或旧版本日志日期。缺少发布日期的应用置后；日期相同按名称和 Bundle ID 稳定排列。\n- 软件源刷新及启用、关闭或删除订阅后自动重排应用列表。\n\n此处的 `SignOs.ipa` 是未分发签名的构建产物，安装前需要使用签名工具签名；不包含私有本地 TLS 资源。\n\n最低 iOS 版本：17.0。\n\n源码提交：`1697e4fcc63020597e0a95662a8244f45344c3ec`。\n\n下载后可用 `shasum -a 256 -c SHA256SUMS` 核对完整校验和。\n\n[完整变更](https://github.com/zh0ngtian/SignOs/compare/v1.1.11...v1.1.12)",
+    "sourceURL": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json",
+    "downloadURL": "https://github.com/zh0ngtian/SignOs/releases/download/v1.1.12/SignOs.ipa",
+    "size": 14945152,
+    "sha256": "01933b714ec763cee48820ba5878cf15fd4dabb64c4fda8bbe5cbb502aa49ce5",
+    "httpsFullDownloadVerified": true
+  }
+}
