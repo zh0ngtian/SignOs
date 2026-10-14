@@ -6,11 +6,13 @@ import json
 from pathlib import Path
 import plistlib
 import tempfile
+import sys
 import unittest
 import zipfile
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "prepare_github_release.py"
+sys.path.insert(0, str(SCRIPT.parent))
 SPEC = importlib.util.spec_from_file_location("prepare_github_release", SCRIPT)
 RELEASE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(RELEASE)
@@ -46,6 +48,18 @@ class GitHubReleaseRegression(unittest.TestCase):
             "size": ipa.stat().st_size,
             "sha256": hashlib.sha256(ipa.read_bytes()).hexdigest(),
         }
+        notes = {"schemaVersion": 1, "batchId": "11111111-1111-1111-1111-111111111111",
+                 "language": "zh-Hans", "version": "1.0.11", "buildNumber": "12",
+                 "tasks": [{"id": "task", "sha": "c" * 40, "changes": ["修复更新日志缺失时仍允许发布的问题"]}]}
+        manifest = {"batchId": notes["batchId"], "scope": "test", "tasks": notes["tasks"],
+                    "prepared": {"version": "1.0.11", "buildNumber": "12"}}
+        (self.output / "release-notes.json").write_text(json.dumps(notes))
+        (self.output / "release-batch.json").write_text(json.dumps(manifest))
+        self.metadata.update({
+            "batchId": notes["batchId"], "releaseScope": "test",
+            "batchManifestSha256": hashlib.sha256((self.output / "release-batch.json").read_bytes()).hexdigest(),
+            "releaseNotesSha256": hashlib.sha256((self.output / "release-notes.json").read_bytes()).hexdigest(),
+        })
         self.write_metadata()
 
     def write_metadata(self):
@@ -60,8 +74,8 @@ class GitHubReleaseRegression(unittest.TestCase):
             digest, filename = line.split("  ")
             self.assertEqual(digest, hashlib.sha256((self.output / filename).read_bytes()).hexdigest())
         notes = (self.output / "release-notes.md").read_text()
-        self.assertIn("1.0.11 (build 12)", notes)
-        self.assertIn("sign it", notes)
+        self.assertIn("1.0.11（构建 12）", notes)
+        self.assertIn("安装前需要使用签名工具签名", notes)
         self.assertIn(self.commit, notes)
 
     def test_rejects_invalid_or_mismatched_tags(self):

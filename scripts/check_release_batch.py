@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+from release_notes import load_notes
 
 
 def validate(root, commit):
@@ -24,7 +25,9 @@ def validate(root, commit):
     prepared=data['prepared'];version=re.search(r'^FEATHER_PROJECT_VERSION=(.+)$',(root/'Feather.xcconfig').read_text(),re.M).group(1)
     builds=set(re.findall(r'CURRENT_PROJECT_VERSION = (\d+);',(root/'Feather.xcodeproj/project.pbxproj').read_text()))
     if prepared['version']!=version or builds!={prepared['buildNumber']}:raise ValueError('Frozen version/build differs from project')
-    return {'batchId':data['batchId'],'batchManifestSha256':hashlib.sha256(path.read_bytes()).hexdigest(),'releaseScope':data['scope']}
+    notes_path=root/'.release-notes.json';load_notes(notes_path,data)
+    return {'batchId':data['batchId'],'batchManifestSha256':hashlib.sha256(path.read_bytes()).hexdigest(),'releaseScope':data['scope'],
+            'releaseNotesSha256':hashlib.sha256(notes_path.read_bytes()).hexdigest()}
 
 if __name__=='__main__':
     try:print(json.dumps(validate(Path.cwd(),sys.argv[1])))

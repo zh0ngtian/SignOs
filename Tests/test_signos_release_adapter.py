@@ -11,6 +11,7 @@ from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
 import check_release_batch
 from signos_release_adapter import Adapter, version
+from release_notes import changelog
 
 
 def git(root,*args):return subprocess.check_output(['git','-C',str(root),*args],text=True,stderr=subprocess.DEVNULL).strip()
@@ -25,6 +26,9 @@ class FrozenManifestTests(unittest.TestCase):
             data={'schemaVersion':1,'batchId':'11111111-1111-1111-1111-111111111111','project':'signos-production','scope':'test','target':'com.signos.app','environment':'production',
                   'tasks':[{'id':'task','sha':task,'validation':{'checks':[{'name':'unit','status':'passed'}]}}],
                   'prepared':{'version':'1.1.1','buildNumber':'23'}}
+            notes={'schemaVersion':1,'batchId':data['batchId'],'language':'zh-Hans','version':'1.1.1','buildNumber':'23',
+                   'tasks':[{'id':'task','sha':task,'changes':['修复更新日志缺失时仍允许发布的问题']}]}
+            (root/'.release-notes.json').write_text(json.dumps(notes))
             manifest=root/'.release-batch.json';manifest.write_text(json.dumps(data));git(root,'add','.');git(root,'commit','-m','freeze');frozen=git(root,'rev-parse','HEAD')
             result=check_release_batch.validate(root,frozen);self.assertEqual(result['batchId'],data['batchId'])
             (root/'README.md').write_text('later docs');git(root,'add','.');git(root,'commit','-m','later')
@@ -35,7 +39,16 @@ class FrozenManifestTests(unittest.TestCase):
 
 class AdapterRecoveryTests(unittest.TestCase):
     def adapter(self,root):
-        a=Adapter.__new__(Adapter);a.root=root;a.artifacts=root;a.repository='owner/repo';a.data={'id':'batch','frozen':{'sha':'a'*40,'version':'1.1.1','buildNumber':'23'}}
+        a=Adapter.__new__(Adapter);a.root=root;a.artifacts=root;a.repository='owner/repo'
+        batch='11111111-1111-1111-1111-111111111111';change='修复更新日志缺失时仍允许发布的问题'
+        task={'id':'task','sha':'b'*40,'validation':{'checks':[{'name':'unit','status':'passed'}],
+              'releaseNotes':{'language':'zh-Hans','changes':[change]}}}
+        a.data={'id':batch,'tasks':[task],'frozen':{'sha':'a'*40,'version':'1.1.1','buildNumber':'23'}}
+        manifest={'batchId':batch,'tasks':[task],'prepared':{'version':'1.1.1','buildNumber':'23'}}
+        notes={'schemaVersion':1,'batchId':batch,'language':'zh-Hans','version':'1.1.1','buildNumber':'23',
+               'tasks':[{'id':'task','sha':'b'*40,'changes':[change]}]}
+        (root/'.release-batch.json').write_text(json.dumps(manifest))
+        (root/'.release-notes.json').write_text(json.dumps(notes))
         return a
     def test_existing_successful_ci_does_not_start_a_second_build(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -62,8 +75,9 @@ class AdapterRecoveryTests(unittest.TestCase):
                 commands.append(args)
                 target=Path(args[args.index('-D')+1]);target.mkdir(parents=True,exist_ok=True)
                 (target/'SignOs.ipa').write_bytes(b'ipa')
-                (target/'build-metadata.json').write_text(json.dumps({'buildNumber':'23','batchId':'batch','batchManifestSha256':'c'*64}))
-                (target/'release-batch.json').write_text('{}')
+                (target/'build-metadata.json').write_text(json.dumps({'buildNumber':'23','batchId':a.data['id'],'batchManifestSha256':'c'*64}))
+                (target/'release-batch.json').write_bytes((a.root/'.release-batch.json').read_bytes())
+                (target/'release-notes.json').write_bytes((a.root/'.release-notes.json').read_bytes())
             a.cmd=cmd
             with patch('signos_release_adapter.find_artifact',return_value={'run_id':10}),patch('signos_release_adapter.prepare_release'):
                 first,_=a.ci_package();second,_=a.ci_package()
@@ -87,8 +101,8 @@ class AdapterRecoveryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);a=self.adapter(root);target=root/'github';target.mkdir()
             (target/'SHA256SUMS').write_text('tampered');(target/'SignOs.ipa').write_bytes(b'ipa');(target/'build-metadata.json').write_bytes(b'{}')
-            ci=root/'ci';ci.mkdir();(ci/'SignOs.ipa').write_bytes(b'ipa');(ci/'build-metadata.json').write_bytes(b'{}');(ci/'release-batch.json').write_text('{}')
-            a.api=lambda *args,**kw:{'draft':False,'html_url':'https://example.invalid/release','assets':[{'name':n} for n in ['SignOs.ipa','build-metadata.json','SHA256SUMS']]}
+            ci=root/'ci';ci.mkdir();(ci/'SignOs.ipa').write_bytes(b'ipa');(ci/'build-metadata.json').write_bytes(b'{}');(ci/'release-batch.json').write_bytes((a.root/'.release-batch.json').read_bytes());(ci/'release-notes.json').write_bytes((a.root/'.release-notes.json').read_bytes())
+            a.api=lambda *args,**kw:{'draft':False,'body':changelog(a.release_notes()),'html_url':'https://example.invalid/release','assets':[{'name':n} for n in ['SignOs.ipa','build-metadata.json','SHA256SUMS']]}
             a.runs=lambda branch:[{'id':1,'status':'completed','conclusion':'success'}];a.cmd=lambda args:'';a.ci_package=lambda:(ci,{'sha256':'test'})
             with patch('signos_release_adapter.prepare_release'):
                 with self.assertRaisesRegex(ValueError,'checksums mismatch'):a.check_github()
@@ -133,8 +147,8 @@ class AdapterRecoveryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);a=self.adapter(root);ci=root/'ci';ci.mkdir();commands=[]
             ipa=b'ipa';metadata=b'{}';digest=hashlib.sha256(ipa).hexdigest()
-            (ci/'SignOs.ipa').write_bytes(ipa);(ci/'build-metadata.json').write_bytes(metadata);(ci/'release-batch.json').write_text('{}')
-            a.api=lambda *args,**kw:{'draft':False,'html_url':'https://example.invalid/release','assets':[{'name':n} for n in ['SignOs.ipa','build-metadata.json','SHA256SUMS']]}
+            (ci/'SignOs.ipa').write_bytes(ipa);(ci/'build-metadata.json').write_bytes(metadata);(ci/'release-batch.json').write_bytes((a.root/'.release-batch.json').read_bytes());(ci/'release-notes.json').write_bytes((a.root/'.release-notes.json').read_bytes())
+            a.api=lambda *args,**kw:{'draft':False,'body':changelog(a.release_notes()),'html_url':'https://example.invalid/release','assets':[{'name':n} for n in ['SignOs.ipa','build-metadata.json','SHA256SUMS']]}
             a.runs=lambda branch:[{'id':1,'status':'completed','conclusion':'success'}];a.ci_package=lambda:(ci,{'sha256':digest})
             def cmd(args):
                 commands.append(args)
@@ -152,7 +166,7 @@ class AdapterRecoveryTests(unittest.TestCase):
     def test_release_download_visibility_retries_are_bounded(self):
         with tempfile.TemporaryDirectory() as directory:
             a=self.adapter(Path(directory));commands=[]
-            a.api=lambda *args,**kw:{'draft':False,'assets':[{'name':n} for n in ['SignOs.ipa','build-metadata.json','SHA256SUMS']]}
+            a.api=lambda *args,**kw:{'draft':False,'body':changelog(a.release_notes()),'assets':[{'name':n} for n in ['SignOs.ipa','build-metadata.json','SHA256SUMS']]}
             a.runs=lambda branch:[{'id':1,'status':'completed','conclusion':'success'}]
             def cmd(args):
                 commands.append(args);raise RuntimeError('gh exited 1: release not found')
@@ -164,7 +178,7 @@ class AdapterRecoveryTests(unittest.TestCase):
     def test_release_download_authentication_error_is_not_retried(self):
         with tempfile.TemporaryDirectory() as directory:
             a=self.adapter(Path(directory));commands=[]
-            a.api=lambda *args,**kw:{'draft':False,'assets':[{'name':n} for n in ['SignOs.ipa','build-metadata.json','SHA256SUMS']]}
+            a.api=lambda *args,**kw:{'draft':False,'body':changelog(a.release_notes()),'assets':[{'name':n} for n in ['SignOs.ipa','build-metadata.json','SHA256SUMS']]}
             a.runs=lambda branch:[{'id':1,'status':'completed','conclusion':'success'}]
             def cmd(args):
                 commands.append(args);raise RuntimeError('gh exited 1: HTTP 401 Bad credentials')

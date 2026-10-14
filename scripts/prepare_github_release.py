@@ -8,6 +8,7 @@ import plistlib
 import re
 import sys
 import zipfile
+from release_notes import load_notes, changelog
 
 
 def prepare_release(output: Path, tag: str, commit: str) -> None:
@@ -43,6 +44,8 @@ def prepare_release(output: Path, tag: str, commit: str) -> None:
     if metadata["bundleIdentifier"] != info["CFBundleIdentifier"]:
         raise ValueError("Bundle identifier does not match build metadata")
 
+    if not metadata.get("batchId"):
+        raise ValueError("发布产物缺少冻结批次与具体中文更新日志")
     if metadata.get("batchId"):
         manifest_path = output / "release-batch.json"
         manifest = json.loads(manifest_path.read_text())
@@ -53,17 +56,22 @@ def prepare_release(output: Path, tag: str, commit: str) -> None:
         if manifest["prepared"]["version"] != metadata["version"] or manifest["prepared"]["buildNumber"] != metadata["buildNumber"]:
             raise ValueError("Artifact version differs from frozen batch")
 
+    notes_path = output / "release-notes.json"
+    notes = load_notes(notes_path, manifest)
+    if hashlib.sha256(notes_path.read_bytes()).hexdigest() != metadata.get("releaseNotesSha256"):
+        raise ValueError("Frozen Chinese release notes checksum mismatch")
+
     metadata_digest = hashlib.sha256(metadata_path.read_bytes()).hexdigest()
     (output / "SHA256SUMS").write_text(
         f"{digest}  SignOs.ipa\n{metadata_digest}  build-metadata.json\n"
     )
     (output / "release-notes.md").write_text(
-        f"SignOs {tag[1:]} (build {metadata['buildNumber']}).\n\n"
-        "Download `SignOs.ipa` and sign it with your preferred signing tool before installation. "
-        "This package has no distribution signature or private local TLS resources.\n\n"
-        f"Minimum iOS version: {metadata['minimumOSVersion']}.\n\n"
-        f"Source commit: `{commit}`.\n\n"
-        "Verify the downloads with `shasum -a 256 -c SHA256SUMS`.\n"
+        changelog(notes) + "\n\n"
+        "此处的 `SignOs.ipa` 是未分发签名的构建产物，安装前需要使用签名工具签名；"
+        "不包含私有本地 TLS 资源。\n\n"
+        f"最低 iOS 版本：{metadata['minimumOSVersion']}。\n\n"
+        f"源码提交：`{commit}`。\n\n"
+        "下载后可用 `shasum -a 256 -c SHA256SUMS` 核对完整校验和。\n"
     )
 
 
