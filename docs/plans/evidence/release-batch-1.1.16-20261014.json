@@ -1,0 +1,93 @@
+{
+  "id": "97eb194a-471c-40c4-a4ac-f406dc984f3d",
+  "project": "signos-production",
+  "scope": "96c87efa825ae59a58d467fb058a33fd710e4ced9bee0b003923625611c49047",
+  "completedAt": 1791968322.073707,
+  "coordinatorVersion": "0.1.4",
+  "frozen": {
+    "buildNumber": "38",
+    "environment": "production",
+    "manifestSha256": "f3248b5c1bc8bbe5e325f010ec44e611ef89f25220a0192ceabe4a48ea6c9ade",
+    "sha": "0e86d5f79138cc4bbcacccaca4af322284fd0aaa",
+    "target": "com.signos.app",
+    "tasks": [
+      {
+        "id": "install-web-dismiss-20261014",
+        "sha": "873397f4d4fa03105474c9827fa8bed4af8a925a"
+      }
+    ],
+    "version": "1.1.16"
+  },
+  "results": {
+    "build": {
+      "buildNumber": "38",
+      "commit": "0e86d5f79138cc4bbcacccaca4af322284fd0aaa",
+      "runId": 38538031917,
+      "sha256": "35b84fb374946f529441f14b15caa7eb62d0476bdf6ac6f38797159c07dc0316",
+      "version": "1.1.16"
+    },
+    "github": {
+      "runId": 38538892045,
+      "sha256": "35b84fb374946f529441f14b15caa7eb62d0476bdf6ac6f38797159c07dc0316",
+      "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.16"
+    },
+    "ota": {
+      "buildNumber": "38",
+      "bundleId": "com.signos.app",
+      "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.16/latest.ipa",
+      "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+      "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.16/manifest.plist",
+      "sha256": "f73b7eeb098d9e307fab437c9c6df427da17c911c9547652eb9af8846cb86fe2",
+      "signed": true,
+      "size": 15015039,
+      "sourceCommit": "0e86d5f79138cc4bbcacccaca4af322284fd0aaa",
+      "version": "1.1.16"
+    },
+    "prepare": {
+      "buildNumber": "38",
+      "bundleIdentifier": "com.signos.app",
+      "inputFingerprint": "12c0a932ab2e138e56c36d50663c8e64feb77f573ce2ea25b388a1887bc2cacc",
+      "localValidation": "passed",
+      "version": "1.1.16"
+    },
+    "verify": {
+      "github": {
+        "runId": 38538892045,
+        "sha256": "35b84fb374946f529441f14b15caa7eb62d0476bdf6ac6f38797159c07dc0316",
+        "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.16"
+      },
+      "httpsFullDownloadVerified": true,
+      "ota": {
+        "buildNumber": "38",
+        "bundleId": "com.signos.app",
+        "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.16/latest.ipa",
+        "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+        "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.16/manifest.plist",
+        "sha256": "f73b7eeb098d9e307fab437c9c6df427da17c911c9547652eb9af8846cb86fe2",
+        "signed": true,
+        "size": 15015039,
+        "sourceCommit": "0e86d5f79138cc4bbcacccaca4af322284fd0aaa",
+        "version": "1.1.16"
+      }
+    }
+  },
+  "releaseNotes": {
+    "language": "zh-Hans",
+    "changes": [
+      "修复自动与手动安装开始取包后仍停留在 127.0.0.1 黑屏中转网页的问题",
+      "从后台返回 SignOs 时自动关闭残留安装网页并恢复原生页面，保留系统确认与安装重试入口"
+    ],
+    "sha256": "6b494280f50320b477c8ac60d9384e4508b147c795460fd3d3e67dea519b02ad",
+    "githubActualBodyMatches": true,
+    "otaActualNotesMatch": true
+  },
+  "localValidation": {
+    "installationBrowserScenarios": 12,
+    "swift6WarningsAsErrorsPassed": true,
+    "oneViewPhaseScenarios": 6,
+    "installCleanupSimulatorPassed": true,
+    "iphoneosReleaseBuildPassed": true,
+    "fullSimulatorBuildAndLaunchPassed": true
+  },
+  "acceptanceScope": "生产安装浏览器生命周期、UIKit 自动入口及 SwiftUI 手动 sheet 的模拟器验收通过；使用受控状态和生命周期通知，没有执行真机 OTA、覆盖安装或数据保留验收。GitHub/OTA 同一冻结产物发布、完整 HTTPS 下载和独立验签已由协调器确认；固定入口、manifest、版本及中文日志再次在线核对一致。"
+}

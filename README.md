@@ -162,6 +162,11 @@ python3 -B scripts/test_install_browser_simulator.py <booted-simulator-udid> \
 回归使用真实生产会话与页面呈现、受控安装状态及生命周期通知，不在模拟器中执行 OTA 安装。
 证据见 [安装页返回验收](docs/plans/evidence/install-browser-20261014/verification.json)。
 
+2026-10-14：该修复已随 **1.1.16（构建号 38）** 完成 GitHub Release 与固定 OTA 发布，
+正式 main / 标签流程、完整 HTTPS 下载与独立验签通过，见
+[共同批次凭证](docs/plans/evidence/release-batch-1.1.16-20261014.json)。
+本次真机不可用；页面生命周期按上述模拟器范围验收，未证明真机覆盖安装及数据保留。
+
 ## Building
 
 ```
