@@ -46,6 +46,14 @@ final class UpdateManager: ObservableObject {
 		return updates[uuid]
 	}
 
+    /// Current releases from enabled sources, including apps without an available update.
+    /// Local signing/import timestamps and older release history do not affect card ordering.
+    var sourceUpdateDates: [String: Date] {
+        candidates.compactMapValues { choices in
+            choices.filter(eligible).compactMap(\.sourceProvenance.sourceAppVersionDate).max()
+        }
+    }
+
 	/// Prefer a retained signed package, then an imported package of this source version.
 	/// Source versions can differ from the version inside the IPA or its signed copy.
 	func downloadedApp(
