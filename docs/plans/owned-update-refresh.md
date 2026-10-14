@@ -25,7 +25,7 @@ SwiftUI 布局重绘中的 `PlatformRefreshControlProxy.configuration.didSet` �
 - [x] 运行新回归及 `python3 scripts/test_update_manager.py 21ED4863-0087-416A-BD30-259BF2512540`，确认检查序列、失败保留和取消行为。
 - [x] 构建 Release 模拟器包。按 SDK 26.5 对照场景，在应用页连续下拉以及刷新过程中切换页面，核对远端同步、客户端成功记录和错误提示。
 - [x] 完成 `make iphoneos`、发布适配器/产物/附件回归、工作流核对及 `git diff --check`。
-- [ ] 只读独立审查；提交开发分支并 push，核对远端 SHA，提交带真实验证记录的 `ready`。
+- [x] 只读独立审查；提交开发分支并 push，核对远端 SHA，提交带真实验证记录的 `ready`。
 - [ ] 读取同一批次共同凭证，核对 main/tag workflow、GitHub Release 附件、固定 OTA 完整下载与版本/构建号，更新具体中文软件源日志及受影响文档。
 
 诊断包、私有令牌、原始设备资料与签名材料保留在仓库外。模拟器功能验收不代表真机覆盖安装已完成。
@@ -33,3 +33,9 @@ SwiftUI 布局重绘中的 `PlatformRefreshControlProxy.configuration.didSet` �
 ## 本地验收（2026-10-14）
 
 [核验记录](evidence/owned-refresh-20261014.json)保留连续下拉与切页场景的 7 个远端任务成功状态及客户端检查时间。新调度回归、原更新管理器回归、Release 模拟器/设备构建、发布合同检查及独立审查通过。发布尚待协调器共同凭证。
+
+## 发布准备环境恢复
+
+开发提交 `315ed9daadf475ee52a8c8aa562021b1dfcec25e` 已 push 并被协调器接受。
+首批 `b0328d94-5ad5-4071-9eeb-dbf48559460a` 在 prepare 的本地构建阶段失败，默认 SwiftPM 缓存保留了目录及状态记录，但 35 个依赖检出缺少 `Package.swift` 等源码；此时未冻结提交、未推进 main、未发布标签。
+逐包按 `Package.resolved` 核对完整缓存的 Git revision 后恢复默认缓存，旧不完整目录与诊断留在仓库外；没有改变依赖版本或客户端代码。关联恢复任务为 `signos-owned-refresh-cache-repair-20261014`，发布版本及批次仍只由协调器决定。
