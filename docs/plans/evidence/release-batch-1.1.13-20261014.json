@@ -102,5 +102,14 @@
     "fixedIpaHeadMatchesReceipt": true,
     "versionedManifestBuildAndIdentityMatchesReceipt": true
   },
-  "acceptanceScope": "iOS 27.0 模拟器运行验收菜单双向切换、禁用提示变化、两种状态重启持久化及移除入口保留；本地 iphoneos Release、相关回归及独立代码复核通过。协调器完成同一冻结提交的 CI、GitHub Release、OTA 完整下载和独立验签；真机覆盖安装与数据保留未验证。"
+  "acceptanceScope": "iOS 27.0 模拟器运行验收菜单双向切换、禁用提示变化、两种状态重启持久化及移除入口保留；本地 iphoneos Release、相关回归及独立代码复核通过。协调器完成同一冻结提交的 CI、GitHub Release、OTA 完整下载和独立验签；真机覆盖安装与数据保留未验证。",
+  "sourceVerification": {
+    "version": "1.1.13",
+    "githubRelease": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.13",
+    "sourceUrl": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json",
+    "chineseNotesVerified": true,
+    "unsignedIpaSha256": "2b4e6f259f02fa9e2a2d8fd916a6e0b8c115c5c7eacc186f5a5d5dae24ab0c83",
+    "packageAndTagUnchanged": true
+  },
+  "notesCorrection": "2026-10-14 发布后发现自动流程仍使用英文占位说明。已按本版实际变更补齐 GitHub Release 中文正文，并同步现有正式仓库订阅；普通与兼容软件源入口使用 SignOs/1.1.13 User-Agent 回验一致，原 IPA 摘要、下载地址、应用元信息和验包信息保留。OTA 批次说明本次未修改；发布脚本的日志输入及校验机制待用户确认方案后调整。"
 }
