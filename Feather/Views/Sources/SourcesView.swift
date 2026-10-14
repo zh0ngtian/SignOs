@@ -73,10 +73,15 @@ struct SourcesView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityHint("浏览此软件源的全部应用")
+        .accessibilityHint("浏览此软件源的全部应用，长按可启用、禁用或移除软件源")
         .padding(WSSpacing.lg)
         .background(WSRadius.continuous(WSRadius.xl).fill(WSSurface.card))
         .contextMenu {
+            Button(access.isEnabled(source) ? "禁用软件源" : "启用软件源",
+                   systemImage: access.isEnabled(source) ? "pause.circle" : "play.circle") {
+                access.setEnabled(!access.isEnabled(source), for: source)
+            }
+            .accessibilityIdentifier("source-toggle-enabled")
             Button("移除软件源", systemImage: "trash", role: .destructive) {
                 sourceToRemove = source
                 confirmsRemoval = true
