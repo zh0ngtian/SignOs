@@ -309,6 +309,7 @@ export class Catalog extends DurableObject {
           // Backfill unchanged IPAs without duplicating a version or dropping
           // a previously attested full-file digest.
           live.current.inspection = inspection;
+          if (config.kind === 'github') live.current.notes = current.notes;
         }
         live.lastSuccessAt = now(); live.error = null; live.status = live.published ? 'succeeded' : 'ready';
         Object.assign(job, { status: 'succeeded', finishedAt: now() });
