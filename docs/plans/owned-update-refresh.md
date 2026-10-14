@@ -1,0 +1,35 @@
+# 更新管理器持有刷新任务实施计划
+
+> 执行：在当前隔离 worktree 中逐项实施，检查通过后由发布协调器交付。
+
+**目标：** 应用页下拉检查不因页面重绘或切换页面而取消；重复请求等待已有检查，手动远端同步不被普通后台检查吞掉。
+
+**架构：** `AutoUpdateManager` 持有 `UpdateCheckCoordinator`。协调器在 MainActor 创建并持有一个独立任务，调用页面只等待其结果。原更新检查、网络取消检查及结果发布顺序保持；普通检查进行时到达的手动同步请求等待后补做同步。
+
+**授权：** 2026-10-14 用户同意任务归属调整，并要求同时解决切换页面取消。
+
+## 根因证据
+
+正式 1.1.9（31）由 Xcode 26.6 / iOS 26.5 SDK 构建，本机此前的模拟器验收使用 Xcode 27 / SDK 27。
+在相同模拟器程序和数据上，仅改变 Mach-O 的链接 SDK 标记：27 检查成功，26.5 连续下拉立即取消，恢复 27 再次成功；26.5 在未接调试器时也复现。
+SwiftUI 布局重绘中的 `PlatformRefreshControlProxy.configuration.didSet` 调用 `swift_task_cancel`，取消指针与 UpdateManager 失败任务一致。
+另有下拉后切到软件源再返回应用的取消路径。1.1.9 只避免捕获页面值，未解决系统兼容路径及页面生命周期对实际检查任务的影响。
+链接 SDK 对照证明兼容行为差异，不能替代使用 Xcode 26.6 完整重建；正式流水线仍保留原构建工具条件。
+
+## 执行步骤
+
+- [x] 添加 `Tests/AutoUpdateCheckRegression.swift` 和 `scripts/test_auto_update_check.py`。提取真实检查阶段与调度方法，以 continuation 控制网络阶段；覆盖取消等待者、重复请求、手动同步排队及失败后重试。
+- [x] 修复前运行 `python3 scripts/test_auto_update_check.py`，编译成功，5 条行为断言失败。
+- [x] 新建 `Feather/Utilities/UpdateCheckCoordinator.swift`：持有任务；相同检查加入；手动同步等待普通检查后递归请求；任务自身完成时清理持有状态。
+- [x] `AutoUpdateManager.checkNow` 委托协调器，原流程移至 `_performCheckNow`；保持 `.refreshable` 直接等待管理器结果。
+- [x] 运行新回归及 `python3 scripts/test_update_manager.py 21ED4863-0087-416A-BD30-259BF2512540`，确认检查序列、失败保留和取消行为。
+- [x] 构建 Release 模拟器包。按 SDK 26.5 对照场景，在应用页连续下拉以及刷新过程中切换页面，核对远端同步、客户端成功记录和错误提示。
+- [x] 完成 `make iphoneos`、发布适配器/产物/附件回归、工作流核对及 `git diff --check`。
+- [ ] 只读独立审查；提交开发分支并 push，核对远端 SHA，提交带真实验证记录的 `ready`。
+- [ ] 读取同一批次共同凭证，核对 main/tag workflow、GitHub Release 附件、固定 OTA 完整下载与版本/构建号，更新具体中文软件源日志及受影响文档。
+
+诊断包、私有令牌、原始设备资料与签名材料保留在仓库外。模拟器功能验收不代表真机覆盖安装已完成。
+
+## 本地验收（2026-10-14）
+
+[核验记录](evidence/owned-refresh-20261014.json)保留连续下拉与切页场景的 7 个远端任务成功状态及客户端检查时间。新调度回归、原更新管理器回归、Release 模拟器/设备构建、发布合同检查及独立审查通过。发布尚待协调器共同凭证。

@@ -38,6 +38,7 @@ final class AutoUpdateManager: ObservableObject {
 	}
 
 	@Published private(set) var isAutoChecking = false
+	private let checkCoordinator = UpdateCheckCoordinator()
 
 	private var _timer: Timer?
 	private let _pathMonitor = NWPathMonitor()
@@ -150,6 +151,12 @@ final class AutoUpdateManager: ObservableObject {
 
 	@discardableResult
 	func checkNow(notifyWhenClean: Bool = true, silent: Bool = false, syncManagedSources: Bool = false) async -> Int {
+		await checkCoordinator.run(syncManagedSources: syncManagedSources) {
+			await self._performCheckNow(notifyWhenClean: notifyWhenClean, silent: silent, syncManagedSources: syncManagedSources)
+		}
+	}
+
+	private func _performCheckNow(notifyWhenClean: Bool, silent: Bool, syncManagedSources: Bool) async -> Int {
 		guard !isAutoChecking else { return UpdateManager.shared.updates.count }
 		isAutoChecking = true
 		defer {

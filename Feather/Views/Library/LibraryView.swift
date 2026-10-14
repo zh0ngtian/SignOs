@@ -86,7 +86,7 @@ struct LibraryView: View {
             }
             .background(WSSurface.background)
             .toolbar(.hidden, for: .navigationBar)
-            // Keep the refresh action independent of the changing view value.
+            // The manager owns the check; refresh-task cancellation only affects this waiter.
             .refreshable { await AutoUpdateManager.shared.checkNow(notifyWhenClean: false, syncManagedSources: true) }
             .sheet(isPresented: $importing) {
                 FileImporterRepresentableView(allowedContentTypes: [.ipa, .tipa], allowsMultipleSelection: true, onDocumentsPicked: { urls in
