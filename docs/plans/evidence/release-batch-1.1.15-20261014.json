@@ -1,0 +1,109 @@
+{
+  "id": "ec25ba0f-26fd-4afe-b621-f0447a203647",
+  "project": "signos-production",
+  "scope": "96c87efa825ae59a58d467fb058a33fd710e4ced9bee0b003923625611c49047",
+  "completedAt": 1791953358.124922,
+  "coordinatorVersion": "0.1.4",
+  "frozen": {
+    "buildNumber": "37",
+    "environment": "production",
+    "manifestSha256": "8e0147ab2ae3b6e5890810165dbae38fe4803651fa1793fdee0f40859d57ebee",
+    "sha": "e0d40bebb4688199a220572ad61ae54262f1f189",
+    "target": "com.signos.app",
+    "tasks": [
+      {
+        "id": "signos-chinese-release-notes-20261014",
+        "sha": "7f5fc5242c8112bc12cb2a046eeff49a8fdbd6b5"
+      }
+    ],
+    "version": "1.1.15"
+  },
+  "results": {
+    "build": {
+      "buildNumber": "37",
+      "commit": "e0d40bebb4688199a220572ad61ae54262f1f189",
+      "runId": 38512457011,
+      "sha256": "5f46ca9d22b282d632b4d9acad2c17458814ce2d9a4a41e8ef71c205f770e9b8",
+      "version": "1.1.15"
+    },
+    "github": {
+      "runId": 38513312875,
+      "sha256": "5f46ca9d22b282d632b4d9acad2c17458814ce2d9a4a41e8ef71c205f770e9b8",
+      "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.15"
+    },
+    "ota": {
+      "buildNumber": "37",
+      "bundleId": "com.signos.app",
+      "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.15/latest.ipa",
+      "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+      "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.15/manifest.plist",
+      "sha256": "ac3cea8835d4050d8bd7df8a584c0d67a05d91cc6139078ef17aa1e63a3b2677",
+      "signed": true,
+      "size": 15010800,
+      "sourceCommit": "e0d40bebb4688199a220572ad61ae54262f1f189",
+      "version": "1.1.15"
+    },
+    "prepare": {
+      "buildNumber": "37",
+      "bundleIdentifier": "com.signos.app",
+      "inputFingerprint": "ca69964279ac1316dbaa08db83e8ef3cb3bc2a8b4d29817b350368435dc9d86e",
+      "localValidation": "passed",
+      "version": "1.1.15"
+    },
+    "verify": {
+      "github": {
+        "runId": 38513312875,
+        "sha256": "5f46ca9d22b282d632b4d9acad2c17458814ce2d9a4a41e8ef71c205f770e9b8",
+        "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.15"
+      },
+      "httpsFullDownloadVerified": true,
+      "ota": {
+        "buildNumber": "37",
+        "bundleId": "com.signos.app",
+        "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.15/latest.ipa",
+        "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+        "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.15/manifest.plist",
+        "sha256": "ac3cea8835d4050d8bd7df8a584c0d67a05d91cc6139078ef17aa1e63a3b2677",
+        "signed": true,
+        "size": 15010800,
+        "sourceCommit": "e0d40bebb4688199a220572ad61ae54262f1f189",
+        "version": "1.1.15"
+      }
+    }
+  },
+  "releaseNotes": {
+    "language": "zh-Hans",
+    "changes": [
+      "发布准备阶段强制要求每个参与任务提供具体中文更新日志，缺失、纯英文或已知占位说明会在版本分配和构建前被拦截。",
+      "更新日志与冻结任务、版本及 CI 产物散列绑定，GitHub Release 和 OTA 自动使用同一份中文变更说明。",
+      "加强实际日志验收，IPA 校验缓存不能绕过日志检查；中断恢复时，日志不符的暂存包不能激活固定渠道。"
+    ],
+    "sha256": "4f496f8fe50877de830a25f41b9e23173d26c0813a5b8f1e4f7788360ff57dc4",
+    "githubActualBodyMatches": true,
+    "otaActualNotesMatch": true,
+    "ciArtifactTransportVerified": true
+  },
+  "sourceVerification": {
+    "version": "1.1.15",
+    "buildNumber": "37",
+    "entryId": "ba9c4295-207b-433a-b191-2c8908964159",
+    "sourceURLs": [
+      "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json",
+      "https://signos-source-aggregator.305301890.workers.dev/source.json"
+    ],
+    "actualChineseReleaseAndSourceNotesMatch": true,
+    "originalCIUnsignedIpaSha256": "5f46ca9d22b282d632b4d9acad2c17458814ce2d9a4a41e8ef71c205f770e9b8",
+    "releaseBodySha256": "63485fca8c122f619a23cce08f915854021ff04b78340e9b1c77ce05c0a5bc72"
+  },
+  "localValidation": {
+    "releaseNotesRegressions": 13,
+    "adapterRegressions": 14,
+    "releaseAssetRegressions": 7,
+    "releaseArtifactRegressions": 7,
+    "independentReviewPassed": true,
+    "pythonSyntaxAndBashSyntaxPassed": true,
+    "workflowYamlParsed": true,
+    "mergedIphoneosReleaseBuildPassed": true
+  },
+  "acceptanceScope": "发布流程与构建输入改动；41 项回归、独立复核、本地整合 Release 构建、正式 main/tag CI、完整 OTA 下载及独立验签通过。实际 GitHub/OTA/软件源中文日志一致；本次没有修改客户端运行行为，真机覆盖安装与数据保留未验证。"
+}

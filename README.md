@@ -769,3 +769,9 @@ Ad Hoc 签名包为 14,986,999 字节，SHA-256 `c5e2c277869a8f1276d906ec1da7f39
 ### 中文更新日志发布门槛
 
 SignOs 发布任务必须在 ready 的验证 JSON 中填写具体中文 releaseNotes；所有参与任务都需要提供，缺失、纯英文或已知笼统占位会在版本分配和构建前报错。日志随冻结提交保存在 .release-notes.json，CI 产物与 build-metadata.json 绑定其 SHA-256。GitHub Release、OTA 共用同一变更日志，软件源从 Release 同步；实际日志不符时，即使 IPA 校验命中缓存，也不能验收完成。暂存包恢复同样在渠道激活前校验日志。填写格式与验证命令见 [发布协调说明](docs/release-coordination.md#中文日志必填与冻结)。
+
+### 2026-10-14 中文日志强制发布验收
+
+1.1.15（构建 37）启用具体中文日志必填门槛：所有参与任务必须提供 releaseNotes，缺失、纯英文或已知占位在版本分配与构建前阻止发布。冻结日志与任务、版本和 CI 散列绑定，GitHub / OTA 共用中文变更，实际日志不符不能借助 IPA 缓存通过；暂存恢复先校验日志再激活固定渠道。
+
+41 项回归及独立复核通过；批次 ec25ba0f-26fd-4afe-b621-f0447a203647 的冻结提交 e0d40bebb4688199a220572ad61ae54262f1f189 已完成本地 Release、main 构建、整个标签工作流及同产物 GitHub Release / OTA 发布。发布的 build-metadata.json 日志散列与冻结文件相同，实际 Release、OTA 和普通/兼容软件源日志均回验一致，软件源继续使用原正式仓库订阅。通用协调器服务未升级；本次未修改客户端运行行为，真机覆盖安装与数据保留未验证。详见 [1.1.15 批次凭证](docs/plans/evidence/release-batch-1.1.15-20261014.json)。
