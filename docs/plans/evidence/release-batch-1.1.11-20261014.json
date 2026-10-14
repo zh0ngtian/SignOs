@@ -1,0 +1,149 @@
+{
+  "id": "619c1407-7d0e-49b9-9634-73ac3925a45e",
+  "project": "signos-production",
+  "scope": "96c87efa825ae59a58d467fb058a33fd710e4ced9bee0b003923625611c49047",
+  "frozen": {
+    "buildNumber": "33",
+    "environment": "production",
+    "manifestSha256": "25c4dab4c65f3d3e562cff87107db9f561c45f1ef8ba8000e6bb288cc9dc7a42",
+    "sha": "ce4c3e03225dcce48449022afcfe796cbbd298fe",
+    "target": "com.signos.app",
+    "tasks": [
+      {
+        "id": "signos-owned-refresh-20261014",
+        "sha": "315ed9daadf475ee52a8c8aa562021b1dfcec25e"
+      },
+      {
+        "id": "signos-owned-refresh-cache-repair-20261014",
+        "sha": "db15392be6ac861975589f5262e1a469f5f42e94"
+      },
+      {
+        "id": "signos-owned-refresh-release-read-repair-20261014",
+        "sha": "6088f17b82f29ccbb0bd121ec44039c9fad071fe"
+      }
+    ],
+    "version": "1.1.11"
+  },
+  "results": {
+    "build": {
+      "buildNumber": "33",
+      "commit": "ce4c3e03225dcce48449022afcfe796cbbd298fe",
+      "runId": 38497609149,
+      "sha256": "2c79b6a09de147dd2b831ec446aa4c88da629179865a34b85dceb911f2beedb9",
+      "version": "1.1.11"
+    },
+    "github": {
+      "runId": 38498721607,
+      "sha256": "2c79b6a09de147dd2b831ec446aa4c88da629179865a34b85dceb911f2beedb9",
+      "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.11"
+    },
+    "ota": {
+      "buildNumber": "33",
+      "bundleId": "com.signos.app",
+      "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.11/latest.ipa",
+      "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+      "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.11/manifest.plist",
+      "sha256": "c4dfecff3974cab26a9fcaeadd75b8af77752acfe919737a3db96a8003708da9",
+      "signed": true,
+      "size": 14988541,
+      "sourceCommit": "ce4c3e03225dcce48449022afcfe796cbbd298fe",
+      "version": "1.1.11"
+    },
+    "prepare": {
+      "buildNumber": "33",
+      "bundleIdentifier": "com.signos.app",
+      "inputFingerprint": "516570914bd584de48e8eac19eae6180e47d8797c8e6ffbd764eb41ad8a071be",
+      "localValidation": "passed",
+      "version": "1.1.11"
+    },
+    "verify": {
+      "github": {
+        "runId": 38498721607,
+        "sha256": "2c79b6a09de147dd2b831ec446aa4c88da629179865a34b85dceb911f2beedb9",
+        "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.11"
+      },
+      "httpsFullDownloadVerified": true,
+      "ota": {
+        "buildNumber": "33",
+        "bundleId": "com.signos.app",
+        "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.11/latest.ipa",
+        "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+        "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.11/manifest.plist",
+        "sha256": "c4dfecff3974cab26a9fcaeadd75b8af77752acfe919737a3db96a8003708da9",
+        "signed": true,
+        "size": 14988541,
+        "sourceCommit": "ce4c3e03225dcce48449022afcfe796cbbd298fe",
+        "version": "1.1.11"
+      }
+    }
+  },
+  "completedAt": 1791943250.737144,
+  "coordinatorVersion": "0.1.4",
+  "recoveryChain": [
+    "b0328d94-5ad5-4071-9eeb-dbf48559460a",
+    "0be3ded8-2c5e-4a64-83dd-95125eeab09c"
+  ],
+  "recoveryOf": "0be3ded8-2c5e-4a64-83dd-95125eeab09c",
+  "tasks": [
+    {
+      "id": "signos-owned-refresh-20261014",
+      "sha": "315ed9daadf475ee52a8c8aa562021b1dfcec25e"
+    },
+    {
+      "id": "signos-owned-refresh-cache-repair-20261014",
+      "sha": "db15392be6ac861975589f5262e1a469f5f42e94"
+    },
+    {
+      "id": "signos-owned-refresh-release-read-repair-20261014",
+      "sha": "6088f17b82f29ccbb0bd121ec44039c9fad071fe"
+    }
+  ],
+  "functionalValidation": {
+    "scope": "检查由管理器持有，不受应用页重绘或切页取消影响；重复请求等待现有检查，手动同步在普通检查后补做。",
+    "checks": [
+      "调度回归修复前5项行为失败，修复后取消、合并、手动同步及重试通过。",
+      "原更新管理器回归通过；Release模拟器及设备构建通过。",
+      "SDK26.5兼容控制包连续下拉、切软件源、切设置均完成7个远端任务和客户端成功检查，没有取消提示。",
+      "14项发布适配器、7项产物、7项附件回归与独立审查通过。"
+    ],
+    "limitations": [
+      "功能验收使用iOS27模拟器的链接SDK26.5兼容控制；不等于完整Xcode26.6模拟器重建。",
+      "正式IPA由Xcode26.6/iOS26.5SDK构建；未进行本次真机覆盖安装验收。"
+    ]
+  },
+  "postReleaseVerification": {
+    "version": "1.1.11",
+    "buildNumber": "33",
+    "fixedPageVerified": true,
+    "fixedManifestVerified": true,
+    "manifestBundleVersion": "33",
+    "fullDownloadVerified": true,
+    "size": 14988541,
+    "sha256": "c4dfecff3974cab26a9fcaeadd75b8af77752acfe919737a3db96a8003708da9",
+    "sourceCommit": "ce4c3e03225dcce48449022afcfe796cbbd298fe",
+    "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html"
+  },
+  "softwareSourceVerification": {
+    "sourceURL": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json",
+    "version": "1.1.11",
+    "buildNumber": "33",
+    "downloadURL": "https://github.com/zh0ngtian/SignOs/releases/download/v1.1.11/SignOs.ipa",
+    "sha256": "2c79b6a09de147dd2b831ec446aa4c88da629179865a34b85dceb911f2beedb9",
+    "size": 14942104,
+    "changelogChinese": true,
+    "historyUnchanged": true,
+    "attestedDigestPreserved": true,
+    "serviceDeploymentVersion": "18396f10-f442-4b99-8dc2-f163784821ab",
+    "serviceSourceCommit": "29de68bfd97488b31832c33b9342ce561948b163"
+  },
+  "softwareSourceServiceVerification": {
+    "testsPassed": 40,
+    "syntaxCheckPassed": true,
+    "independentReviewPassed": true,
+    "regressionBeforeFix": "同一GitHub包保留旧日志，新增断言失败",
+    "regressionAfterFix": "同包日志更新，历史与已验证SHA保持，公开versionDescription更新",
+    "deploymentVersion": "18396f10-f442-4b99-8dc2-f163784821ab",
+    "sourceCommit": "29de68bfd97488b31832c33b9342ce561948b163",
+    "httpsPublicFeedVerified": true
+  }
+}

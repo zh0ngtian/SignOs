@@ -26,13 +26,13 @@ SwiftUI 布局重绘中的 `PlatformRefreshControlProxy.configuration.didSet` �
 - [x] 构建 Release 模拟器包。按 SDK 26.5 对照场景，在应用页连续下拉以及刷新过程中切换页面，核对远端同步、客户端成功记录和错误提示。
 - [x] 完成 `make iphoneos`、发布适配器/产物/附件回归、工作流核对及 `git diff --check`。
 - [x] 只读独立审查；提交开发分支并 push，核对远端 SHA，提交带真实验证记录的 `ready`。
-- [ ] 读取同一批次共同凭证，核对 main/tag workflow、GitHub Release 附件、固定 OTA 完整下载与版本/构建号，更新具体中文软件源日志及受影响文档。
+- [x] 读取同一批次共同凭证，核对 main/tag workflow、GitHub Release 附件、固定 OTA 完整下载与版本/构建号，更新具体中文软件源日志及受影响文档。
 
 诊断包、私有令牌、原始设备资料与签名材料保留在仓库外。模拟器功能验收不代表真机覆盖安装已完成。
 
 ## 本地验收（2026-10-14）
 
-[核验记录](evidence/owned-refresh-20261014.json)保留连续下拉与切页场景的 7 个远端任务成功状态及客户端检查时间。新调度回归、原更新管理器回归、Release 模拟器/设备构建、发布合同检查及独立审查通过。发布尚待协调器共同凭证。
+[核验记录](evidence/owned-refresh-20261014.json)保留连续下拉与切页场景的 7 个远端任务成功状态及客户端检查时间。新调度回归、原更新管理器回归、Release 模拟器/设备构建、发布合同检查及独立审查通过。发布共同凭证及回验结果见下节。
 
 ## 发布准备环境恢复
 
@@ -42,3 +42,21 @@ SwiftUI 布局重绘中的 `PlatformRefreshControlProxy.configuration.didSet` �
 
 关联批次 `0be3ded8-2c5e-4a64-83dd-95125eeab09c` 已冻结 1.1.10（32），正式 main 构建成功，GitHub 标签及附件已发布。在附件验收时，REST 已能读取完整 Release，但 CLI 下载短暂返回 `release not found`，协调器因此失败，OTA 尚未更新。
 为这条已经确认发布的只读下载添加最多三次尝试（间隔 1、2 秒）；认证、校验和等其他错误及所有发布写操作不重试。新增回归先出现两条行为失败，后验证恢复、次数上限及认证失败不重试。新关联任务 `signos-owned-refresh-release-read-repair-20261014` 保留既有标签和两个失败批次，由协调器分配后续版本并交付两个渠道。
+
+## 最终交付（2026-10-14）
+
+已由关联批次 `619c1407-7d0e-49b9-9634-73ac3925a45e` 交付 **1.1.11（构建 33）**。
+冻结提交 `ce4c3e03225dcce48449022afcfe796cbbd298fe` 的
+[main 构建](https://github.com/zh0ngtian/SignOs/actions/runs/38497609149)和
+[标签发布](https://github.com/zh0ngtian/SignOs/actions/runs/38498721607)均成功。
+[GitHub Release](https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.11)三个附件与该提交 CI 产物一致；
+[固定 OTA](https://192.168.123.79:8769/channels/signos/current/install.html)版本、构建号、manifest、签名和完整 IPA 散列回验通过。
+原开发任务与缓存修复任务为 recovered，发布读取修复任务为 complete，均关联同一共享凭证；两个失败批次和 1.1.10 标签保留。
+
+最后的软件源回验发现：同一 GitHub IPA 的同步分支保留旧日志，导致已编辑的中文说明未进入公开源。
+仅在 GitHub 同包分支更新当前 notes，保留历史和已 attested SHA；新增断言先失败，修复后 40 项服务回归、语法及独立审查通过。
+服务提交 `29de68bfd97488b31832c33b9342ce561948b163` 独立部署到现有 source-aggregator Worker，部署版本
+`18396f10-f442-4b99-8dc2-f163784821ab`。真实 HTTPS 软件源已确认 1.1.11（33）、具体中文日志、完整散列及历史保持。
+这一服务更新未重构建客户端，客户端仍对应上述冻结提交。
+
+[共享交付凭证](evidence/release-batch-1.1.11-20261014.json)记录客户端双渠道及服务回验。功能验收为模拟器，不代表已完成本次真机覆盖安装。
