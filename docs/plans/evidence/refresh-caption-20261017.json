@@ -1,0 +1,94 @@
+{
+  "checks": [
+    {
+      "name": "owned-check-regression",
+      "status": "passed",
+      "evidence": "python3 -B scripts/test_auto_update_check.py: passed cancellation, coalescing, manual synchronization, retry."
+    },
+    {
+      "name": "simulator-build",
+      "status": "passed",
+      "evidence": "XcodeBuildMCP build_sim Debug with iOS Simulator 26.5 succeeded. Private dependencies initialized; local TLS copied with make deps. Existing project warnings remain."
+    },
+    {
+      "name": "simulator-refresh-caption",
+      "status": "passed",
+      "evidence": "Production LibraryView on iOS 26.5 Simulator: controlled native UIRefreshControl.beginRefreshing plus content offset exposes one caption below the spinner. Native valueChanged event ran the real refresh action; lastUpdateCheckUTC 2026-10-17 12:40:52.786551 and completion screenshot show both indicator and caption retract. No duplicate ProgressView below filter. Native gesture automation did not trigger a pull, so physical swipe/OTA installation is outside this acceptance."
+    },
+    {
+      "name": "iphoneos-build",
+      "status": "passed",
+      "evidence": "make iphoneos TMP=/private/tmp/signos-pull-refresh-release: BUILD SUCCEEDED, exit 0; packages/SignOs.ipa produced after final UI changes."
+    },
+    {
+      "name": "adapter-regression",
+      "status": "passed",
+      "evidence": "python3 -B -m unittest Tests.test_signos_release_adapter Tests.test_release_artifact Tests.test_release_notes: 34 passed."
+    },
+    {
+      "name": "release-artifact-regression",
+      "status": "passed",
+      "evidence": "Same unittest command: release artifact checks included in 34 passing checks."
+    },
+    {
+      "name": "release-assets-regression",
+      "status": "passed",
+      "evidence": "python3 -B Tests/GitHubReleaseRegression.py: 7 passed."
+    },
+    {
+      "name": "workflow-review",
+      "status": "passed",
+      "evidence": "No workflow changes. .github/workflows/ios-build.yml retains signos-production-release, cancel-in-progress false, queue max."
+    },
+    {
+      "name": "diff-check",
+      "status": "passed",
+      "evidence": "git diff --check: exit 0."
+    },
+    {
+      "name": "independent-review",
+      "status": "passed",
+      "evidence": "Read-only reviewer found no blocking correctness, layout or lifecycle issues. Native refresh action remains unchanged; weak callback and idempotent label attachment checked. iOS 17 runtime, real swipe and maximum Dynamic Type remain outside current runtime acceptance."
+    }
+  ],
+  "releaseNotes": {
+    "language": "zh-Hans",
+    "changes": [
+      "移除应用页筛选栏下方重复的更新检查进度提示，将“正在检查更新”统一显示在顶部下拉刷新图标下方，检查结束后一起收起"
+    ]
+  },
+  "runtime": {
+    "toolchain": "Xcode 27",
+    "simulatorRuntime": "iOS 26.5",
+    "method": "Controlled native refresh begin/valueChanged; production SwiftUI refresh action completed. Automated physical pull did not trigger in the current UI automation environment.",
+    "lastUpdateCheckUTC": "2026-10-17 12:40:52.786551"
+  },
+  "release": {
+    "version": "1.1.18",
+    "buildNumber": "40",
+    "batchId": "a2a75f33-8f47-4667-8273-332901bc65d2",
+    "frozenCommit": "0037cfb7b2eb5dec2460e03560c91605bd292991",
+    "mainRun": 39033872449,
+    "tagRun": 39034635357
+  },
+  "freshOTAProbe": {
+    "version": "1.1.18",
+    "buildNumber": "40",
+    "bundleId": "com.signos.app",
+    "signed": true,
+    "size": 15748420,
+    "sha256": "8c87bf4d597719ee562b4562034bc3b4f17d0feb393abb918b7e9756b98b21a2",
+    "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+    "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.18/latest.ipa",
+    "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.18/manifest.plist",
+    "notes": "SignOs 1.1.18（构建 40）\n\n- 移除应用页筛选栏下方重复的更新检查进度提示，将“正在检查更新”统一显示在顶部下拉刷新图标下方，检查结束后一起收起",
+    "verifiedAtUTC": "2026-10-17T13:00:08.490587+00:00",
+    "checks": [
+      "trusted HTTPS fixed installation page",
+      "fixed manifest identity and URL",
+      "full signed IPA download, size and SHA-256",
+      "IPA bundle identity and version",
+      "specific Chinese release notes"
+    ]
+  }
+}

@@ -810,3 +810,11 @@ SignOs 发布任务必须在 ready 的验证 JSON 中填写具体中文 releaseN
 1.1.15（构建 37）启用具体中文日志必填门槛：所有参与任务必须提供 releaseNotes，缺失、纯英文或已知占位在版本分配与构建前阻止发布。冻结日志与任务、版本和 CI 散列绑定，GitHub / OTA 共用中文变更，实际日志不符不能借助 IPA 缓存通过；暂存恢复先校验日志再激活固定渠道。
 
 41 项回归及独立复核通过；批次 ec25ba0f-26fd-4afe-b621-f0447a203647 的冻结提交 e0d40bebb4688199a220572ad61ae54262f1f189 已完成本地 Release、main 构建、整个标签工作流及同产物 GitHub Release / OTA 发布。发布的 build-metadata.json 日志散列与冻结文件相同，实际 Release、OTA 和普通/兼容软件源日志均回验一致，软件源继续使用原正式仓库订阅。通用协调器服务未升级；本次未修改客户端运行行为，真机覆盖安装与数据保留未验证。详见 [1.1.15 批次凭证](docs/plans/evidence/release-batch-1.1.15-20261014.json)。
+
+### 2026-10-17 应用页更新检查提示位置
+
+1.1.18（构建 40）移除应用页筛选栏下方重复的进度提示，将“正在检查更新”显示在顶部下拉刷新图标下方，检查结束后一起收起。使用应用页局部刷新控件中的标签显示文字，避免 SwiftUI 隐藏原生标题；更新检查任务与刷新结束时机保持原有流程。
+
+模拟器构建、设备版 Release 构建、更新检查调度回归、41 项发布相关回归和独立复查通过。iOS 26.5 模拟器通过受控原生刷新事件验证顶部文字可见及真实检查完成后收起；当前自动手势未触发下拉，未据此声称真实手势、真机覆盖安装或数据保留验收。具体范围见[控件验收记录](docs/plans/evidence/refresh-caption-20261017.json)。
+
+冻结提交 `0037cfb7b2eb5dec2460e03560c91605bd292991` 的 [main 构建](https://github.com/zh0ngtian/SignOs/actions/runs/39033872449)与[标签发布](https://github.com/zh0ngtian/SignOs/actions/runs/39034635357)均成功，[GitHub Release](https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.18)附件与同提交 CI 产物一致。[固定 OTA 安装页](https://192.168.123.79:8769/channels/signos/current/install.html)、manifest、版本、中文日志及完整签名 IPA 的 HTTPS 下载与 SHA-256 回验通过。签名包为 15,748,420 字节，SHA-256 `8c87bf4d597719ee562b4562034bc3b4f17d0feb393abb918b7e9756b98b21a2`；详见[共同发布凭证](docs/plans/evidence/release-batch-1.1.18-20261017.json)。
