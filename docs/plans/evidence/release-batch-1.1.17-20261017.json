@@ -1,0 +1,82 @@
+{
+  "completedAt": 1792215884.171863,
+  "coordinatorVersion": "0.1.6",
+  "id": "a78866f6-fa5b-40bd-845f-c39f7b1e4fa9",
+  "project": "signos-production",
+  "scope": "96c87efa825ae59a58d467fb058a33fd710e4ced9bee0b003923625611c49047",
+  "frozen": {
+    "buildNumber": "39",
+    "environment": "production",
+    "manifestSha256": "7078fc64621405b6b753a9bd8a98a9a21b8db728ec9b119669c9a7347f473aaf",
+    "sha": "a139f93eddc9c9f559f907a79d39250c6da6fd42",
+    "target": "com.signos.app",
+    "tasks": [
+      {
+        "id": "signos-signature-check-app-icon-20261017",
+        "sha": "533f848155f63d4d72fa0f89fe5e4420590d00bb"
+      }
+    ],
+    "version": "1.1.17"
+  },
+  "results": {
+    "build": {
+      "buildNumber": "39",
+      "commit": "a139f93eddc9c9f559f907a79d39250c6da6fd42",
+      "runId": 39006693552,
+      "sha256": "7a98ca1776705dd940f030834fcc7b6477e1b8c6e9c4a150355262afe2584b33",
+      "version": "1.1.17"
+    },
+    "github": {
+      "runId": 39007287501,
+      "sha256": "7a98ca1776705dd940f030834fcc7b6477e1b8c6e9c4a150355262afe2584b33",
+      "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.17"
+    },
+    "ota": {
+      "buildNumber": "39",
+      "bundleId": "com.signos.app",
+      "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.17/latest.ipa",
+      "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+      "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.17/manifest.plist",
+      "sha256": "b726c68096da5ac12a139008f5783e9fc55db10f319e8cc0887421f9d796291b",
+      "signed": true,
+      "size": 15745902,
+      "sourceCommit": "a139f93eddc9c9f559f907a79d39250c6da6fd42",
+      "version": "1.1.17"
+    },
+    "prepare": {
+      "buildNumber": "39",
+      "bundleIdentifier": "com.signos.app",
+      "inputFingerprint": "c8b50defb9a71d75b7a7514e4c31269341b76ac54336f91834fa5d90be0c2aed",
+      "localValidation": "passed",
+      "version": "1.1.17"
+    },
+    "verify": {
+      "github": {
+        "runId": 39007287501,
+        "sha256": "7a98ca1776705dd940f030834fcc7b6477e1b8c6e9c4a150355262afe2584b33",
+        "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.17"
+      },
+      "httpsFullDownloadVerified": true,
+      "ota": {
+        "buildNumber": "39",
+        "bundleId": "com.signos.app",
+        "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.17/latest.ipa",
+        "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+        "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.17/manifest.plist",
+        "sha256": "b726c68096da5ac12a139008f5783e9fc55db10f319e8cc0887421f9d796291b",
+        "signed": true,
+        "size": 15745902,
+        "sourceCommit": "a139f93eddc9c9f559f907a79d39250c6da6fd42",
+        "version": "1.1.17"
+      }
+    }
+  },
+  "recoveryChain": [],
+  "recoveryOf": null,
+  "tasks": [
+    {
+      "id": "signos-signature-check-app-icon-20261017",
+      "sha": "533f848155f63d4d72fa0f89fe5e4420590d00bb"
+    }
+  ]
+}

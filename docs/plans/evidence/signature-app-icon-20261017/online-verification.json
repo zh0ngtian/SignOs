@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-10-17T13:45:50.274059+08:00",
+  "version": "1.1.17",
+  "buildNumber": "39",
+  "sourceCommitVerifiedByBatch": "a139f93eddc9c9f559f907a79d39250c6da6fd42",
+  "signedIpaSha256": "b726c68096da5ac12a139008f5783e9fc55db10f319e8cc0887421f9d796291b",
+  "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+  "fixedInstallPageHttpStatus": 200,
+  "manifestVerified": true,
+  "fullHttpsDownloadVerifiedByBatch": true
+}

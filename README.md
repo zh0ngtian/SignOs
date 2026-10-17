@@ -184,6 +184,11 @@ Project workflow and post-test delivery requirements are in [AGENTS.md](AGENTS.m
 无透明通道的浅色、深色、着色图标及 Icon Composer 图层；各外观保留同一幅白底图案。
 既有替代图标与 IPA 文档图标仍使用原有样式。
 
+2026-10-17：新图标已随 **1.1.17（构建号 39）** 完成 GitHub Release 与固定 OTA 发布。
+构建、模拟器启动及桌面浅色 / 深色图标验收通过，见
+[图标验收记录](docs/plans/evidence/signature-app-icon-20261017/verification.json)与
+[共同批次凭证](docs/plans/evidence/release-batch-1.1.17-20261017.json)。
+
 ### 多任务协调与合批发布
 
 开发任务在独立分支或 worktree 完成本地必要验证，登记确定的提交 SHA 与结果；由同一
