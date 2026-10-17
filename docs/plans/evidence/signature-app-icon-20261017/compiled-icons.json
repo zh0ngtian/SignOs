@@ -1,0 +1,103 @@
+[
+  {
+    "Name": "AppIcon_Assets/Color-1",
+    "AssetType": "Color",
+    "Idiom": "universal"
+  },
+  {
+    "Name": "AppIcon_Assets/Color-2",
+    "AssetType": "Color",
+    "Idiom": "universal"
+  },
+  {
+    "Name": "AppIcon_Assets/Color-3",
+    "AssetType": "Color",
+    "Idiom": "universal"
+  },
+  {
+    "Name": "AppIcon_Assets/Color-4",
+    "AssetType": "Color",
+    "Idiom": "universal"
+  },
+  {
+    "Name": "AppIcon",
+    "AssetType": "Icon Image",
+    "Idiom": "phone",
+    "PixelWidth": 1024,
+    "PixelHeight": 1024
+  },
+  {
+    "Name": "AppIcon",
+    "AssetType": "Icon Image",
+    "Idiom": "phone",
+    "Appearance": "UIAppearanceDark",
+    "PixelWidth": 1024,
+    "PixelHeight": 1024
+  },
+  {
+    "Name": "AppIcon",
+    "AssetType": "Icon Image",
+    "Idiom": "phone",
+    "Appearance": "ISAppearanceTintable",
+    "PixelWidth": 1024,
+    "PixelHeight": 1024
+  },
+  {
+    "Name": "AppIcon/Group",
+    "AssetType": "IconGroup",
+    "Idiom": "universal",
+    "Appearance": "UIAppearanceDark"
+  },
+  {
+    "Name": "AppIcon/Group",
+    "AssetType": "IconGroup",
+    "Idiom": "universal",
+    "Appearance": "UIAppearanceLight"
+  },
+  {
+    "Name": "AppIcon/Group",
+    "AssetType": "IconGroup",
+    "Idiom": "universal",
+    "Appearance": "ISAppearanceTintable"
+  },
+  {
+    "Name": "AppIcon",
+    "AssetType": "IconImageStack",
+    "Idiom": "universal",
+    "Appearance": "UIAppearanceDark"
+  },
+  {
+    "Name": "AppIcon",
+    "AssetType": "IconImageStack",
+    "Idiom": "universal",
+    "Appearance": "UIAppearanceLight"
+  },
+  {
+    "Name": "AppIcon",
+    "AssetType": "IconImageStack",
+    "Idiom": "universal",
+    "Appearance": "ISAppearanceTintable"
+  },
+  {
+    "Name": "AppIcon_Assets/feather",
+    "AssetType": "Image",
+    "Idiom": "universal",
+    "PixelWidth": 1024,
+    "PixelHeight": 1024
+  },
+  {
+    "Name": "AppIcon",
+    "AssetType": "MultiSized Image",
+    "Idiom": "phone"
+  },
+  {
+    "Name": "AppIcon_Assets/Gradient-1",
+    "AssetType": "Named Gradient",
+    "Idiom": "universal"
+  },
+  {
+    "Name": "AppIcon_Assets/system-dark",
+    "AssetType": "Named Gradient",
+    "Idiom": "universal"
+  }
+]
