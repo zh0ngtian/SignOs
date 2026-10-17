@@ -1,0 +1,42 @@
+{
+  "sourceSha256": "321d59931ba13d2824773ab5cba7c81cf256f63c285d91aecc24711705c35c00",
+  "assets": [
+    {
+      "path": "Feather/Resources/Assets.xcassets/AppIcon.appiconset/feather.png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "mode": "RGB",
+      "sha256": "8d08384fda0497a5c8b72c63a00083a76cd20900965cbfcd9ce22a5a4c79e62b"
+    },
+    {
+      "path": "Feather/Resources/Assets.xcassets/AppIcon.appiconset/feather_dark.png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "mode": "RGB",
+      "sha256": "8d08384fda0497a5c8b72c63a00083a76cd20900965cbfcd9ce22a5a4c79e62b"
+    },
+    {
+      "path": "Feather/Resources/Assets.xcassets/AppIcon.appiconset/feather_tint.png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "mode": "RGB",
+      "sha256": "8d08384fda0497a5c8b72c63a00083a76cd20900965cbfcd9ce22a5a4c79e62b"
+    },
+    {
+      "path": "Feather/Resources/AppIcon.icon/Assets/feather.png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "mode": "RGB",
+      "sha256": "8d08384fda0497a5c8b72c63a00083a76cd20900965cbfcd9ce22a5a4c79e62b"
+    }
+  ],
+  "generatorReproducesPrimaryAssets": true
+}

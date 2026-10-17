@@ -1,0 +1,65 @@
+{
+  "date": "2026-10-17",
+  "scope": "将 SignOs 主图标替换为用户选定的白底黑色签名与对号，保留原图并同步图标生成入口。",
+  "checks": [
+    {
+      "name": "approved-icon-assets",
+      "status": "passed",
+      "evidence": "原图与用户确认的 ImageGen 输出逐字节一致；四份主图标均为 1024×1024 RGB 无透明通道 PNG，SHA-256 相同；在临时目录运行 make_icon.main() 可逐字节重现全部主图标；icon.json 仅引用一层新图案且关闭阴影和半透明。"
+    },
+    {
+      "name": "simulator-build-launch",
+      "status": "passed",
+      "evidence": "XcodeBuildMCP Release build_sim 编译成功，errors=[]；iPhone 17 Pro / iOS 26.5 安装并启动 com.signos.app 成功，显示原生软件源页。"
+    },
+    {
+      "name": "simulator-home-icon",
+      "status": "passed",
+      "evidence": "iPhone 17e / iOS 27.0 安装同一模拟器包；桌面浅色与深色截图均显示白底黑色签名与对号。Assets.car 含 light/dark/tintable AppIcon 渲染项，包内 AppIcon60x60@2x.png 已目视核对。"
+    },
+    {
+      "name": "iphoneos-build",
+      "status": "passed",
+      "evidence": "make iphoneos 成功（退出码 0），生成 packages/SignOs.ipa；ZIP 完整性、com.signos.app 身份及 CFBundlePrimaryIcon/AppIcon 校验通过。本机缺失的 SwiftPM 缓存已保留并重新获取，未更改 Package.resolved 或子模块提交。"
+    },
+    {
+      "name": "adapter-regression",
+      "status": "passed",
+      "evidence": "python3 -B -m unittest discover -s Tests -p test_signos_release_adapter.py：14 项通过。"
+    },
+    {
+      "name": "release-artifact-regression",
+      "status": "passed",
+      "evidence": "python3 -B -m unittest discover -s Tests -p test_release_artifact.py：7 项通过。"
+    },
+    {
+      "name": "release-assets-regression",
+      "status": "passed",
+      "evidence": "python3 -B Tests/GitHubReleaseRegression.py：7 项通过。"
+    },
+    {
+      "name": "release-notes-regression",
+      "status": "passed",
+      "evidence": "python3 -B -m unittest discover -s Tests -p test_release_notes.py：13 项通过。"
+    },
+    {
+      "name": "workflow-review",
+      "status": "passed",
+      "evidence": "检查 .github/workflows/ios-build.yml：Feather/** 涵盖本次客户端资源变化；正式 main 冻结构建、标签复用同提交产物及 signos-production-release 共用并发组仍生效，工作流未修改。"
+    },
+    {
+      "name": "diff-check",
+      "status": "passed",
+      "evidence": "git diff --check、make_icon.py AST、Icon Composer JSON 及 README 原图路径检查通过。"
+    }
+  ],
+  "releaseNotes": {
+    "language": "zh-Hans",
+    "changes": [
+      "将 SignOs 主图标更换为白底黑色签名与对号，同步普通、深色、着色及 iOS 26 图标资源"
+    ]
+  },
+  "limits": [
+    "功能验收在 iOS 模拟器中完成，未执行真机 Ad Hoc 覆盖安装或数据保留验收。"
+  ]
+}

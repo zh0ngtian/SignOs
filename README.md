@@ -177,6 +177,13 @@ That produces packages/SignOs.ipa. You need Xcode 26 or newer on macOS.
 Initialize both Git submodules with `git submodule update --init --recursive` first.
 Project workflow and post-test delivery requirements are in [AGENTS.md](AGENTS.md).
 
+### App 图标
+
+主图标使用白底黑色签名与对号，原图保存在 `artwork/signos-app-icon.png`。
+安装 Pillow 后运行 `python3 make_icon.py`，可从原图重新生成 1024×1024、
+无透明通道的浅色、深色、着色图标及 Icon Composer 图层；各外观保留同一幅白底图案。
+既有替代图标与 IPA 文档图标仍使用原有样式。
+
 ### 多任务协调与合批发布
 
 开发任务在独立分支或 worktree 完成本地必要验证，登记确定的提交 SHA 与结果；由同一

@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
-"""Generates the SignOs icon set: light/dark/tinted app icons, Icon Composer
-layers, and the document-type icon. Clean geometric monogram, App Store-grade."""
+"""Generate primary app icons from the approved signature artwork.
+
+The alternate and document icons retain their existing monogram artwork.
+Requires Pillow: python3 -m pip install Pillow.
+"""
 
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import os
@@ -9,6 +12,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.join(ROOT, "Feather", "Resources", "Assets.xcassets", "AppIcon.appiconset")
 ICON_DIR = os.path.join(ROOT, "Feather", "Resources", "AppIcon.icon", "Assets")
 ICONS_DIR = os.path.join(ROOT, "Feather", "Resources", "Icons")
+APP_ICON_SOURCE = os.path.join(ROOT, "artwork", "signos-app-icon.png")
 
 FONT_PATH = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
 
@@ -16,6 +20,14 @@ TOP = (18, 108, 255)      # vivid blue
 BOTTOM = (0, 62, 200)     # deep blue
 DARK_BG_TOP = (22, 24, 34)
 DARK_BG_BOTTOM = (10, 11, 16)
+
+
+def approved_app_icon(size):
+    """Preserve the selected white background and black signature in every appearance."""
+    with Image.open(APP_ICON_SOURCE) as source:
+        if source.width != source.height:
+            raise ValueError("The approved app icon must be square")
+        return source.convert("RGB").resize((size, size), Image.Resampling.LANCZOS)
 
 
 def gradient(size, top, bottom):
@@ -109,12 +121,10 @@ def main():
     os.makedirs(ICON_DIR, exist_ok=True)
     os.makedirs(ICONS_DIR, exist_ok=True)
 
-    app_icon(1024).save(os.path.join(ASSETS, "feather.png"))
-    app_icon(1024, dark=True).save(os.path.join(ASSETS, "feather_dark.png"))
-    tinted_icon(1024).save(os.path.join(ASSETS, "feather_tint.png"))
-
-    glyph_layer(1024).save(os.path.join(ICON_DIR, "feather.png"))
-    glow_layer(1024).save(os.path.join(ICON_DIR, "feather 5.png"))
+    primary = approved_app_icon(1024)
+    for name in ("feather.png", "feather_dark.png", "feather_tint.png"):
+        primary.save(os.path.join(ASSETS, name))
+    primary.save(os.path.join(ICON_DIR, "feather.png"))
 
     doc_icon(512).save(os.path.join(ROOT, "Feather", "Resources", "feather_extension.png"))
 
