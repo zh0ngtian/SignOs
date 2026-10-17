@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
-  "batchId": "a78866f6-fa5b-40bd-845f-c39f7b1e4fa9",
+  "batchId": "a2a75f33-8f47-4667-8273-332901bc65d2",
   "language": "zh-Hans",
-  "version": "1.1.17",
-  "buildNumber": "39",
+  "version": "1.1.18",
+  "buildNumber": "40",
   "tasks": [
     {
-      "id": "signos-signature-check-app-icon-20261017",
-      "sha": "533f848155f63d4d72fa0f89fe5e4420590d00bb",
+      "id": "library-refresh-caption-20261017",
+      "sha": "9ce08a00945458a0fe53eed6cf0749b44c7a2708",
       "changes": [
-        "将 SignOs 主图标更换为白底黑色签名与对号，同步普通、深色、着色及 iOS 26 图标资源"
+        "移除应用页筛选栏下方重复的更新检查进度提示，将“正在检查更新”统一显示在顶部下拉刷新图标下方，检查结束后一起收起"
       ]
     }
   ]
