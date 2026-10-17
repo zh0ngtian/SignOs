@@ -68,6 +68,7 @@ contributors for their work, this wouldn't exist without them.
 - Applications combines Library and Updates, groups retained packages by Bundle ID, and exposes version/source/certificate history in app details
 - Applications sorts current source releases by publication date, newest first, across all filters; apps without publication dates appear last
 - Pull down Applications to synchronize enabled subscribed sources and check updates from the same fresh data
+- 更新检查中的“正在检查更新”显示在应用页顶部下拉刷新图标下方，筛选栏与应用列表之间不再显示重复进度提示。
 - Sources can be disabled locally while retaining packages; disabled archives remain visible and are excluded from signing, installation and automatic cleanup
 - Single-app and batch certificate replacement reuses local packages without changing app versions
 - Simplified Chinese throughout app controls, settings, status messages and notifications; source sync and update actions share Search's capsule style
