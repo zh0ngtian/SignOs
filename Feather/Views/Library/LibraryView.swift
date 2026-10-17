@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import CoreData
 import NimbleViews
 
@@ -45,7 +46,6 @@ struct LibraryView: View {
                 VStack(alignment: .leading, spacing: WSSpacing.sectionGap) {
                     WSHeroHeader(eyebrow: "\(applications.count) 个应用", title: "应用")
                     searchBar
-                    if checker.isAutoChecking || updates.isChecking { ProgressView("正在检查更新…").font(.footnote) }
                     if scope == "updates", !filtered.isEmpty {
                         HStack {
                             Text("可更新 \(filtered.count) 个应用").font(.subheadline).foregroundStyle(.secondary)
@@ -84,6 +84,7 @@ struct LibraryView: View {
                     }
                 }
                 .padding(.horizontal, WSSpacing.screenPadding).padding(.top, 4).padding(.bottom, 28)
+                .background { LibraryRefreshCaption().allowsHitTesting(false) }
             }
             .background(WSSurface.background)
             .toolbar(.hidden, for: .navigationBar)
@@ -223,6 +224,62 @@ struct LibraryView: View {
             Label("添加应用", systemImage: "plus.circle.fill").font(.body.weight(.semibold))
                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).padding(14)
                 .background(WSRadius.continuous(WSRadius.lg).fill(WSSurface.cardFaded))
+        }
+    }
+}
+
+/// Keep the caption with this screen's native pull-to-refresh indicator.
+private struct LibraryRefreshCaption: UIViewRepresentable {
+    func makeUIView(context: Context) -> CaptionView { CaptionView() }
+
+    func updateUIView(_ uiView: CaptionView, context: Context) {
+        uiView.setNeedsLayout()
+    }
+
+    final class CaptionView: UIView {
+        private let captionLabel = UILabel()
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            // SwiftUI installs the refresh control after attaching the content.
+            DispatchQueue.main.async { [weak self] in self?.applyCaption() }
+        }
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            applyCaption()
+        }
+
+        private func applyCaption() {
+            var ancestor = superview
+            while let view = ancestor {
+                if let scrollView = view as? UIScrollView, let refreshControl = scrollView.refreshControl {
+                    let font = UIFont.preferredFont(forTextStyle: .footnote)
+                    // Reserve the native title's space. SwiftUI can hide that title
+                    // during refresh, so render the caption in our own label.
+                    let spacingTitle = NSAttributedString(string: " ", attributes: [.font: font])
+                    if refreshControl.attributedTitle != spacingTitle {
+                        refreshControl.attributedTitle = spacingTitle
+                    }
+                    captionLabel.font = font
+                    if captionLabel.superview !== refreshControl {
+                        captionLabel.removeFromSuperview()
+                        captionLabel.text = "正在检查更新"
+                        captionLabel.textColor = .secondaryLabel
+                        captionLabel.adjustsFontForContentSizeCategory = true
+                        captionLabel.translatesAutoresizingMaskIntoConstraints = false
+                        refreshControl.addSubview(captionLabel)
+                        NSLayoutConstraint.activate([
+                            captionLabel.centerXAnchor.constraint(equalTo: refreshControl.centerXAnchor),
+                            captionLabel.bottomAnchor.constraint(equalTo: refreshControl.bottomAnchor, constant: -8),
+                            captionLabel.leadingAnchor.constraint(greaterThanOrEqualTo: refreshControl.leadingAnchor, constant: 16),
+                            captionLabel.trailingAnchor.constraint(lessThanOrEqualTo: refreshControl.trailingAnchor, constant: -16)
+                        ])
+                    }
+                    return
+                }
+                ancestor = view.superview
+            }
         }
     }
 }
