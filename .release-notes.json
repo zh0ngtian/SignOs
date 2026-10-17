@@ -1,16 +1,15 @@
 {
   "schemaVersion": 1,
-  "batchId": "97eb194a-471c-40c4-a4ac-f406dc984f3d",
+  "batchId": "a78866f6-fa5b-40bd-845f-c39f7b1e4fa9",
   "language": "zh-Hans",
-  "version": "1.1.16",
-  "buildNumber": "38",
+  "version": "1.1.17",
+  "buildNumber": "39",
   "tasks": [
     {
-      "id": "install-web-dismiss-20261014",
-      "sha": "873397f4d4fa03105474c9827fa8bed4af8a925a",
+      "id": "signos-signature-check-app-icon-20261017",
+      "sha": "533f848155f63d4d72fa0f89fe5e4420590d00bb",
       "changes": [
-        "修复自动与手动安装开始取包后仍停留在 127.0.0.1 黑屏中转网页的问题",
-        "从后台返回 SignOs 时自动关闭残留安装网页并恢复原生页面，保留系统确认与安装重试入口"
+        "将 SignOs 主图标更换为白底黑色签名与对号，同步普通、深色、着色及 iOS 26 图标资源"
       ]
     }
   ]
