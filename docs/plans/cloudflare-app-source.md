@@ -238,3 +238,10 @@ UTM 的中央目录超出尾部读取范围，测试成功触发补读。两个�
 - 原归档订阅只跟踪 `zh0ngtian/ipa-archive` 的 `museum-muse/` 正式 Release，因此原项目新发布的 1.1.3 未被收录。用户将原仓库设为公开后，已将现有订阅改为 `zh0ngtian/DailyMusuem`，tag 前缀 `build-`、附件 `MuseumMuse-unsigned.ipa`、包含预发布且不暂停；继续使用每小时 Cron。
 - 现有订阅 ID 与旧版兼容标记保留，1.1.2（8）移入历史。已自动解析并公开 1.1.3（9），核对匿名完整下载与 GitHub 附件 SHA-256，以及 `/sources/yao.json`、`?legacy=1`、`/source.json` 和 `/appstore` 的版本、下载地址与校验和。
 - 本次只修改线上订阅配置与记录，无客户端或服务代码变更；未验证真机覆盖安装。配置与接口验收见 [持续收录证据](evidence/museum-release-tracking-20261011.json)。
+
+### 博物女神双标签兼容（2026-10-20）
+
+- 原订阅的 `build-` 前缀排除了新正式标签 `v1.1.4`，导致同步成功但公开清单仍停留在 1.1.3（9）。按用户确认，同时接收 `build-` 和 `v`，统一按 Release 发布时间取最新匹配 IPA，不设置正式版或版本号优先级。
+- 服务的现有字符串字段 `tagPrefix` 支持 `|` 分隔多个字面前缀；空字段继续表示全部标签，拒绝非空规则中的空分段，避免意外放开匹配。博物女神配置为 `build-|v`，附件仍精确匹配 `MuseumMuse-unsigned.ipa`，保持包含预发布及每小时 Cron。
+- 已部署 Worker 并更新现有订阅，公开普通、兼容及两个别名清单均为 1.1.4（10）。原订阅 ID、展示信息和兼容标记保持不变，1.1.3（9）及 1.1.2（8）完整保留在历史，其他六项订阅配置与已发布版本未变。
+- 42 项服务回归和 Worker 打包通过；核对真实 HTTPS 健康接口、图标、匿名完整 IPA 下载、包内版本与 Bundle ID、GitHub 附件 SHA-256、HEAD 和单字节 Range。本次仅修改与部署软件源服务，未涉及 SignOs 客户端构建或 App 发包。详见 [双前缀验收](evidence/museum-dual-release-prefixes-20261020.json)。

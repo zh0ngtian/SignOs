@@ -32,6 +32,8 @@ GitHub 订阅按 Release 发布时间从新到旧查找，在 tag 前缀、预�
 
 2026-10-11 按用户要求，除哔哩哔哩保留固定 IPA URL 外，其余应用均订阅各自的正式 GitHub 仓库，沿用每小时 Cron：
 
+下表为当前订阅配置；博物女神的双前缀规则于 2026-10-20 更新。
+
 | 应用 | 仓库 / 来源 | tag 前缀 | IPA 匹配 | 包含预发布 |
 | --- | --- | --- | --- | --- |
 | SignOs | `zh0ngtian/SignOs` | `v` | `SignOs.ipa` | 否 |
@@ -50,6 +52,14 @@ SignOs 原订阅已就地从 `ipa-archive` 切换到正式仓库，当前版本�
 [验收记录](../../docs/plans/evidence/museum-release-tracking-20261011.json)。
 `migrate_cloud_source.py` 是原始迁移工具，仍使用归档规则；重跑旧源迁移时应加
 `--skip-bundle tech.zh0ngtian.MuseumMuse`，避免另外创建归档订阅。
+
+2026-10-20 已将博物女神的规则扩展为 `tagPrefix: "build-|v"`，同时接收
+`build-` 和 `v` 标签，包含预发布，并统一按 Release 发布时间取最新匹配 IPA。
+现有订阅已同步到 1.1.4（10）；订阅 ID、旧版兼容标记及 1.1.3、1.1.2
+历史记录完整保留。42 项服务回归、四个公开清单入口、图标 HTTPS、IPA
+匿名完整下载及 SHA-256、HEAD 和单字节 Range 验收通过，其他六项订阅未改动。
+本次仅部署软件源服务，记录见
+[双前缀验收](../../docs/plans/evidence/museum-dual-release-prefixes-20261020.json)。
 
 `scripts/publish_signos.py` 是原有双渠道签名包发布工具，仍会创建或更新 `ipa-archive` 订阅，不用于当前正式仓库主订阅的更新。仅在用户另行明确要求新增签名包渠道时，由对应批次的协调负责人执行：先按项目 OTA 流程发布正式签名包，再用 `scripts/publish_signos.py --ipa <同一签名包> --release-json <OTA凭证> --plan` 预检后执行实际发布。工具公开归档到 GitHub，再核对 Cloudflare 的版本、构建号、URL、大小和全包 SHA-256；GitHub 完整 GET 也必须匹配 OTA 凭证。纯软件源服务改动只完成对应部署与接口验收，不触发客户端构建或 App 发布；涉及 SignOs 客户端的改动按[项目合批发布流程](../../README.md#多任务协调与合批发布)完成 GitHub Release 与 OTA。此工具不是统一任务协调入口。
 

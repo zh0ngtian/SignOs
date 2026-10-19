@@ -1,0 +1,131 @@
+{
+  "verifiedAt": "2026-10-19T17:04:27.424558+00:00",
+  "scope": "Cloudflare source service and existing MuseumMuse subscription only; no SignOs client changes or app release",
+  "sourceCommit": "770a2b132e40be83275ef6fc4e816c087b3aea6e",
+  "entryId": "ff230a01-dbcd-4b0e-95bb-4d4c0d2acb78",
+  "bundleIdentifier": "tech.zh0ngtian.MuseumMuse",
+  "beforeConfig": {
+    "kind": "github",
+    "paused": false,
+    "repository": "zh0ngtian/DailyMusuem",
+    "tagPrefix": "build-",
+    "assetPattern": "MuseumMuse-unsigned.ipa",
+    "includePrereleases": true
+  },
+  "config": {
+    "kind": "github",
+    "paused": false,
+    "repository": "zh0ngtian/DailyMusuem",
+    "tagPrefix": "build-|v",
+    "assetPattern": "MuseumMuse-unsigned.ipa",
+    "includePrereleases": true
+  },
+  "selection": "Newest published_at among build- or v tags with the exact MuseumMuse-unsigned.ipa asset; prereleases included; no stable/version-number preference",
+  "current": {
+    "version": "1.1.4",
+    "buildVersion": "10",
+    "tag": "v1.1.4",
+    "publishedAt": "2026-10-19T16:19:35Z",
+    "downloadURL": "https://github.com/zh0ngtian/DailyMusuem/releases/download/v1.1.4/MuseumMuse-unsigned.ipa",
+    "size": 2603064,
+    "sha256": "3c49d9de3e1c76e65968f18e0014ccb244aa5e9301a0103a02ee3df8c81810f3"
+  },
+  "historyVersions": [
+    "1.1.3",
+    "1.1.2"
+  ],
+  "subscriptionIdentityPreserved": true,
+  "legacyDefaultPreserved": true,
+  "presentationPreserved": true,
+  "historyPreserved": true,
+  "otherSubscriptionsUnchanged": 6,
+  "anonymousFullDownloadVerified": true,
+  "githubAssetDigestVerified": true,
+  "packagePlistVerified": true,
+  "downloadChecks": {
+    "getStatus": 200,
+    "headStatus": 200,
+    "rangeStatus": 206,
+    "contentRange": "bytes 0-0/2603064"
+  },
+  "publicEndpoints": [
+    {
+      "url": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json",
+      "status": 200,
+      "version": "1.1.4",
+      "buildVersion": "10",
+      "sha256": "3c49d9de3e1c76e65968f18e0014ccb244aa5e9301a0103a02ee3df8c81810f3",
+      "verified": true
+    },
+    {
+      "url": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json?legacy=1",
+      "status": 200,
+      "version": "1.1.4",
+      "buildVersion": "10",
+      "sha256": "3c49d9de3e1c76e65968f18e0014ccb244aa5e9301a0103a02ee3df8c81810f3",
+      "verified": true
+    },
+    {
+      "url": "https://signos-source-aggregator.305301890.workers.dev/source.json",
+      "status": 200,
+      "version": "1.1.4",
+      "buildVersion": "10",
+      "sha256": "3c49d9de3e1c76e65968f18e0014ccb244aa5e9301a0103a02ee3df8c81810f3",
+      "verified": true
+    },
+    {
+      "url": "https://signos-source-aggregator.305301890.workers.dev/appstore",
+      "status": 200,
+      "version": "1.1.4",
+      "buildVersion": "10",
+      "sha256": "3c49d9de3e1c76e65968f18e0014ccb244aa5e9301a0103a02ee3df8c81810f3",
+      "verified": true
+    }
+  ],
+  "health": {
+    "status": 200,
+    "body": {
+      "service": "signos-source-aggregator",
+      "version": 1,
+      "sourceId": "yao"
+    }
+  },
+  "icon": {
+    "url": "https://signos-source-aggregator.305301890.workers.dev/app-icons/155057261ced42715b56785336bb30e45d5b8629f1700d743253ac27638aaae5.png",
+    "status": 200,
+    "contentType": "image/png"
+  },
+  "schedule": "0 * * * *",
+  "checks": [
+    {
+      "name": "source-service-regression",
+      "status": "passed",
+      "evidence": "cd distribution/source-aggregator && npm test: 42 passed, including workerd API, dual prefixes, both publication orders, pagination/cache, prerelease filtering and invalid alternatives"
+    },
+    {
+      "name": "worker-bundle",
+      "status": "passed",
+      "evidence": "npx --no-install wrangler deploy --dry-run: passed"
+    },
+    {
+      "name": "live-https-package",
+      "status": "passed",
+      "evidence": "All four public source routes, health, icon HEAD, anonymous IPA GET/HEAD/Range and full SHA-256 passed"
+    },
+    {
+      "name": "documentation-consistency",
+      "status": "passed",
+      "evidence": "Updated service README and Cloudflare source plan; referenced evidence files exist; JSON parses; git diff --check passed"
+    }
+  ],
+  "deployment": {
+    "id": "3d89dc9a-ad08-40a7-b7f7-10a0e7c7788b",
+    "created_on": "2026-10-19T17:03:17.929655Z",
+    "versions": [
+      {
+        "version_id": "7694d467-6e92-4e39-81fb-ac28432fe2a6",
+        "percentage": 100
+      }
+    ]
+  }
+}
