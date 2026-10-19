@@ -49,6 +49,12 @@ jobs:
             "$BINARY"
             rm "$BINARY"
           done
+          BINARY="$RUNNER_TEMP/signos-museum-app-group"
+          xcrun swiftc Feather/Utilities/MachOEntitlements.swift \
+            Feather/Utilities/MuseumMuseAppGroupSigning.swift \
+            Tests/MuseumMuseSigningRegression.swift -o "$BINARY"
+          "$BINARY"
+          rm "$BINARY"
           BINARY="$RUNNER_TEMP/signos-source-access"
           xcrun swiftc Feather/Utilities/SourcePolicy.swift \
             Feather/Utilities/SourceRepositoryIdentity.swift \
