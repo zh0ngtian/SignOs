@@ -24,12 +24,22 @@ export function glob(pattern, name) {
   return new RegExp(`^${escaped}$`, 'i').test(name);
 }
 
+export function tagPrefixes(value) {
+  const rule = String(value ?? '').trim();
+  if (!rule) return [];
+  const prefixes = rule.split('|').map(prefix => prefix.trim());
+  if (rule.length > 100 || prefixes.some(prefix => !prefix)) {
+    throw new SourceError('INVALID_RULE', 'tag 前缀最多 100 字符，多个前缀用 | 分隔且不能为空');
+  }
+  return prefixes;
+}
+
 export function subscription(input) {
   if (!['github', 'url'].includes(input.kind)) throw new SourceError('INVALID_KIND', '请选择 GitHub Release 或直接 IPA 地址');
   const out = { kind: input.kind, paused: input.paused === true };
   if (input.kind === 'github') {
     out.repository = repository(input.repository);
-    out.tagPrefix = String(input.tagPrefix ?? '').trim();
+    out.tagPrefix = tagPrefixes(input.tagPrefix).join('|');
     out.assetPattern = String(input.assetPattern ?? '').trim();
     out.includePrereleases = input.includePrereleases === true;
     if (out.tagPrefix.length > 100 || out.assetPattern.length > 200 || out.assetPattern.includes('/') || out.assetPattern.includes('\\')) {

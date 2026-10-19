@@ -18,7 +18,7 @@ python3 scripts/cloud_source.py status
 
 公开入口为 `/sources/yao.json`，兼容 `/source.json`、`/appstore`；`/health` 为探针。管理接口使用 `Authorization: Bearer <管理 Token>`。新增与配置编辑需携带 `/api/catalog` 的当前 `revision`；冲突返回 409。Token 轮换后旧 Token 立即失效，CLI 的私有凭据也需更新。
 
-GitHub 订阅按 Release 发布时间从新到旧查找，在 tag 前缀、预发布及 IPA 文件名匹配规则内选择最新含匹配 IPA 的 Release。只有 APK、没有附件或 IPA 文件名不匹配的版本会跳过；选定版本包含多个匹配 IPA 时仍要求选择或收紧规则，不会退到更旧版本。扫描最多 10 页、每页 100 条；超出扫描或响应限额仍明确报错。
+GitHub 订阅按 Release 发布时间从新到旧查找，在 tag 前缀、预发布及 IPA 文件名匹配规则内选择最新含匹配 IPA 的 Release。`tagPrefix` 沿用字符串格式，支持用 `|` 分隔多个字面前缀，例如 `build-|v` 接受这两种标签；留空接受所有标签，非空规则不允许出现空分段。正式版和预发布版在允许范围内统一按发布时间排序，不按版本号或标签类型优先。只有 APK、没有附件或 IPA 文件名不匹配的版本会跳过；选定版本包含多个匹配 IPA 时仍要求选择或收紧规则，不会退到更旧版本。扫描最多 10 页、每页 100 条；超出扫描或响应限额仍明确报错。
 
 直接 IPA 地址订阅首次成功解析后，地址未变的手动同步、重试和每小时自动同步只检查文件是否可访问：优先 `HEAD`，服务器返回 405/501 时改用 `GET Range: bytes=0-0`，收到响应后立即取消正文，兼容忽略 Range 的文件服务器。不会比较 ETag 或文件大小来重新解析，现有版本、图标、SHA-256 和历史保持不变；文件失效时报告失败并保留已发布包，临时故障沿用重试机制。首次订阅或当前包地址与配置地址不同，仍完整解析元信息与图标。同一地址的内容替换不会自动更新源中的版本信息。
 
@@ -36,14 +36,14 @@ GitHub 订阅按 Release 发布时间从新到旧查找，在 tag 前缀、预�
 | --- | --- | --- | --- | --- |
 | SignOs | `zh0ngtian/SignOs` | `v` | `SignOs.ipa` | 否 |
 | Codex Mobile | `zh0ngtian/codex-mobile` | 无 | `CodexMobile-*-unsigned.ipa` | 否 |
-| 博物女神 | `zh0ngtian/DailyMusuem` | `build-` | `MuseumMuse-unsigned.ipa` | 是 |
+| 博物女神 | `zh0ngtian/DailyMusuem` | `build-` 或 `v`（配置值 `build-\|v`） | `MuseumMuse-unsigned.ipa` | 是 |
 | Bangumi | `czy0729/Bangumi` | 无 | `bangumi_*.ipa` | 否 |
 | 哔哩哔哩 | 原固定 IPA URL，`kind=url` | — | — | — |
 
 SignOs 原订阅已就地从 `ipa-archive` 切换到正式仓库，当前版本为 1.0.11（12）；保留订阅 ID、旧客户端默认标记和原 1.0.10 签名包历史。正式仓库的 IPA 未经分发签名，安装前由客户端签名。其他三个仓库订阅已核对最新匹配附件，哔哩哔哩的配置、当前包和历史均保持原样。普通/兼容清单、图标 HTTPS 接口与 SignOs 全包 SHA-256 验收见 [记录](../../docs/plans/evidence/repository-subscriptions-20261011.json)。固定本地 OTA 渠道独立于正式仓库订阅。
 
 博物女神的持续订阅已于 2026-10-11 从迁移归档切换到公开仓库
-`zh0ngtian/DailyMusuem`：tag 前缀 `build-`，附件精确匹配
+`zh0ngtian/DailyMusuem`，当时的 tag 前缀为 `build-`，附件精确匹配
 `MuseumMuse-unsigned.ipa`，包含预发布，保持启用。现有每小时 Cron 继续检查
 该仓库的新 Release；原订阅 ID、旧版兼容标记与 1.1.2 历史包保留。
 当次已核验 1.1.3（9）的公开下载、完整 SHA-256 和普通/兼容软件源入口，见

@@ -117,6 +117,11 @@ test('Durable catalog publishes only parsed apps, preserves old versions on fail
     const discovery = await call('/api/discover', 'POST', { config: { kind: 'github', repository: 'owner/repo' } });
     assert.equal(discovery.data.candidates.length, 2);
     assert.ok(discovery.data.candidates.every(candidate => candidate.tag === 'v1'), 'discover skips the newer Android-only release');
+    const dualDiscovery = await call('/api/discover', 'POST', { config: { kind: 'github', repository: 'owner/repo', tagPrefix: ' build- | v ', assetPattern: 'App.ipa', includePrereleases: true } });
+    assert.equal(dualDiscovery.status, 200);
+    assert.deepEqual(dualDiscovery.data.candidates.map(candidate => candidate.tag), ['v1'], 'the real API accepts both prefixes through the existing string field');
+    const invalidPrefixes = await call('/api/discover', 'POST', { config: { kind: 'github', repository: 'owner/repo', tagPrefix: 'build-|' } });
+    assert.equal(invalidPrefixes.data.error.code, 'INVALID_RULE', 'an empty alternative must not widen matching to every tag');
     const state = (await call('/api/catalog')).data;
     const ambiguous = await call('/api/entries', 'POST', { revision: state.revision, config: { kind: 'github', repository: 'owner/repo', assetPattern: '*.ipa' } });
     const failed = await waitFor(ambiguous.data.entry.id, 'failed');

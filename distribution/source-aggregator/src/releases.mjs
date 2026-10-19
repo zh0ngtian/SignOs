@@ -1,7 +1,8 @@
 import { SourceError } from './errors.mjs';
-import { glob, publicURL } from './urls.mjs';
+import { glob, publicURL, tagPrefixes } from './urls.mjs';
 
 export async function releaseCandidates(config, env, cache, transport = fetch) {
+  const prefixes = tagPrefixes(config.tagPrefix);
   // Cache a bounded complete release listing, shared by subscriptions to this repo.
   const cacheKey = `github:${config.repository.toLowerCase()}`;
   const previous = await cache.get(cacheKey);
@@ -51,7 +52,7 @@ export async function releaseCandidates(config, env, cache, transport = fetch) {
     }
     await cache.put(cacheKey, { etag, releases, checkedAt: Date.now() });
   }
-  const eligible = releases.filter(x => (config.includePrereleases || !x.prerelease) && (!config.tagPrefix || x.tag.startsWith(config.tagPrefix)));
+  const eligible = releases.filter(x => (config.includePrereleases || !x.prerelease) && (!prefixes.length || prefixes.some(prefix => x.tag.startsWith(prefix))));
   eligible.sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt) || b.id - a.id);
   if (!eligible.length) throw new SourceError('RELEASE_NOT_FOUND', '没有找到符合 tag 和预发布规则的 Release');
   // Android-only releases and unrelated IPA variants must not hide an older matching IPA.

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { releaseCandidates, chooseCandidate } from '../src/releases.mjs';
+import { subscription } from '../src/urls.mjs';
 
 function release(id, tag, names, options = {}) {
   return {
@@ -80,4 +81,40 @@ test('distinguishes no eligible releases from no matching IPA anywhere in eligib
     releaseCandidates({ repository: 'owner/repo', assetPattern: 'App*.ipa' }, {}, source.cache, source.transport),
     { code: 'ASSET_NOT_FOUND' },
   );
+});
+
+test('accepts literal alternative tag prefixes in the existing string config', () => {
+  const config = { kind: 'github', repository: 'owner/repo' };
+  assert.equal(subscription(config).tagPrefix, '');
+  assert.equal(subscription({ ...config, tagPrefix: ' build- ' }).tagPrefix, 'build-');
+  const dual = subscription({ ...config, tagPrefix: ' build- | v ' });
+  assert.equal(dual.tagPrefix, 'build-|v');
+  assert.deepEqual(subscription(JSON.parse(JSON.stringify(dual))), dual, 'client and backup string round trips preserve both prefixes');
+  for (const tagPrefix of ['|', '|v', 'build-|', 'build-| |v', 'x'.repeat(101)]) {
+    assert.throws(() => subscription({ ...config, tagPrefix }), { code: 'INVALID_RULE' });
+  }
+});
+
+test('selects either tag family by publication time across pages and cached listings', async () => {
+  for (const newest of ['v1.1.4', 'build-next']) {
+    const stable = release(9, 'v1.1.4', ['MuseumMuse-unsigned.ipa'], {
+      published_at: newest === 'v1.1.4' ? '2026-10-20T00:00:00Z' : '2026-10-19T00:00:00Z',
+    });
+    const build = release(10, 'build-next', ['MuseumMuse-unsigned.ipa'], {
+      prerelease: true, published_at: newest === 'build-next' ? '2026-10-20T00:00:00Z' : '2026-10-19T00:00:00Z',
+    });
+    const source = listing([
+      [release(24, 'other-v9', ['MuseumMuse-unsigned.ipa']),
+        release(23, 'v9-draft', ['MuseumMuse-unsigned.ipa'], { draft: true }),
+        release(22, 'v8', ['MuseumMuse-compatibility-unsigned.ipa']), stable],
+      [build],
+    ]);
+    const config = subscription({ kind: 'github', repository: 'owner/repo', tagPrefix: 'build-|v', assetPattern: 'MuseumMuse-unsigned.ipa', includePrereleases: true });
+    const candidates = await releaseCandidates(config, {}, source.cache, source.transport);
+    assert.equal(chooseCandidate(candidates).tag, newest, 'neither tag family nor a higher release ID takes priority over publication time');
+    assert.deepEqual(await releaseCandidates(config, {}, source.cache, source.transport), candidates);
+    assert.equal(source.calls(), 2, 'cached listings retain the same selection');
+    const stableOnly = await releaseCandidates({ ...config, includePrereleases: false }, {}, source.cache, source.transport);
+    assert.equal(chooseCandidate(stableOnly).tag, 'v1.1.4', 'the prerelease setting remains effective');
+  }
 });
