@@ -872,3 +872,11 @@ SignOs 发布任务必须在 ready 的验证 JSON 中填写具体中文 releaseN
 冻结提交 `59f743b291f3cc952d508ebbc86ea1d07a230f81` 的 [main 构建](https://github.com/zh0ngtian/SignOs/actions/runs/39454887221)和[标签发布](https://github.com/zh0ngtian/SignOs/actions/runs/39456788042)均成功，[GitHub Release](https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.20)三个附件与同提交 CI 产物一致。同一产物经 `--plan` 检查后完成 Ad Hoc 签名、独立验签及[固定 OTA 发布](https://192.168.123.79:8769/channels/signos/current/install.html)。固定安装页、manifest、版本、中文日志、完整 HTTPS 下载和 SHA-256 回验通过；签名包为 15,865,220 字节，SHA-256 为 `b183a2a19b5b28be5bb40b9e096123cb1951d6bc437e9aeb30f93478b5256edb`。现有软件源普通与兼容 JSON 均已同步新版及中文日志，订阅配置未更改，未上传签名包归档。详见[共同发布凭证](docs/plans/evidence/release-batch-1.1.20-20261021.json)。
 
 功能验收覆盖完整应用模拟器中的默认值、编辑保存、重启恢复、手动签名读取与恢复原始值，生产签名/更新队列、数据库迁移、下载进程重启及本地包清理回归通过。本次未验证真机覆盖安装及数据、钥匙串保留。
+
+### 2026-10-21 待安装本地包删除修复发布
+
+已发布 **1.1.21（构建 43）**，修复列表显示“已安装”、但待安装保护记录导致无法手动删除本地包的问题。没有任务占用时，在普通删除确认后追加「放弃安装重试并删除？」；取消保留包和记录，明确确认且再次检查通过后才删除，并在删除成功后清理对应记录。其他应用、安装计划、软件源订阅和配置保留；下载、签名或安装任务占用时仍拦截，自动清理继续保护待完成安装的包。
+
+冻结提交 `1fa5589ce8a174053db1808085872ea5da1d2c5f` 的 [main 构建](https://github.com/zh0ngtian/SignOs/actions/runs/39461497023)和[标签工作流](https://github.com/zh0ngtian/SignOs/actions/runs/39463158030)均成功，[GitHub Release](https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.21)附件与同提交 CI 产物一致。同一产物经 `--plan`、Ad Hoc 签名及独立验签后更新[固定 OTA 安装页](https://192.168.123.79:8769/channels/signos/current/install.html)。固定页面、manifest、中文日志及完整 HTTPS 下载回验通过；签名包为 15,873,297 字节，SHA-256 为 `07fd386c1a629d7ce84e55b3a328ce8e16f4b5363e07a7bf4d2533a746ea62f0`。现有软件源普通与兼容清单均同步到 1.1.21（43），订阅配置未更改，未上传签名包归档。详见[共同发布凭证](docs/plans/evidence/release-batch-1.1.21-20261021.json)。
+
+生产保留策略、Core Data/文件回归、6 项 OneView 状态检查及完整应用模拟器验收通过，覆盖取消、任务重新开始、旧确认失效、共享输入隔离和失败重试。本次未执行或取消系统安装，未验证真机覆盖安装及数据、钥匙串保留。

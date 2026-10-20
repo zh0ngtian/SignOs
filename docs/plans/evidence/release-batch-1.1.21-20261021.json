@@ -1,0 +1,127 @@
+{
+  "date": "2026-10-21",
+  "completedAt": 1792516302.230745,
+  "coordinatorVersion": "0.1.7",
+  "id": "e9889f08-0732-42a0-a2fb-1684f1e4c45a",
+  "project": "signos-production",
+  "state": "complete",
+  "frozen": {
+    "buildNumber": "43",
+    "environment": "production",
+    "manifestSha256": "337e6f2c965d3e97e159afb19cabfbd72c09c639dd6ff8454b776670dcf23930",
+    "sha": "1fa5589ce8a174053db1808085872ea5da1d2c5f",
+    "target": "com.signos.app",
+    "tasks": [
+      {
+        "id": "817e40ae-a392-4155-8648-764ba321158d",
+        "sha": "ce88aa16029a4bd413c47dcbe5f05e8330e0fd0f"
+      }
+    ],
+    "version": "1.1.21"
+  },
+  "results": {
+    "build": {
+      "buildNumber": "43",
+      "commit": "1fa5589ce8a174053db1808085872ea5da1d2c5f",
+      "runId": 39461497023,
+      "sha256": "2938233d74613d18ab7f92d1e75c61e7923c273307648e371fa59c01cb3577a4",
+      "version": "1.1.21"
+    },
+    "github": {
+      "runId": 39463158030,
+      "sha256": "2938233d74613d18ab7f92d1e75c61e7923c273307648e371fa59c01cb3577a4",
+      "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.21"
+    },
+    "ota": {
+      "buildNumber": "43",
+      "bundleId": "com.signos.app",
+      "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.21/latest.ipa",
+      "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+      "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.21/manifest.plist",
+      "sha256": "07fd386c1a629d7ce84e55b3a328ce8e16f4b5363e07a7bf4d2533a746ea62f0",
+      "signed": true,
+      "size": 15873297,
+      "sourceCommit": "1fa5589ce8a174053db1808085872ea5da1d2c5f",
+      "version": "1.1.21"
+    },
+    "prepare": {
+      "buildNumber": "43",
+      "bundleIdentifier": "com.signos.app",
+      "inputFingerprint": "41ac598ca9857eb11f2e5080a74e1115724a0a0cc26f5dae690cf38d5804b968",
+      "localValidation": "passed",
+      "version": "1.1.21"
+    },
+    "verify": {
+      "github": {
+        "runId": 39463158030,
+        "sha256": "2938233d74613d18ab7f92d1e75c61e7923c273307648e371fa59c01cb3577a4",
+        "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.21"
+      },
+      "httpsFullDownloadVerified": true,
+      "ota": {
+        "buildNumber": "43",
+        "bundleId": "com.signos.app",
+        "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.21/latest.ipa",
+        "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+        "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.21/manifest.plist",
+        "sha256": "07fd386c1a629d7ce84e55b3a328ce8e16f4b5363e07a7bf4d2533a746ea62f0",
+        "signed": true,
+        "size": 15873297,
+        "sourceCommit": "1fa5589ce8a174053db1808085872ea5da1d2c5f",
+        "version": "1.1.21"
+      }
+    }
+  },
+  "checks": {
+    "mainBuild": "passed",
+    "tagWorkflow": "passed",
+    "annotatedTagFrozenCommit": "passed",
+    "githubAssetsAndFullSHA256": "passed",
+    "chineseNotes": "passed",
+    "signosOTASignature": "passed",
+    "otaPlan": {
+      "inputIpaInspected": true,
+      "capabilitiesVerified": true
+    },
+    "fixedOTAHTTPS": {
+      "version": "1.1.21",
+      "build": "43",
+      "metadataNotesVerified": true,
+      "installPageVerified": true,
+      "manifestVerified": true,
+      "fullDownloadVerified": true,
+      "sha256": "07fd386c1a629d7ce84e55b3a328ce8e16f4b5363e07a7bf4d2533a746ea62f0",
+      "size": 15873297
+    }
+  },
+  "softwareSource": {
+    "entryId": "ba9c4295-207b-433a-b191-2c8908964159",
+    "status": "succeeded",
+    "configurationChanged": false,
+    "signedArchiveUploaded": false,
+    "publicChecks": [
+      {
+        "url": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json",
+        "version": "1.1.21",
+        "build": "43",
+        "downloadURL": "https://github.com/zh0ngtian/SignOs/releases/download/v1.1.21/SignOs.ipa",
+        "size": 15825900,
+        "notesVerified": true
+      },
+      {
+        "url": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json?legacy=1",
+        "version": "1.1.21",
+        "build": "43",
+        "downloadURL": "https://github.com/zh0ngtian/SignOs/releases/download/v1.1.21/SignOs.ipa",
+        "size": 15825900,
+        "notesVerified": true
+      }
+    ],
+    "integrityScope": "The source exposes the exact GitHub unsigned IPA URL and parsed metadata; full IPA SHA-256 was verified by the release adapter."
+  },
+  "physicalVerification": {
+    "status": "notPerformed",
+    "reason": "本地包删除和待安装记录在隔离 iOS 27 模拟器验证；本次未执行或取消系统安装，未验证真机覆盖安装及数据、钥匙串保留。"
+  },
+  "acceptance": "pending-install-deletion-20261021/verification.json"
+}
