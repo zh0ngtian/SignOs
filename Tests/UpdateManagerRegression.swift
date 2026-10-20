@@ -8,6 +8,7 @@ protocol AppInfoPresentable {
     var uuid: String? { get }
     var name: String? { get }
     var identifier: String? { get }
+    var originalIdentifier: String? { get }
     var version: String? { get }
     var source: URL? { get }
     var isSigned: Bool { get }
@@ -21,6 +22,7 @@ struct LocalApp: AppInfoPresentable {
     var source: URL? = URL(string: "https://yao-app-source.305301890.workers.dev/source.json")!
     var isSigned = true
     var date: Date? = Date(timeIntervalSince1970: 100)
+    var originalIdentifier: String? = nil
 }
 struct AltSource {
     let sourceURL: URL?
@@ -255,6 +257,12 @@ struct UpdateManagerRegression {
         checkpoint("all-source synchronization before comparison with one request per source passed")
 
         checkpoint("repeat check and metadata repair passed")
+        let manualCustomized = LocalApp(uuid: "manual-customized", identifier: bundle + ".personal", source: nil, originalIdentifier: bundle)
+        await manager.checkForUpdates(sources: [source], localApps: [manualCustomized])
+        precondition(manager.updates[manualCustomized.uuid!]!.bundleIdentifier == bundle,
+                     "A manually imported app keeps finding source updates after its Bundle ID changes")
+        precondition(manager.updates[manualCustomized.uuid!]!.managedIdentifier == manualCustomized.identifier)
+        await manager.checkForUpdates(sources: [source], localApps: [local])
         // A completed download persists independently of the transient download task.
         let update = manager.updates["museum"]!
         let imported = LocalApp(uuid: "downloaded", version: "ipa-version", isSigned: false)
@@ -276,6 +284,16 @@ struct UpdateManagerRegression {
         try Data("clone".utf8).write(to: packageURL(clone))
         precondition(manager.downloadedApp(for: update, among: [imported, clone, signed, local], isPackageAvailable: available)?.uuid == signed.uuid,
                      "Prefer a ready signed package and never install a cloned identity")
+        precondition(manager.downloadedApp(for: update, among: [signed, imported], signedIdentifier: bundle + ".personal", isPackageAvailable: available)?.uuid == imported.uuid,
+                     "Changing the configured Bundle ID must not install an old signed identity")
+        let customized = LocalApp(uuid: "customized", identifier: bundle + ".personal")
+        Storage.shared.addSourceMetadata(for: customized.uuid!, kind: .signed, provenance: update.sourceProvenance)
+        try Data("customized package".utf8).write(to: packageURL(customized))
+        precondition(manager.downloadedApp(for: update, among: [customized, signed, imported], signedIdentifier: customized.identifier, isPackageAvailable: available)?.uuid == customized.uuid,
+                     "Reuse the configured identity without mixing other signed identities")
+        precondition(manager.downloadedApp(for: update, among: [customized, signed, imported], signedIdentifier: bundle, isPackageAvailable: available)?.uuid == signed.uuid,
+                     "Restoring the original ID must select the original signed package")
+        Storage.shared.deleteSourceMetadata(for: customized.uuid)
         let restarted = UpdateManager(session: URLSession(configuration: configuration))
         precondition(restarted.downloadedApp(for: update, among: [signed, imported, local], isPackageAvailable: available)?.uuid == signed.uuid,
                      "Reuse persists when the manager is recreated")

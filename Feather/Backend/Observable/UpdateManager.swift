@@ -59,9 +59,10 @@ final class UpdateManager: ObservableObject {
 	func downloadedApp(
 		for update: AppUpdate,
 		among localApps: [AppInfoPresentable],
+		signedIdentifier targetIdentifier: String? = nil,
 		isPackageAvailable: (AppInfoPresentable) -> Bool
 	) -> AppInfoPresentable? {
-		let signedIdentifier = localApps.first { $0.uuid == update.localUUID }?.identifier ?? update.bundleIdentifier
+		let signedIdentifier = targetIdentifier ?? localApps.first { $0.uuid == update.localUUID }?.identifier ?? update.bundleIdentifier
 		let matches = localApps.filter { app in
 			guard let metadata = Storage.shared.sourceMetadata(for: app),
 				let sourceURL = metadata.sourceRepositoryURL,
@@ -221,6 +222,7 @@ final class UpdateManager: ObservableObject {
         for application in AppInventory.applications(localApps) {
             let local = application.primary
             guard let uuid = local.uuid, let identifier = local.identifier else { continue }
+            let originalIdentifier = local.originalIdentifier ?? identifier
             var metadata = Storage.shared.sourceMetadata(for: local)
             // Repair legacy signing records only when their retained provenance is unambiguous.
             if metadata == nil, local.isSigned {
@@ -234,19 +236,19 @@ final class UpdateManager: ObservableObject {
                 for (source, repository) in repositories {
                     guard let url = source.sourceURL,
                         SourceRepositoryIdentity.matches(storedURL: storedURL, storedIdentifier: nil, currentURL: url, currentIdentifier: repository.id),
-                        let index = SourceSubscriptionIdentity.matchIndex(storedKey: identifier,
+                        let index = SourceSubscriptionIdentity.matchIndex(storedKey: originalIdentifier,
                             candidates: repository.apps.map { ($0.id ?? "", $0.sourceEntryIdentifier) },
-                            legacyPreferredIndex: repository.apps.firstIndex { $0.id == identifier && $0.legacyDefault == true }) else { continue }
+                            legacyPreferredIndex: repository.apps.firstIndex { $0.id == originalIdentifier && $0.legacyDefault == true }) else { continue }
                     let remote = repository.apps[index]
                     Storage.shared.addSourceMetadata(for: uuid, kind: local.isSigned ? .signed : .imported,
                         provenance: SourceAppProvenance(sourceRepositoryURL: url, sourceRepositoryIdentifier: repository.id,
-                            sourceRepositoryName: repository.name, sourceAppIdentifier: SourceSubscriptionIdentity.key(bundleIdentifier: identifier, subscriptionID: remote.sourceEntryIdentifier),
+                            sourceRepositoryName: repository.name, sourceAppIdentifier: SourceSubscriptionIdentity.key(bundleIdentifier: originalIdentifier, subscriptionID: remote.sourceEntryIdentifier),
                             sourceAppName: local.name, sourceAppVersion: local.version, sourceAppVersionDate: nil, sourceAppDownloadURL: nil))
                     metadata = Storage.shared.sourceMetadata(for: local)
                     break
                 }
             }
-            let bundle = SourceSubscriptionIdentity.bundleIdentifier(from: metadata?.sourceAppIdentifier ?? identifier)
+            let bundle = SourceSubscriptionIdentity.bundleIdentifier(from: metadata?.sourceAppIdentifier ?? originalIdentifier)
             let baseline = metadata?.sourceAppVersion ?? local.version
             var choices: [AppUpdate] = []
             for (source, repository) in repositories {

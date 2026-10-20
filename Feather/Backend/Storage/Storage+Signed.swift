@@ -18,6 +18,7 @@ extension Storage {
 		
 		appName: String? = nil,
 		appIdentifier: String? = nil,
+		originalIdentifier: String? = nil,
 		appVersion: String? = nil,
 		appIcon: String? = nil,
 		
@@ -34,6 +35,7 @@ extension Storage {
 		new.certificate = certificate
 		// could possibly be nil, but thats fine.
 		new.identifier = appIdentifier
+		new.originalIdentifier = originalIdentifier
 		new.name = appName
 		new.icon = appIcon
 		new.version = appVersion

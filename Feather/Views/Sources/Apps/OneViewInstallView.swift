@@ -38,16 +38,17 @@ struct OneViewTracker {
 		let queueJobs = (autoSignManager.currentJob.map { [$0] } ?? []) + autoSignManager.queue
 
 		let identifier = app.id
+        let targetIdentifier = identifier.map { AppBundleIdentifierPreferences.shared.identifier(for: $0) }
 		let provenance = source.flatMap { SourceAppProvenance(sourceURL: sourceURL, repository: $0, app: app) }
         let newestSigned = signed
-			.filter { $0.identifier == identifier && AppOperations.matchesSourcePackage($0, provenance: provenance) && (provenance != nil || ($0.date ?? .distantPast) >= startedAt || $0.version == app.currentVersion) }
+            .filter { $0.identifier == targetIdentifier && AppOperations.matchesSourcePackage($0, provenance: provenance) && (provenance != nil || ($0.date ?? .distantPast) >= startedAt || $0.version == app.currentVersion) }
 			.max { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }
 		let newestImported = imported
 			.filter { $0.identifier == identifier && AppOperations.matchesSourcePackage($0, provenance: provenance) && (provenance != nil || ($0.date ?? .distantPast) >= startedAt || $0.version == app.currentVersion) }
 			.max { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }
 		return .resolve(
 			downloading: downloadManager.getDownload(by: app.currentUniqueId) != nil,
-			queued: queueJobs.contains { $0.appIdentifier == app.id } || SourceAccessManager.shared.hasActiveApplication(identifier ?? ""),
+			queued: queueJobs.contains { $0.appIdentifier == targetIdentifier } || SourceAccessManager.shared.hasActiveApplication(identifier ?? "") || SourceAccessManager.shared.hasActiveApplication(targetIdentifier ?? ""),
 			signed: newestSigned != nil,
 			installed: newestSigned?.uuid.map { autoSignManager.confirmedInstallUUIDs.contains($0) } ?? false,
 			imported: newestImported != nil
@@ -157,7 +158,7 @@ struct WSOneViewGetButton: View {
 				.buttonStyle(.borderless)
 			case .installed:
 				Button {
-					UIApplication.openApp(with: app.id ?? "")
+					UIApplication.openApp(with: _newestSigned()?.identifier ?? app.id ?? "")
 				} label: {
 					Text(.localized("Open"))
 						.lineLimit(0)
@@ -172,8 +173,9 @@ struct WSOneViewGetButton: View {
 			}
 		}
 		.animation(.easeInOut(duration: 0.3), value: phase)
-		.onChange(of: autoSignManager.installErrors[app.id ?? ""]) { message in
-			_installError = message
+		.onChange(of: autoSignManager.installErrors) { _, errors in
+            guard let original = app.id else { return }
+			_installError = errors[AppBundleIdentifierPreferences.shared.identifier(for: original)] ?? errors[original]
 		}
 		.alert(.localized("Install"), isPresented: Binding(
 			get: { _installError != nil },
@@ -214,8 +216,9 @@ struct WSOneViewGetButton: View {
 	}
 
 	private func _newestSigned() -> Signed? {
-		_signedApps
-			.filter { $0.identifier == app.id && AppOperations.matchesSourcePackage($0, provenance: _provenance()) && (_provenance() != nil || ($0.date ?? .distantPast) >= _startedAt || $0.version == app.currentVersion) }
+		let targetIdentifier = app.id.map { AppBundleIdentifierPreferences.shared.identifier(for: $0) }
+		return _signedApps
+			.filter { $0.identifier == targetIdentifier && AppOperations.matchesSourcePackage($0, provenance: _provenance()) && (_provenance() != nil || ($0.date ?? .distantPast) >= _startedAt || $0.version == app.currentVersion) }
 			.max { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }
 	}
 
@@ -264,8 +267,9 @@ struct OneViewInstallView: View {
 	}
 
 	private var _newestInstalled: Signed? {
-		_signedApps
-			.filter { $0.identifier == app.id && AppOperations.matchesSourcePackage($0, provenance: _provenance()) && (_provenance() != nil || ($0.date ?? .distantPast) >= _startedAt || $0.version == app.currentVersion) }
+		let targetIdentifier = app.id.map { AppBundleIdentifierPreferences.shared.identifier(for: $0) }
+		return _signedApps
+			.filter { $0.identifier == targetIdentifier && AppOperations.matchesSourcePackage($0, provenance: _provenance()) && (_provenance() != nil || ($0.date ?? .distantPast) >= _startedAt || $0.version == app.currentVersion) }
 			.max { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }
 	}
 
@@ -347,8 +351,9 @@ struct OneViewInstallView: View {
 			.toolbar {
 				NBToolbarButton(role: .dismiss)
 			}
-			.onChange(of: autoSignManager.installErrors[app.id ?? ""]) { message in
-				_installError = message
+			.onChange(of: autoSignManager.installErrors) { _, errors in
+                guard let original = app.id else { return }
+				_installError = errors[AppBundleIdentifierPreferences.shared.identifier(for: original)] ?? errors[original]
 			}
 			.alert(.localized("Install"), isPresented: Binding(
 				get: { _installError != nil },
@@ -452,7 +457,7 @@ extension OneViewInstallView {
 
 			case .installed:
 				Button {
-					UIApplication.openApp(with: app.id ?? "")
+					UIApplication.openApp(with: _newestInstalled?.identifier ?? app.id ?? "")
 				} label: {
 					_prominentButton(title: "Open", systemImage: "app.badge.fill", color: .green)
 				}

@@ -43,6 +43,7 @@
         <attribute name="version" attributeType="String"/>
     </entity>
     <entity name="Signed" representedClassName="Signed" syncable="YES" codeGenerationType="class">
+        <attribute name="originalIdentifier" optional="YES" attributeType="String"/>
         <attribute name="signingIdentityData" optional="YES" attributeType="Binary"/>
         <attribute name="date" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="icon" optional="YES" attributeType="String"/>

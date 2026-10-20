@@ -56,6 +56,20 @@ struct ApplicationDetailView: View {
                     }
                     if let error = signer.installErrors[identifier] { Text(error).font(.footnote).foregroundStyle(.orange) }
                 }
+                if let original = AppOperations.originalIdentifier(for: application.primary) {
+                    Section("签名设置") {
+                        NavigationLink {
+                            ApplicationBundleIdentifierView(originalIdentifier: original)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text("Bundle ID")
+                                Text(AppBundleIdentifierPreferences.shared.identifier(for: original))
+                                    .font(.caption).foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+                }
                 Section("更新设置") {
                     Toggle("自动更新", isOn: Binding(get: { AutoUpdateManager.shared.isAutoUpdateEnabled(for: identifier) }, set: {
                         AutoUpdateManager.shared.setAutoUpdate($0, for: identifier); ruleRevision += 1
@@ -180,13 +194,13 @@ struct CertificateReplacementView: View {
 
     private func replace(with certificate: CertificatePair) {
         for app in apps {
-            if let issue = AppOperations.signingError(for: app, certificate: certificate) {
+            let options = AppOperations.signingOptions(for: app, base: .defaultOptions)
+            if let issue = AppOperations.signingError(for: app, certificate: certificate, targetIdentifier: options.appIdentifier) {
                 error = "\(app.name ?? "应用")：\(issue)"; return
             }
         }
         for app in apps {
-            var options = Options.defaultOptions
-            options.appIdentifier = app.identifier
+            let options = AppOperations.signingOptions(for: app, base: .defaultOptions)
             AutoSignManager.shared.enqueue(app: app, reason: .renewal, certificate: certificate, options: options, force: true)
         }
         dismiss()

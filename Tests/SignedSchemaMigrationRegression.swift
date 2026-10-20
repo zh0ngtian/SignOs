@@ -7,7 +7,7 @@ import CoreData
         for entity in newModel.entities { entity.managedObjectClassName = "NSManagedObject" }
         let oldModel = newModel.copy() as! NSManagedObjectModel
         let signedEntity = oldModel.entitiesByName["Signed"]!
-        signedEntity.properties = signedEntity.properties.filter { $0.name != "signingIdentityData" }
+        signedEntity.properties = signedEntity.properties.filter { !["signingIdentityData", "originalIdentifier"].contains($0.name) }
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
@@ -37,14 +37,17 @@ import CoreData
         precondition(retained[0].value(forKey: "date") as? Date == date)
         precondition(retained[0].value(forKey: "version") as? String == "1.0")
         precondition(retained[0].value(forKey: "signingIdentityData") == nil)
+        precondition(retained[0].value(forKey: "originalIdentifier") == nil)
         let importedCount = try reader.count(for: NSFetchRequest<NSManagedObject>(entityName: "Imported")); precondition(importedCount == 1)
         let metadataCount = try reader.count(for: NSFetchRequest<NSManagedObject>(entityName: "AppSourceMetadata")); precondition(metadataCount == 1)
         let identity = SigningIdentity(prefix: "PREFIX", teams: ["TEAM"], applicationIdentifier: "PREFIX.*", keychainGroups: ["PREFIX.*"])
         retained[0].setValue(try JSONEncoder().encode(identity), forKey: "signingIdentityData")
+        retained[0].setValue("com.example.original", forKey: "originalIdentifier")
         try reader.save(); reader.reset()
         let reloaded = try reader.fetch(NSFetchRequest<NSManagedObject>(entityName: "Signed"))[0]
         let decoded = try JSONDecoder().decode(SigningIdentity.self, from: reloaded.value(forKey: "signingIdentityData") as! Data)
         precondition(decoded.canReplace(identity, bundle: "com.example.app"))
-        print("SignedSchemaMigrationRegression passed: old signed/imported/source records and signing dates survive lightweight migration; signing identity persists")
+        precondition(reloaded.value(forKey: "originalIdentifier") as? String == "com.example.original")
+        print("SignedSchemaMigrationRegression passed: old signed/imported/source records and signing dates survive lightweight migration; signing identity and original Bundle ID persist")
     }
 }

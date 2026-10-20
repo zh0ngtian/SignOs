@@ -158,6 +158,7 @@ final class SigningHandler: NSObject {
 				certificate: _options.signingOption != .default ? nil : appCertificate,
 				appName: bundle?.name,
 				appIdentifier: bundle?.bundleIdentifier,
+				originalIdentifier: _options.originalIdentifier ?? AppOperations.originalIdentifier(for: _app),
 				appVersion: bundle?.version,
 				appIcon: bundle?.iconFileName
 			) { _ in

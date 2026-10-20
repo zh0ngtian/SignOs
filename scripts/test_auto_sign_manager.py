@@ -33,6 +33,8 @@ def main():
         binary = app / "AutoSignManagerRegression"
         subprocess.run(common + ["-I", str(output), *[str(ROOT / source) for source in [
             "Feather/Backend/Observable/AutoSignManager.swift",
+            "Feather/Utilities/AppBundleIdentifierPreferences.swift",
+            "Feather/Utilities/ApplicationSigningOptions.swift",
             "NimbleKit/Sources/NimbleExtensions/String/String+localized.swift",
             "Tests/AutoSignManagerRegression.swift"]], "-o", str(binary)], check=True, env=env)
         bundle_id = "com.signos.auto-sign-test-" + uuid.uuid4().hex

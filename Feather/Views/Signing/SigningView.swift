@@ -39,10 +39,26 @@ struct SigningView: View {
 	
 	init(app: AppInfoPresentable) {
 		self.app = app
-		let existing = AppOperations.certificate(for: app)
+		let existing = AppOperations.certificate(for: app, targetIdentifier: AppOperations.signingOptions(for: app).appIdentifier)
         let storedCert = existing.flatMap { cert in Storage.shared.getAllCertificates().firstIndex { $0.uuid == cert.uuid } } ?? UserDefaults.standard.integer(forKey: "feather.selectedCert")
 		__temporaryCertificate = State(initialValue: storedCert)
+		__temporaryOptions = State(initialValue: Self._initialOptions(for: app, certificate: Storage.shared.getCertificate(for: storedCert)))
 	}
+
+    private static func _initialOptions(for app: AppInfoPresentable, certificate: CertificatePair?) -> Options {
+        var options = AppOperations.signingOptions(for: app)
+        let original = AppOperations.originalIdentifier(for: app)
+        if original.flatMap({ AppBundleIdentifierPreferences.shared.configuredIdentifier(for: $0) }) == nil {
+            if options.ppqProtection, certificate?.ppQCheck == true, let identifier = app.identifier {
+                options.appIdentifier = "\(identifier).\(options.ppqString)"
+            }
+            if let identifier = app.identifier, let replacement = options.identifiers[identifier] {
+                options.appIdentifier = replacement
+            }
+        }
+        if let name = app.name, let replacement = options.displayNames[name] { options.appName = replacement }
+        return options
+    }
 		
 	// MARK: Body
 	var body: some View {
@@ -68,7 +84,7 @@ struct SigningView: View {
 					style: .text,
 					placement: .topBarTrailing
 				) {
-					_temporaryOptions = OptionsManager.shared.options
+					_temporaryOptions = Self._initialOptions(for: app, certificate: _selectedCert())
 					appIcon = nil
 				}
 			}
@@ -107,31 +123,6 @@ struct SigningView: View {
 						dismiss()
 					}
 			)
-		}
-		.onAppear {
-			// ppq protection
-			if
-				_optionsManager.options.ppqProtection,
-				let identifier = app.identifier,
-				let cert = _selectedCert(),
-				cert.ppQCheck
-			{
-				_temporaryOptions.appIdentifier = "\(identifier).\(_optionsManager.options.ppqString)"
-			}
-			
-			if
-				let currentBundleId = app.identifier,
-				let newBundleId = _temporaryOptions.identifiers[currentBundleId]
-			{
-				_temporaryOptions.appIdentifier = newBundleId
-			}
-			
-			if
-				let currentName = app.name,
-				let newName = _temporaryOptions.displayNames[currentName]
-			{
-				_temporaryOptions.appName = newName
-			}
 		}
 	}
 }

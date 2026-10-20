@@ -50,6 +50,12 @@ jobs:
             "$BINARY"
             rm "$BINARY"
           done
+          BINARY="$RUNNER_TEMP/signos-bundle-id"
+          xcrun swiftc -swift-version 6 -warnings-as-errors \
+            Feather/Utilities/AppBundleIdentifierPreferences.swift \
+            Tests/AppBundleIdentifierPreferencesRegression.swift -o "$BINARY"
+          "$BINARY"
+          rm "$BINARY"
           BINARY="$RUNNER_TEMP/signos-museum-app-group"
           xcrun swiftc Feather/Utilities/MachOEntitlements.swift \
             Feather/Utilities/MuseumMuseAppGroupSigning.swift \

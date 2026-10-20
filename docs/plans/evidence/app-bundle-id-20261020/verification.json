@@ -1,0 +1,39 @@
+{
+  "date": "2026-10-20",
+  "baseline": "1b361b833fbdf3e5345d51d9a7f50a063468d006",
+  "scope": "代码交付，不发布或部署",
+  "environment": {
+    "xcode": "27.0",
+    "runtime": "iOS 27.0 Simulator",
+    "application": "隔离 Bundle ID 的完整 SignOs 应用",
+    "fixtures": "两个无私有资料的本地导入记录"
+  },
+  "passed": [
+    "默认配置为原始 Bundle ID；编辑保存后详情即时更新",
+    "关闭应用并重新启动后，自定义 Bundle ID 仍保留",
+    "手动签名页读取保存的自定义 ID",
+    "恢复原始 Bundle ID 并保存后，详情与本机偏好均恢复原始值",
+    "AppBundleIdentifierPreferencesRegression：Swift 6 严格检查、本机重新加载、不同应用与克隆隔离、显式恢复及非法输入",
+    "AutoSignManagerRegression：生产参数解析与队列，覆盖自动导入、自定义包重新签名/恢复、克隆签名及更新配置",
+    "UpdateManagerRegression：生产更新检查与缓存，覆盖手动自定义 ID 继续匹配原始来源、目标 ID 包选择及恢复",
+    "SignedSchemaMigrationRegression：旧数据库轻量迁移与原始 ID、签名身份持久化",
+    "SigningIdentityRegression 与 OneViewPhaseRegression（6 项）",
+    "InstallPackageRetentionRegression：包保留、清理、重试与删除回归",
+    "完整 iOS Simulator Debug 构建与启动",
+    "make iphoneos：无分发签名的本地设备版 Release 构建与 IPA 打包"
+  ],
+  "screenshots": {
+    "customAfterRestart": "custom-reloaded.png",
+    "restoredDetail": "restored-detail.png"
+  },
+  "notVerified": [
+    "真机签名后覆盖安装",
+    "真机数据和钥匙串保留",
+    "实际分发证书的自定义 ID 安装"
+  ],
+  "publication": {
+    "githubRelease": false,
+    "ota": false,
+    "deployment": false
+  }
+}

@@ -53,6 +53,8 @@ struct Options: Codable, Equatable {
 	var appVersion: String?
 	/// App bundle identifer
 	var appIdentifier: String?
+	/// Original identity owning the per-app preference; clones have their own identity.
+	var originalIdentifier: String?
 	/// App entitlements
 	var appEntitlementsFile: URL?
 	/// App apparence (i.e. Light/Dark/Default)

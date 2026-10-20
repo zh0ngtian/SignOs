@@ -120,12 +120,13 @@ final class AutoSignManager: ObservableObject {
 	) {
 		guard force || isAutoSignEnabled else { return }
 		guard let uuid = app.uuid, AppOperations.isAllowed(app) else { return }
+		let options = options ?? AppOperations.signingOptions(for: app)
 
 		let job = Job(
 			appUUID: uuid,
 			reason: reason,
-			appIdentifier: options?.appIdentifier ?? app.identifier,
-			appName: options?.appName ?? app.name,
+			appIdentifier: options.appIdentifier ?? app.identifier,
+			appName: options.appName ?? app.name,
 			certificate: certificate,
 			options: options
 		)
@@ -137,6 +138,7 @@ final class AutoSignManager: ObservableObject {
 		var options = OptionsManager.shared.options
 		let base = app.identifier ?? UUID().uuidString
 		options.appIdentifier = "\(base).clone\(Int.random(in: 100...999))"
+		options.originalIdentifier = options.appIdentifier
 		options.appName = "\(app.name ?? .localized("App")) \(Int.random(in: 2...9))"
 		options.signingOption = .default
 
@@ -155,13 +157,9 @@ final class AutoSignManager: ObservableObject {
 		request.predicate = NSPredicate(format: "uuid == %@", uuid)
 		guard let app = (try? Storage.shared.context.fetch(request))?.first else { return }
 
-		var options = OptionsManager.shared.options
-        var cert: CertificatePair?
-        if let targetAppUUID, let baseline = _resolveApp(uuid: targetAppUUID) {
-            options.appIdentifier = baseline.identifier
-            if baseline.identifier != app.identifier { options.appName = baseline.name }
-            cert = AppOperations.certificate(for: baseline)
-        }
+        let baseline = targetAppUUID.flatMap { _resolveApp(uuid: $0) }
+        let options = AppOperations.signingOptions(for: app, updating: baseline)
+        let cert = AppOperations.certificate(for: baseline ?? app, targetIdentifier: options.appIdentifier)
         enqueue(app: app, reason: targetAppUUID == nil ? .autoSign : .autoUpdate, certificate: cert, options: options, force: force)
 	}
 
@@ -452,7 +450,7 @@ final class AutoSignManager: ObservableObject {
 	// MARK: - Certificate selection
 
 	private func _certificate(for app: AppInfoPresentable, options: Options) -> CertificatePair? {
-        AppOperations.certificate(for: app)
+        AppOperations.certificate(for: app, targetIdentifier: options.appIdentifier)
 	}
 
 	// MARK: - Fetch helpers

@@ -114,12 +114,17 @@ protocol AppInfoPresentable {
 	var name: String? { get }
 	var version: String? { get }
 	var identifier: String? { get }
+	var originalIdentifier: String? { get }
 	var date: Date? { get }
 	var icon: String? { get }
 	var uuid: String? { get }
 	var source: URL? { get }
 	var isSigned: Bool { get }
 	
+}
+
+extension AppInfoPresentable {
+    var originalIdentifier: String? { nil }
 }
 
 extension Signed: AppInfoPresentable {

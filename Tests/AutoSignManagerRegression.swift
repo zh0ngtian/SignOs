@@ -8,8 +8,11 @@ import Darwin
 
 protocol AppInfoPresentable {
     var uuid: String? { get }; var identifier: String? { get }; var name: String? { get }; var isSigned: Bool { get }
+    var originalIdentifier: String? { get }
 }
+extension AppInfoPresentable { var originalIdentifier: String? { nil } }
 @objc(Signed) final class Signed: NSManagedObject, AppInfoPresentable {
+    var originalIdentifier: String?
     @NSManaged var uuid: String?; @NSManaged var identifier: String?; @NSManaged var name: String?
     @NSManaged var date: Date?; @NSManaged var version: String?
     var isSigned: Bool { true }
@@ -54,7 +57,7 @@ struct Metadata { let sourceVersionID: String }
     func getAllCertificates() -> [CertificatePair] { [] }
     func getCertificate(for index: Int) -> CertificatePair? { nil }
 }
-struct Options { enum SigningOption { case `default`, adhoc }; var signingOption = SigningOption.adhoc; var appIdentifier: String?; var appName: String? }
+struct Options { enum SigningOption { case `default`, adhoc }; var signingOption = SigningOption.adhoc; var appIdentifier: String?; var appName: String?; var originalIdentifier: String? }
 @MainActor final class OptionsManager { static let shared = OptionsManager(); var options = Options() }
 @MainActor enum AppOperations {
     static var disabled = Set<String>()
@@ -62,7 +65,7 @@ struct Options { enum SigningOption { case `default`, adhoc }; var signingOption
     static func packages() -> [any AppInfoPresentable] { [] }
     static func signedResult(for app: AppInfoPresentable) -> Signed? { nil }
     static func resumeDeferredUpdates() {}
-    static func certificate(for app: AppInfoPresentable) -> CertificatePair? { nil }
+    static func certificate(for app: AppInfoPresentable, targetIdentifier: String? = nil) -> CertificatePair? { CertificatePair() }
     static func signingError(for app: AppInfoPresentable, certificate: CertificatePair?, targetIdentifier: String? = nil) -> String? { nil }
 }
 @MainActor final class SourceAccessManager {
@@ -79,8 +82,9 @@ struct Options { enum SigningOption { case `default`, adhoc }; var signingOption
 }
 @MainActor enum FR {
     static var signCalls = 0; static var completion: ((Error?) -> Void)?
+    static var lastOptions: Options?
     static func signPackageFile(_ app: AppInfoPresentable, using: Options, icon: String?, certificate: CertificatePair?, completion: @escaping (Error?) -> Void) {
-        signCalls += 1; self.completion = completion
+        signCalls += 1; self.completion = completion; lastOptions = using
     }
 }
 @MainActor final class AutoUpdateManager {
@@ -192,7 +196,37 @@ extension UIApplication { static func topViewController() -> UIViewController? {
         ArchiveHandler.finish()
         try await waitUntil { manager.currentJob == nil }
         precondition(!ArchiveHandler.entered.contains("late-result") && !ArchiveHandler.entered.contains("cancelled-queue"))
-        print("AutoSignManagerRegression passed: direct install without signing, serial queue, queued/active deduplication, imported signing and in-flight result reuse")
+        let preferences = AppBundleIdentifierPreferences.shared
+        preferences.save("fixture.personal", for: imported.identifier!)
+        manager.enqueueImported(uuid: imported.uuid!, force: true)
+        try await waitUntil { FR.completion != nil }
+        precondition(FR.lastOptions?.appIdentifier == "fixture.personal", "Automatic imports use the saved per-app identity")
+        precondition(FR.lastOptions?.originalIdentifier == imported.identifier)
+        manager.cancelPending { $0.uuid == imported.uuid }
+        FR.completion!(nil); FR.completion = nil
+        try await waitUntil { manager.currentJob == nil }
+        manager.cloneApp(app: imported)
+        try await waitUntil { FR.completion != nil }
+        let cloneOptions = FR.lastOptions!
+        precondition(cloneOptions.appIdentifier != imported.identifier)
+        precondition(cloneOptions.originalIdentifier == cloneOptions.appIdentifier, "A clone owns an independent persistent preference")
+        let clone = signed("clone-baseline", identifier: cloneOptions.appIdentifier!)
+        clone.originalIdentifier = cloneOptions.originalIdentifier
+        let cloneUpdate = AppOperations.signingOptions(for: imported, updating: clone)
+        precondition(cloneUpdate.appIdentifier == clone.identifier, "Updating a clone does not use its parent's preference")
+        preferences.save("fixture.personal.clone", for: clone.originalIdentifier!)
+        let customizedClone = AppOperations.signingOptions(for: clone)
+        precondition(customizedClone.appIdentifier == "fixture.personal.clone")
+        precondition(AppOperations.signingOptions(for: imported).appIdentifier == "fixture.personal")
+        let customized = signed("customized-baseline", identifier: "fixture.personal")
+        customized.originalIdentifier = imported.identifier
+        precondition(AppOperations.signingOptions(for: customized).appIdentifier == "fixture.personal", "Manual re-signing keeps the original preference key")
+        preferences.save(imported.identifier!, for: imported.identifier!)
+        precondition(AppOperations.signingOptions(for: customized).appIdentifier == imported.identifier, "Reset applies even when the input is a custom signed package")
+        manager.cancelPending { $0.uuid == imported.uuid }
+        FR.completion!(nil); FR.completion = nil
+        try await waitUntil { manager.currentJob == nil }
+        print("AutoSignManagerRegression passed: direct install, serial queue, deduplication, saved Bundle ID on import, original identity on re-sign/reset, independent clone signing/update preferences")
         fflush(stdout)
     }
 }

@@ -89,14 +89,15 @@ enum AppOperations {
         Storage.shared.saveContext()
     }
 
-    static func certificate(for app: any AppInfoPresentable) -> CertificatePair? {
-        let current = installed(for: app.identifier)
-        let previous = currentIdentity(for: app)
+    static func certificate(for app: any AppInfoPresentable, targetIdentifier: String? = nil) -> CertificatePair? {
+        let identifier = targetIdentifier ?? app.identifier
+        let current = installed(for: identifier)
+        let previous = current.flatMap { currentIdentity(for: $0) }
         func eligible(_ cert: CertificatePair) -> Bool {
             guard isValid(cert) else { return false }
             guard current != nil else { return true }
             guard let previous, let replacement = signingIdentity(for: cert) else { return false }
-            return replacement.canReplace(previous, bundle: app.identifier)
+            return replacement.canReplace(previous, bundle: identifier)
         }
         if let existing = current?.certificate ?? Storage.shared.getCertificate(from: app), eligible(existing) { return existing }
         let certs = Storage.shared.getAllCertificates().filter(eligible)
@@ -111,15 +112,18 @@ enum AppOperations {
     }
 
     static func signingError(for app: any AppInfoPresentable, certificate: CertificatePair?, targetIdentifier: String? = nil) -> String? {
-        guard !SourceAccessManager.shared.hasActiveApplication(app.identifier ?? "") else { return "这个应用正在处理，请等待当前任务结束。" }
+        let identifier = targetIdentifier ?? app.identifier
+        guard !SourceAccessManager.shared.hasActiveApplication(app.identifier ?? ""),
+            !SourceAccessManager.shared.hasActiveApplication(identifier ?? "") else { return "这个应用正在处理，请等待当前任务结束。" }
+        if let identifier, let error = AppBundleIdentifierPreferences.validationError(for: identifier) { return error }
         if let status = sourceStatus(app) { return status + (status == "来源已禁用" ? "，请先启用软件源。" : "，此订阅的包不能继续签名或安装。") }
         if let certificate {
             guard isValid(certificate) else { return "所选证书已过期或撤销，请选择有效证书。" }
-            if targetIdentifier == nil || targetIdentifier == app.identifier, installed(for: app.identifier) != nil {
-                guard let previous = currentIdentity(for: app), let replacement = signingIdentity(for: certificate) else {
+            if let current = installed(for: identifier) {
+                guard let previous = currentIdentity(for: current), let replacement = signingIdentity(for: certificate) else {
                     return "无法验证原应用的签名身份，请恢复原证书资料后再更换，或通过签名选项使用新的 Bundle ID 安装。"
                 }
-                guard replacement.canReplace(previous, bundle: app.identifier) else {
+                guard replacement.canReplace(previous, bundle: identifier) else {
                     return "新证书的签名身份与当前应用不兼容，无法直接覆盖安装。请保留原包和数据，选择兼容证书。"
                 }
             }
@@ -137,7 +141,10 @@ enum AppOperations {
             return
         }
         let bundle = SourceSubscriptionIdentity.bundleIdentifier(from: provenance.sourceAppIdentifier)
-        guard let baseline = AppInventory.applications(packages()).first(where: { $0.id == bundle })?.primary,
+        let applications = AppInventory.applications(packages())
+        let target = AppBundleIdentifierPreferences.shared.identifier(for: bundle)
+        guard let baseline = (applications.first(where: { $0.id == target && originalIdentifier(for: $0.primary) == bundle }) ??
+            applications.first(where: { $0.id == bundle }))?.primary,
             let uuid = baseline.uuid else {
             _ = DownloadManager.shared.startDownload(from: url, id: id, sourceProvenance: provenance)
             return
@@ -174,27 +181,32 @@ enum AppOperations {
         if let job = AutoSignManager.shared.currentJob,
             Storage.shared.sourceMetadata(for: job.appUUID)?.sourceVersionID == origin.sourceVersionID { return false }
         if DownloadManager.shared.downloads.contains(where: { $0.sourceProvenance?.sourceVersionID == origin.sourceVersionID && $0.targetAppUUID == baseline?.uuid }) { return false }
-        let targetIdentifier = baseline?.identifier ?? update.bundleIdentifier
+        let options = baseline.map { signingOptions(for: $0) }
+        let targetIdentifier = options?.appIdentifier ?? update.bundleIdentifier
         if AutoSignManager.shared.currentJob?.appIdentifier == targetIdentifier ||
             SourceAccessManager.shared.hasActiveApplication(targetIdentifier) ||
             DownloadManager.shared.downloads.contains(where: { $0.targetAppUUID == update.localUUID || $0.sourceProvenance.map { SourceSubscriptionIdentity.bundleIdentifier(from: $0.sourceAppIdentifier) == update.bundleIdentifier } == true }) {
             deferredUpdates[targetIdentifier] = (update, automatic, allowReplacement, downloadID)
             return false
         }
-        let target = baseline.flatMap { certificate(for: $0) }
-        let cached = UpdateManager.shared.downloadedApp(for: update, among: apps, isPackageAvailable: {
-            guard let directory = Storage.shared.getAppDirectory(for: $0) else { return false }
+        let target = baseline.flatMap { certificate(for: $0, targetIdentifier: targetIdentifier) }
+        func isPackageAvailable(_ app: any AppInfoPresentable) -> Bool {
+            guard let directory = Storage.shared.getAppDirectory(for: app) else { return false }
             return FileManager.default.fileExists(atPath: directory.appendingPathComponent("Info.plist").path)
-        })
+        }
+        let cached = UpdateManager.shared.downloadedApp(for: update, among: apps, signedIdentifier: targetIdentifier,
+            isPackageAvailable: isPackageAvailable) ?? apps.first {
+                $0.isSigned && originalIdentifier(for: $0) == options?.originalIdentifier &&
+                matchesSourcePackage($0, provenance: origin) && isPackageAvailable($0)
+            }
         if let cached {
-            if let signed = cached as? Signed, signed.certificate?.uuid == target?.uuid,
+            if let signed = cached as? Signed, signed.identifier == targetIdentifier, signed.certificate?.uuid == target?.uuid,
                 signed.certificate.map(isValid) ?? true,
                 (signed.date ?? .distantPast) >= (baseline?.date ?? .distantPast) {
                 AutoSignManager.shared.enqueueInstall(app: signed)
             } else {
-                var options = OptionsManager.shared.options
-                if let baselineID = baseline?.identifier, baselineID != update.bundleIdentifier { options.appIdentifier = baselineID; options.appName = baseline?.name }
-                AutoSignManager.shared.enqueue(app: cached, reason: .autoUpdate, certificate: target, options: options, force: !automatic)
+                let signingOptions = signingOptions(for: cached, updating: baseline)
+                AutoSignManager.shared.enqueue(app: cached, reason: .autoUpdate, certificate: target, options: signingOptions, force: !automatic)
             }
             return true
         }
