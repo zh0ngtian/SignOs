@@ -192,10 +192,15 @@ Project workflow and post-test delivery requirements are in [AGENTS.md](AGENTS.m
 
 ### 多任务协调与合批发布
 
-开发任务在独立分支或 worktree 完成本地必要验证，登记确定的提交 SHA 与结果；由同一
-发布作用域的协调负责人统一整合、分配版本、推进 `main` 并完成发布。合批窗口、冻结、
-锁与恢复的通用策略以当前生效的 canonical 全局 `AGENTS.md` 为准；项目只补充
-[发布目标、接入状态和具体改造项](docs/release-coordination.md)。
+默认交付为完成本地必要验证、合入 `main`、提交并 push，核对远端 SHA；默认不发布。
+开始修改前同步并记录 `origin/main` 的 SHA，合入前再次 fetch 比较：开发期间主分支
+没有新增提交时，无须合入后重复回归；有新增提交时，先整合最新主分支，再对整合后的
+代码完成必要回归，通过后提交并推送。推送前主分支再次前进时，重新整合并回归。
+完整交付规则以 [AGENTS.md](AGENTS.md#测试后的交付规则) 为准。
+
+仅在用户明确要求发布时，由同一发布作用域的协调负责人统一整合、分配版本、推进
+`main` 并完成发布。合批窗口、冻结、锁与恢复的通用策略以当前生效的 canonical 全局
+`AGENTS.md` 为准；项目只补充[发布目标、接入状态和具体改造项](docs/release-coordination.md)。
 
 本机统一入口为 `~/.local/bin/releasectl`；协调器独立维护在
 [release-coordinator](https://github.com/zh0ngtian/release-coordinator)，通过 Python / SQLite
@@ -204,8 +209,10 @@ SignOs 使用 `signos-production` 配置，适配器为 `scripts/signos_release_
 运行时不依赖开发 worktree，状态、心跳、CI 进度和共同凭证在仓库外持久保存。
 启动模式以本机安装凭证为准：LaunchAgent 是登录启动，LaunchDaemon 才是登录前开机启动。
 
-开发任务登记、维持心跳、完成验证并 push 开发分支后提交就绪；后台服务自动推进兼容批次。
-本节后续构建、标签和 OTA 命令是适配器的底层步骤，不由各任务分别执行。常用命令和
+已获发布授权的任务登记、维持心跳、完成验证并 push 开发分支后提交就绪；后台服务自动
+推进兼容批次。普通代码交付不登记发布任务、不提交 `ready`，不递增版本或构建号，
+不打标签、不创建 Release、不更新 OTA 或部署服务。本节后续标签和 OTA 命令是发布
+适配器的底层步骤，不由各任务分别执行。常用命令和
 恢复方式见[发布协调说明](docs/release-coordination.md)。
 
 ### GitHub Actions 构建检查
@@ -308,23 +315,23 @@ python3 scripts/test_download_manager_simulator.py <SIMULATOR_UDID>
 得到的地址，输出字节数、耗时、吞吐量和 URLSession 分段指标。跳转地址只用于本次
 诊断，不保存签名 URL，也不作为软件源的长期地址。测试结束会移除临时 App 和文件。
 
-常规交付流程为：各开发任务完成本地必要检查，提交并 push 开发分支，核对远端 SHA 后
-登记就绪；协调负责人整合并完成合并后的必要检查，统一分配版本，冻结批次及最终提交，
-再推进 `main`，触发该批次一次正式构建。各任务须核对自己的改动已包含在最终提交中，
-等待 **冻结提交** 的 `iOS Build Check / iOS Release build` 成功，并读取该批次共同的发布凭证。
-任何涉及 App 的改动都必须随所属批次发布，不按类型、规模或是否改变用户可见功能区别
-处理；进入队列或加入批次不算交付完成。不涉及构建或发布的改动检查后直接提交与 push，
-不额外触发客户端构建；纯服务改动按既有部署与 HTTPS 验收要求完成，不发 App。
-发布默认使用 GitHub Release，由协调负责人按批次递增版本号和构建号，参与任务共用
-该版本。普通提交和手动构建本身不创建 Release；客户端批次还须完成标签发布，并使用
-同一产物完成 OTA 签名与固定渠道更新，交付安装链接，避免参与任务分别发包。
+常规交付按上文完成验证、合入及条件回归，提交并 push 后核对远端提交即可，客户端
+改动也默认不发布。纯文档、规则、服务和其他非客户端改动不额外触发客户端构建。
+现有 `main` 打包仍要求精确冻结提交；此次交付规则调整不改变该校验，不能为了通过
+流水线自动生成发布批次或发版，失败时按实际原因报告。
+
+用户明确要求发布后，任务才登记就绪，由协调负责人整合并完成必要检查、统一分配
+版本、冻结批次及最终提交，再推进 `main`。等待 **冻结提交** 的
+`iOS Build Check / iOS Release build` 成功，完成 GitHub Release 和同产物 OTA 签名、
+固定渠道更新后，读取共同发布凭证并交付安装链接。服务仅在用户明确要求部署时部署，
+核对进程及真实 HTTPS 接口。
 
 ### GitHub Release 标准发布流程
 
-以下步骤由协调负责人对冻结批次执行。发布标签使用 `vX.Y.Z`，例如 `v1.0.11`。
+仅在用户明确要求发布时，由协调负责人对冻结批次执行以下步骤。发布标签使用 `vX.Y.Z`，例如 `v1.0.11`。
 整合及必要检查通过后，统一将 `Feather.xcconfig` 的 `FEATHER_PROJECT_VERSION`
 更新为 `X.Y.Z`，并递增 Xcode 工程的 `CURRENT_PROJECT_VERSION`，将版本改动纳入
-批次最终提交后冻结。每个涉及 App 的批次都发布新版，版本号和构建号均须高于之前
+批次最终提交后冻结。每个获授权的 App 发布批次都发布新版，版本号和构建号均须高于之前
 发出的包。推进该冻结提交到 `main`，等待其 `iOS Build Check` 成功，再为该提交打标签：
 
 ```sh
@@ -446,17 +453,18 @@ the exact frozen commit's verified CI IPA, and its actual version/build number; 
 verifies signing, stages versioned resources, checks HTTPS downloads, and then
 switches the fixed `current` entry.
 
-任何涉及 App 的改动都须随所属批次通过上文的 GitHub Actions 构建检查，并按标签发布新版到 GitHub Release。
-用户已持续授权每批 App 发布同时更新 OTA：由协调负责人使用同一已验证构建产物和现有私有配置发布正式
+默认代码交付不发布 App；用户明确要求发布时，所属批次须通过上文的 GitHub Actions
+构建检查，并按标签发布新版到 GitHub Release。已获授权的 App 发布同时更新 OTA：
+由协调负责人使用同一已验证构建产物和现有私有配置发布正式
 Ad Hoc 签名 IPA，保持两者版本一致、构建号递增，无须逐次询问。GitHub Release 和 OTA
 均验收成功才算交付完成，最终回复须附上可点击的固定 OTA 安装页链接和实际版本、构建号。
 固定安装页为 `https://192.168.123.79:8769/channels/signos/current/install.html`；
-每次交付前从私有配置和在线探针核对当前地址及版本。
+每次发布交付前从私有配置和在线探针核对当前地址及版本。
 
 2026-10-11 用户曾明确要求双渠道正式发包：同一 OTA 签名包通过
 `scripts/publish_signos.py` 归档到 GitHub，并加入 Cloudflare 软件源；发布前执行 `--plan`，
 两端完整下载 SHA-256 必须相同。软件源管理、最新包迁移与兼容入口见
-[Cloudflare 软件源](distribution/source-aggregator/README.md)。该按需操作独立于每次 App 改动必须完成的 GitHub Release 发布。
+[Cloudflare 软件源](distribution/source-aggregator/README.md)。该按需操作独立于获授权的 GitHub Release / OTA 发布流程。
 
 The fixed release metadata endpoint is
 `https://192.168.123.79:8769/channels/signos/current/latest-ios.json`; its sibling

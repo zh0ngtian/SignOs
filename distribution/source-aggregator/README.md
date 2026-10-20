@@ -61,7 +61,7 @@ SignOs 原订阅已就地从 `ipa-archive` 切换到正式仓库，当前版本�
 本次仅部署软件源服务，记录见
 [双前缀验收](../../docs/plans/evidence/museum-dual-release-prefixes-20261020.json)。
 
-`scripts/publish_signos.py` 是原有双渠道签名包发布工具，仍会创建或更新 `ipa-archive` 订阅，不用于当前正式仓库主订阅的更新。仅在用户另行明确要求新增签名包渠道时，由对应批次的协调负责人执行：先按项目 OTA 流程发布正式签名包，再用 `scripts/publish_signos.py --ipa <同一签名包> --release-json <OTA凭证> --plan` 预检后执行实际发布。工具公开归档到 GitHub，再核对 Cloudflare 的版本、构建号、URL、大小和全包 SHA-256；GitHub 完整 GET 也必须匹配 OTA 凭证。纯软件源服务改动只完成对应部署与接口验收，不触发客户端构建或 App 发布；涉及 SignOs 客户端的改动按[项目合批发布流程](../../README.md#多任务协调与合批发布)完成 GitHub Release 与 OTA。此工具不是统一任务协调入口。
+`scripts/publish_signos.py` 是原有双渠道签名包发布工具，仍会创建或更新 `ipa-archive` 订阅，不用于当前正式仓库主订阅的更新。仅在用户另行明确要求新增签名包渠道时，由对应批次的协调负责人执行：先按项目 OTA 流程发布正式签名包，再用 `scripts/publish_signos.py --ipa <同一签名包> --release-json <OTA凭证> --plan` 预检后执行实际发布。工具公开归档到 GitHub，再核对 Cloudflare 的版本、构建号、URL、大小和全包 SHA-256；GitHub 完整 GET 也必须匹配 OTA 凭证。软件源服务和 SignOs 客户端改动默认按[项目代码交付规则](../../AGENTS.md#测试后的交付规则)完成验证、合入及推送，不自动部署或发布。用户明确要求部署服务时，完成对应部署与接口验收，不触发客户端构建或 App 发布；明确要求发布 SignOs 时，按[项目合批发布流程](../../README.md#多任务协调与合批发布)完成 GitHub Release 与 OTA。此工具不是统一任务协调入口。
 
 | 接口 | 功能 |
 | --- | --- |
