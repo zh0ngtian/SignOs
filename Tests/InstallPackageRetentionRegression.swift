@@ -55,6 +55,14 @@ final class Storage {
 			}
 			return entity
 		}
+		let metadata = NSEntityDescription()
+		metadata.name = "AppSourceMetadata"
+		metadata.managedObjectClassName = NSStringFromClass(NSManagedObject.self)
+		let appUUID = NSAttributeDescription()
+		appUUID.name = "appUUID"
+		appUUID.attributeType = .stringAttributeType
+		metadata.properties = [appUUID]
+		model.entities.append(metadata)
 		let coordinator = NSPersistentStoreCoordinator(managedObjectModel: model)
 		try! coordinator.addPersistentStore(ofType: NSInMemoryStoreType, configurationName: nil, at: nil)
 		context.persistentStoreCoordinator = coordinator
@@ -72,6 +80,36 @@ final class Storage {
         return (try! context.fetch(Signed.fetchRequest())).map { $0 as any AppInfoPresentable }
             + (try! context.fetch(Imported.fetchRequest())).map { $0 as any AppInfoPresentable }
     }
+}
+
+@MainActor final class SourceAccessManager {
+    static let shared = SourceAccessManager()
+    var activeUUIDs = Set<String>()
+    var activeIdentifiers = Set<String>()
+    func isInUse(_ uuid: String?) -> Bool { uuid.map(activeUUIDs.contains) ?? false }
+    func hasActiveApplication(_ identifier: String) -> Bool { activeIdentifiers.contains(identifier) }
+}
+@MainActor final class AutoSignManager {
+    struct Job { let appUUID: String; let appIdentifier: String? }
+    static let shared = AutoSignManager()
+    var queue: [Job] = []
+    var currentJob: Job?
+}
+@MainActor final class DownloadManager {
+    struct Provenance { let sourceAppIdentifier: String }
+    struct Download { let targetAppUUID: String?; var sourceProvenance: Provenance? }
+    static let shared = DownloadManager()
+    var downloads: [Download] = []
+}
+@MainActor final class UpdateManager {
+    static let shared = UpdateManager()
+    var localUUIDs = Set<String>()
+    func sourceAvailabilityChanged(localApps: [any AppInfoPresentable]) { localUUIDs = Set(localApps.compactMap(\.uuid)) }
+}
+@MainActor final class AutoUpdateManager {
+    static let shared = AutoUpdateManager()
+    var badgeRefreshes = 0
+    func updateBadgeFromState() { badgeRefreshes += 1 }
 }
 
 @main
@@ -204,6 +242,98 @@ struct InstallPackageRetentionRegression {
 		restart.installationEnded(for: "direct-install", replaceOldVersions: true) { uuid, _ in unexpectedlyDeleted.append(uuid) }
 		precondition(unexpectedlyDeleted.isEmpty && !restart.protectedPackageUUIDs.contains("direct-old"),
 			"Protection-only plans unlock after installation without changing automatic deletion preferences")
-		print("InstallPackageRetentionRegression passed: pending/failed retention, progress end, persisted retry, paired completion, file/metadata cleanup, replacement toggle, manual signing, manual cleanup protection and failure retry")
+		try manualDeletion()
+		print("InstallPackageRetentionRegression passed: pending/failed retention, progress end, persisted retry, paired completion, file/metadata cleanup, replacement toggle, manual signing, manual app/package deletion, busy protection and failure retry")
 	}
+
+    @MainActor
+    private static func manualDeletion() throws {
+        let storage = Storage.shared
+        let bundle = "manual.delete.app"
+        let preferences: [String: Any] = [
+            "SignOs.deletedSubscriptions": ["unrelated-subscription"],
+            "SignOs.disabledSources": ["disabled-source"],
+            "SignOs.heldApps": [bundle],
+            "SignOs.preferredUpdateSources": [bundle: "source-a"],
+        ]
+        preferences.forEach { UserDefaults.standard.set($0.value, forKey: $0.key) }
+        defer { preferences.keys.forEach { UserDefaults.standard.removeObject(forKey: $0) } }
+        func package(_ uuid: String, signed: Bool, identifier: String = "manual.delete.app") throws -> StoredPackage {
+            let app = NSEntityDescription.insertNewObject(forEntityName: signed ? "Signed" : "Imported", into: storage.context) as! StoredPackage
+            app.uuid = uuid; app.name = "测试应用"; app.version = "1.0"; app.identifier = identifier
+            let directory = storage.getUuidDirectory(for: app as! any AppInfoPresentable)!
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try Data(uuid.utf8).write(to: directory.appendingPathComponent("package"))
+            let metadata = NSEntityDescription.insertNewObject(forEntityName: "AppSourceMetadata", into: storage.context)
+            metadata.setValue(uuid, forKey: "appUUID")
+            try storage.context.save()
+            return app
+        }
+        func uuids() -> Set<String> { Set(AppOperations.packages().compactMap(\.uuid)) }
+        func metadataExists(_ uuid: String) -> Bool {
+            let request = NSFetchRequest<NSManagedObject>(entityName: "AppSourceMetadata")
+            request.predicate = NSPredicate(format: "appUUID == %@", uuid)
+            return try! storage.context.count(for: request) > 0
+        }
+        _ = try package("delete-source-a", signed: true)
+        _ = try package("delete-source-b", signed: true)
+        _ = try package("delete-import", signed: false)
+        _ = try package("keep-clone", signed: true, identifier: bundle + ".clone")
+        _ = try package("keep-other", signed: false, identifier: "other.app")
+        let application = AppInventory.applications(AppOperations.packages()).first { $0.id == bundle }!
+        let request = AppPackageDeletion.Request(application: application)
+        precondition(request.count == 3)
+        // Changes while confirmation is open must be checked before deleting any sibling.
+        AutoSignManager.shared.queue = [.init(appUUID: "delete-import", appIdentifier: bundle)]
+        precondition(AppPackageDeletion.remove(request.target).removed == 0 && uuids().contains("delete-source-a"))
+        AutoSignManager.shared.queue = []
+        AutoSignManager.shared.currentJob = .init(appUUID: "delete-import", appIdentifier: bundle + ".clone")
+        precondition(!AppPackageDeletion.remove(request.target).failures.isEmpty, "A clone job still protects its original input")
+        AutoSignManager.shared.currentJob = nil
+        SourceAccessManager.shared.activeIdentifiers = [bundle]
+        precondition(!AppPackageDeletion.remove(.package("delete-source-a")).failures.isEmpty, "Sibling installs protect every package")
+        SourceAccessManager.shared.activeIdentifiers = []
+        SourceAccessManager.shared.activeUUIDs = ["delete-import"]
+        precondition(!AppPackageDeletion.remove(request.target).failures.isEmpty)
+        SourceAccessManager.shared.activeUUIDs = []
+        DownloadManager.shared.downloads = [.init(targetAppUUID: "delete-source-a")]
+        precondition(!AppPackageDeletion.remove(request.target).failures.isEmpty)
+        DownloadManager.shared.downloads = [.init(targetAppUUID: nil, sourceProvenance: .init(
+            sourceAppIdentifier: SourceSubscriptionIdentity.key(bundleIdentifier: bundle, subscriptionID: "source-a")))]
+        precondition(!AppPackageDeletion.remove(request.target).failures.isEmpty, "First-time source downloads protect this application too")
+        DownloadManager.shared.downloads = []
+        InstallPackageRetention.shared.schedule(for: "delete-source-a", imported: ["delete-import"])
+        precondition(!AppPackageDeletion.remove(request.target).failures.isEmpty, "Pending installation retains retry packages")
+        InstallPackageRetention.shared.installationEnded(for: "delete-source-a", replaceOldVersions: false) { _, _ in }
+        AppOperations.disabledSources.insert("delete-source-b")
+        let single = AppPackageDeletion.remove(.package("delete-source-b"))
+        precondition(single.removed == 1 && single.failures.isEmpty, "Explicit deletion supports disabled source archives")
+        precondition(!uuids().contains("delete-source-b") && uuids().contains("delete-source-a") && uuids().contains("delete-import"))
+        precondition(!metadataExists("delete-source-b"))
+        _ = try package("late-history", signed: true)
+        let all = AppPackageDeletion.remove(request.target)
+        precondition(all.removed == 3 && all.failures.isEmpty, "Resolve every local version again after confirmation")
+        precondition(uuids().isSuperset(of: ["keep-clone", "keep-other"]))
+        precondition(!uuids().contains("delete-source-a") && !uuids().contains("late-history") && !uuids().contains("delete-import"))
+        precondition(!metadataExists("delete-source-a") && !metadataExists("late-history") && !metadataExists("delete-import"))
+        precondition(!FileManager.default.fileExists(atPath: FileManager.default.signed("late-history").path))
+        precondition(UpdateManager.shared.localUUIDs == uuids() && AutoUpdateManager.shared.badgeRefreshes >= 2,
+                     "Deletion refreshes local update baselines and the badge")
+        precondition(AppPackageDeletion.remove(request.target).removed == 0, "Confirming an already removed application is harmless")
+        for (key, value) in preferences {
+            precondition((UserDefaults.standard.object(forKey: key) as AnyObject).isEqual(value), "Local deletion must preserve subscription and update preferences")
+        }
+
+        _ = try package("partial-failure", signed: true)
+        _ = try package("partial-success", signed: false)
+        let parent = FileManager.default.signed("partial-failure").deletingLastPathComponent()
+        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: parent.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: parent.path) }
+        let partial = AppPackageDeletion.remove(.application(bundle))
+        precondition(partial.removed == 1 && partial.failures.count == 1)
+        precondition(uuids().contains("partial-failure") && !uuids().contains("partial-success"))
+        precondition(metadataExists("partial-failure") && !metadataExists("partial-success"), "File failures preserve their database and metadata records")
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: parent.path)
+        precondition(AppPackageDeletion.remove(.application(bundle)).removed == 1, "Failed deletions remain retryable")
+    }
 }

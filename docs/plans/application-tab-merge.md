@@ -14,7 +14,11 @@
 
 最近一次成功签名的保留包作为“已安装”展示基线，按签名日期而非最高版本选择，支持主动降级。未签名下载不改变该基线。此约定不表示 OTA 安装结果已被系统确认：安装失败保留重试入口，旧包仍等现有安装结束信号后清理。
 
-详情包含当前版本、来源、证书、版本更新设置、其他软件源提供的版本，以及本地包和历史版本。软件源包提供签名、安装、克隆、导出和信息入口，不提供直接删除；手动导入包可删除。
+详情包含当前版本、来源、证书、版本更新设置、其他软件源提供的版本，以及本地包和历史版本。软件源包提供签名、安装、克隆、导出、信息和删除入口，手动导入包也可删除。
+
+应用卡片长按「删除」，确认后清除同一实际 Bundle ID 的全部本地包和历史版本，包括所有软件源和手动导入包；克隆与其他应用保留。详情的「操作 → 删除本地包」仅删除所选包，删掉当前包后按剩余包重新计算展示基线。两种操作均保留软件源订阅和更新偏好，不卸载桌面应用；可从软件源重新下载或手动导入。禁用软件源的包也允许显式手动删除，自动清理仍遵守禁用源保留规则。
+
+删除前重新读取本地包与任务状态。同一应用正在下载、排队、签名或安装，以及持久化待完成安装计划保护的包，暂不删除并说明原因，保留重试入口。整卡删除遇到保护条件时不删除任何包；文件或数据库错误则显示实际删除数量和失败原因，未删除记录可重试。删除后同步重算更新候选和角标。
 
 ## 多源候选和缓存
 
@@ -48,8 +52,10 @@
 
 ## 验证
 
-基础回归：AppVersion、SigningIdentity、MachOEntitlements、SourceAccess、SignedSchemaMigration、OneViewPhase、CloudSourceSubscription。模拟器回归：UpdateManager、AutoSignManager、DownloadManager、InstallPackageRetention。新增检查已接入手动 Full iOS Regression。
+基础回归：AppVersion、SigningIdentity、MachOEntitlements、SourceAccess、SignedSchemaMigration、OneViewPhase、CloudSourceSubscription。模拟器回归：UpdateManager、AutoSignManager、DownloadManager、InstallPackageRetention。InstallPackageRetention 同时覆盖显式整卡/单包删除、克隆保留、任务与待安装保护、删除失败及重试。新增检查已接入手动 Full iOS Regression。
 
 2026-10-12 使用隔离的 iPhone 17 Pro / iOS 26.5 模拟器 App 和本机虚构软件源验收：5 个包汇总为 3 张卡片；当前签名 1.0 不被未签名 1.2 改写；可更新 1、待安装 1；完整多行说明及末尾可见；源包菜单不提供删除；禁用备用源后 1.2 候选立即回退到开发者源 1.1，1.2 本地包保留并标注禁用；重新启用恢复 1.2 及缓存标记；批量重签首次弹出显示一个可操作应用，排除禁用来源和未签名包。
+
+2026-10-20 使用独立工作区、专用 iPhone 17 Pro / iOS 27.0 模拟器和隔离 App 验收手动删除：取消确认保留全部 5 个包；整卡确认删除 3 个包及元数据，卡片消失且软件源记录保留；详情可删除禁用来源的单个下载包，删除最后一个包后显示“应用已移除”；待完成安装的包阻止删除，显示原因且文件、记录和订阅保留。InstallPackageRetention 与 OneViewPhase 回归、完整模拟器构建及无签名 iOS Release 构建通过；本次未发布。
 
 本次真机不可用。模拟器、兼容性回归和 OTA 包验签不能证明真机覆盖安装及数据、钥匙串保留。

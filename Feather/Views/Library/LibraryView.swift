@@ -15,6 +15,7 @@ struct LibraryView: View {
     @State private var importingURL = false
     @State private var urlText = ""
     @State private var replacement: CertificateReplacementRequest?
+    @State private var deletion: AppPackageDeletion.Request?
     @FetchRequest(entity: Signed.entity(), sortDescriptors: [NSSortDescriptor(keyPath: \Signed.date, ascending: false)], animation: .snappy)
     private var signed: FetchedResults<Signed>
     @FetchRequest(entity: Imported.entity(), sortDescriptors: [NSSortDescriptor(keyPath: \Imported.date, ascending: false)], animation: .snappy)
@@ -61,6 +62,11 @@ struct LibraryView: View {
                                 applicationCard(application)
                             }
                             .buttonStyle(.plain)
+                            .contextMenu {
+                                Button("删除", systemImage: "trash", role: .destructive) {
+                                    deletion = AppPackageDeletion.Request(application: application)
+                                }
+                            }
                         }
                     }
                     if filtered.isEmpty {
@@ -109,6 +115,7 @@ struct LibraryView: View {
                 }
             }
             .sheet(item: $replacement) { CertificateReplacementView(apps: $0.apps) }
+            .packageDeletionConfirmation($deletion)
             .task { access.cleanupDeletedSubscriptions() }
         }
     }

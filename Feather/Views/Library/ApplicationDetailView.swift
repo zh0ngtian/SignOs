@@ -16,7 +16,7 @@ struct ApplicationDetailView: View {
     @State private var installing: AnyApp?
     @State private var replacement: CertificateReplacementRequest?
     @State private var ruleRevision = 0
-    @State private var deleting: AnyApp?
+    @State private var deleting: AppPackageDeletion.Request?
     @FetchRequest(entity: Signed.entity(), sortDescriptors: [NSSortDescriptor(keyPath: \Signed.date, ascending: false)], animation: .snappy)
     private var signed: FetchedResults<Signed>
     @FetchRequest(entity: Imported.entity(), sortDescriptors: [NSSortDescriptor(keyPath: \Imported.date, ascending: false)], animation: .snappy)
@@ -99,7 +99,7 @@ struct ApplicationDetailView: View {
                 Section {
                     ForEach(packages, id: \.uuid) { package in packageRow(package, current: application.primary.uuid == package.uuid) }
                 } header: { Text("本地包与历史版本 · \(packages.count)") } footer: {
-                    Text("软件源下载包按自动清理规则回收。手动导入包可以直接删除。删除订阅会清理该订阅对应的本地包。")
+                    Text("所有本地包均可手动删除，包括软件源下载包。删除保留软件源订阅，不会卸载桌面应用；正在处理或待完成安装的包会保留供重试。")
                 }
             } else {
                 ContentUnavailableView("应用已移除", systemImage: "square.stack.3d.up")
@@ -110,12 +110,7 @@ struct ApplicationDetailView: View {
         .sheet(item: $signing) { SigningView(app: $0.base) }
         .sheet(item: $installing) { InstallPreviewView(app: $0.base, isSharing: $0.archive).presentationDetents([.height(200)]).presentationDragIndicator(.visible) }
         .sheet(item: $replacement) { CertificateReplacementView(apps: $0.apps) }
-        .confirmationDialog("删除这个本地包？", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), titleVisibility: .visible) {
-            Button("删除", role: .destructive) {
-                if let app = deleting?.base, !AppOperations.isSourceManaged(app) { Storage.shared.deleteApp(for: app) }
-                deleting = nil
-            }
-        }
+        .packageDeletionConfirmation($deleting)
     }
 
     private func packageRow(_ app: any AppInfoPresentable, current: Bool) -> some View {
@@ -136,7 +131,7 @@ struct ApplicationDetailView: View {
                     else { Button("签名并安装") { signer.enqueue(app: app, force: true) }.disabled(!AppOperations.isAllowed(app)) }
                     Button("导出") { installing = AnyApp(base: app, archive: true) }
                     Button("克隆应用") { signer.cloneApp(app: app) }.disabled(!AppOperations.isAllowed(app))
-                    if !AppOperations.isSourceManaged(app) { Button("删除本地包", role: .destructive) { deleting = AnyApp(base: app) } }
+                    Button("删除本地包", role: .destructive) { deleting = AppPackageDeletion.Request(package: app) }
                 }
             }.font(.subheadline).buttonStyle(.borderless)
         }.padding(.vertical, 5)

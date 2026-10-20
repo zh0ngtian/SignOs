@@ -28,6 +28,10 @@ def main():
             "-module-cache-path", str(output / "ModuleCache"),
             *[str(ROOT / source) for source in [
                 "Feather/Utilities/InstallPackageRetention.swift",
+                "Feather/Utilities/AppInventory.swift",
+                "Feather/Utilities/AppPackageDeletion.swift",
+                "Feather/Utilities/StorageCleanup.swift",
+                "Feather/Utilities/SourceSubscriptionIdentity.swift",
                 "Feather/Backend/Storage/Storage+Shared.swift",
                 "Tests/InstallPackageRetentionRegression.swift",
             ]], "-o", str(binary),
