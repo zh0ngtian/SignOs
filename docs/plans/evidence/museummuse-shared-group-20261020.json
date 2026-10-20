@@ -1,0 +1,48 @@
+{
+  "date": "2026-10-20",
+  "scope": "SignOs MuseumMuse re-sign runtime shared-group alignment; MuseumMuse client unchanged",
+  "input": {
+    "version": "1.1.4",
+    "build": "10",
+    "sha256": "3c49d9de3e1c76e65968f18e0014ccb244aa5e9301a0103a02ee3df8c81810f3"
+  },
+  "runtimeGroup": "group.363da22903f0409e.5",
+  "targets": [
+    "tech.zh0ngtian.MuseumMuse",
+    "tech.zh0ngtian.MuseumMuse.widget"
+  ],
+  "checks": {
+    "signingPlanRegression": "passed",
+    "oneViewPhaseRegression": "6 passed",
+    "adapterRegression": "14 passed",
+    "artifactRegression": "7 passed",
+    "releaseAssetsRegression": "7 passed",
+    "releaseNotesRegression": "13 passed",
+    "deviceReleaseBuild": "passed",
+    "actualZsignGroupPostcheck": "passed",
+    "signedEntitlementsUnchanged": "passed",
+    "simulatorMismatchReproduced": "App refreshed into private cache; desktop remained idle",
+    "simulatorFixedDesktop": "passed",
+    "simulatorSingleCandidateStopsOnSuccess": "passed",
+    "simulatorRenderErrors": 0
+  },
+  "simulation": {
+    "model": "iPhone 17 Pro",
+    "runtime": "iOS 27",
+    "artworkKey": "tnm|cobas-87940",
+    "title": "小袖 黒綸子地遠州模様"
+  },
+  "physicalDevice": {
+    "status": "pending",
+    "reason": "UI test runner startup: LocalAuthentication Code=-2, authentication canceled; no test installation performed"
+  },
+  "strictMacOSSignatureCheck": {
+    "previousPhoneZsignArtifact": "failed",
+    "nativeZsignArtifact": "failed",
+    "interpretation": "Group postcheck is not cryptographic signature acceptance; physical iOS installation/desktop verification remains pending"
+  },
+  "sourceFiles": {
+    "Feather/Utilities/MuseumMuseAppGroupSigning.swift": "3a18e94bc3fa5ce84ea85a1681bd3b97e4498edcb086322088eeb247e2f74ddf",
+    "Feather/Utilities/Handlers/ZsignHandler.swift": "9809fb6f711155b2c73b688b4b1e40dedd4bac3ea473c55c8ba5235788ef646d"
+  }
+}

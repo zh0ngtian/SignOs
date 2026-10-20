@@ -641,6 +641,17 @@ SignOs by [@ihateios](https://github.com/ihateios). It's built over the open sou
 MachOEntitlements、SourceAccess 和 SignedSchemaMigration；现有更新、签名队列、
 下载和安装清理回归已扩展到跨源、禁用与缓存场景。
 
+博物女神的 App 与 Widget 通过共享组交换刷新结果；重签时还须同步两端运行配置，
+仅向签名中加入权限不足以保证小组件可用。具体规则见
+[共享组适配](docs/plans/museummuse-shared-group.md)。本地回归：
+
+```sh
+xcrun swiftc Feather/Utilities/MachOEntitlements.swift \
+  Feather/Utilities/MuseumMuseAppGroupSigning.swift \
+  Tests/MuseumMuseSigningRegression.swift -o /tmp/signos-museum-group-regression
+/tmp/signos-museum-group-regression
+```
+
 2026-10-12 发布完成 1.1.0（22）：实现提交 `bf1cc03a4a62c4a0ac429ed7b8e128934cad8d8d`
 的 [iOS Build Check](https://github.com/zh0ngtian/SignOs/actions/runs/38251330899) 与
 [标签发布工作流](https://github.com/zh0ngtian/SignOs/actions/runs/38252981196) 均成功，
