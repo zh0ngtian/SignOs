@@ -1,0 +1,61 @@
+{
+  "date": "2026-10-20T13:30:13.348410+00:00",
+  "repository": "Roxbili/dilidili",
+  "serviceURL": "https://signos-source-aggregator.305301890.workers.dev",
+  "sourceURL": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json",
+  "deployment": {
+    "deploymentID": "dbf3b761-1d51-406e-9fa9-21b3dd10dfea",
+    "versions": [
+      {
+        "version_id": "2b6ef6f8-abf0-46d1-ad38-be939b9fcc2a",
+        "percentage": 100
+      }
+    ],
+    "createdOn": "2026-10-20T13:26:46.676635Z",
+    "deployedCommit": "2d1d6231e08c01e19eddc7459c37a9c70cab7668",
+    "previousVersionID": "7694d467-6e92-4e39-81fb-ac28432fe2a6",
+    "cron": "0 * * * *"
+  },
+  "scope": "Production HTTPS service deployment and temporary private repository subscription",
+  "signOsAppReleased": false,
+  "clientChanged": false,
+  "synchronizations": [],
+  "health": {
+    "service": "signos-source-aggregator",
+    "version": 1,
+    "sourceId": "yao"
+  },
+  "passed": false,
+  "failure": {
+    "type": "TimeoutError",
+    "message": "SYNC_TIMEOUT"
+  },
+  "cleanup": {
+    "temporaryEntryRemoved": true,
+    "remainingEntries": 7,
+    "existingConfigurationsAndVersionsUnchanged": true,
+    "catalogSnapshotRetainedOutsideRepository": true
+  },
+  "publicFeedsAfterCleanup": [
+    {
+      "path": "/sources/yao.json",
+      "status": 200,
+      "apps": 7
+    },
+    {
+      "path": "/source.json",
+      "status": 200,
+      "apps": 7
+    },
+    {
+      "path": "/appstore",
+      "status": 200,
+      "apps": 7
+    },
+    {
+      "path": "/sources/yao.json?legacy=1",
+      "status": 200,
+      "apps": 4
+    }
+  ]
+}

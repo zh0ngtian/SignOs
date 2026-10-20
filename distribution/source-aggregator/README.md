@@ -18,11 +18,15 @@ python3 scripts/cloud_source.py status
 
 私有订阅首次解析后仍需管理员确认发布。**确认发布即允许任何获得软件源或下载地址的人匿名下载该 IPA**，下载不再要求 GitHub 登录或管理 Token。公开清单的当前版本与保留历史使用 `/downloads/<订阅 ID>/<附件 ID>/<文件名>`；此接口只代理已发布订阅记录中的对应 IPA，不接受自定义仓库、附件或目标 URL。未确认、已删除订阅以及未保留的附件返回 404。管理接口继续要求管理 Token，现有客户端无需更新。
 
-代理支持 GET、HEAD、单区段 Range、If-Range 和条件请求，直接流式传输而不缓存完整 IPA；解析所用的尾部 Range 按附件大小换算为明确起止字节，兼容 GitHub CDN 的 501 限制。每次下载重新获取 CDN 地址，支持后续重试与续传。响应不公开临时 Location、Token 或上游 Cookie，且使用 `Cache-Control: no-store`。私有 IPA 下载流量经过 Worker。公开仓库及直接 IPA URL 保留原下载路径。此功能的本地验收范围见 [私有附件代理验收](../../docs/plans/evidence/private-source-proxy-20261020.json)；未部署前不改变线上行为。
+代理支持 GET、HEAD、单区段 Range、If-Range 和条件请求，直接流式传输而不缓存完整 IPA；解析所用的尾部 Range 按附件大小换算为明确起止字节，兼容 GitHub CDN 的 501 限制。每次下载重新获取 CDN 地址，支持后续重试与续传。响应不公开临时 Location、Token 或上游 Cookie，且使用 `Cache-Control: no-store`。私有 IPA 下载流量经过 Worker。公开仓库及直接 IPA URL 保留原下载路径。此功能的本地验收范围见 [私有附件代理验收](../../docs/plans/evidence/private-source-proxy-20261020.json)；线上部署回验见下方记录。
 
-2026-10-20 本地隔离 workerd 连接真实 `Roxbili/dilidili` 仓库完成验收：49 项回归与 Worker 打包预检通过；三轮首次同步 5.623～14.778 秒，同包手动同步 1.174～1.916 秒。元信息与图标解析共 8 个 Range、565,132 字节，原 IPA 为 278,097,777 字节；通过匿名代理分段下载的完整 SHA-256 与 GitHub Release 一致。此为本机网络测量，不是线上部署后的客户端耗时；本次未部署、未修改现有订阅，未改动或构建客户端。
+2026-10-20 本地隔离 workerd 连接真实 `Roxbili/dilidili` 仓库完成验收：49 项回归与 Worker 打包预检通过；三轮首次同步 5.623～14.778 秒，同包手动同步 1.174～1.916 秒。元信息与图标解析共 8 个 Range、565,132 字节，原 IPA 为 278,097,777 字节；通过匿名代理分段下载的完整 SHA-256 与 GitHub Release 一致。此为本机网络测量，不是线上部署后的客户端耗时；该次本地验收未部署、未修改现有订阅，未改动或构建客户端。
 
 下载超时的 `details` 只记录请求阶段、主机名、字节区段及耗时，区分 GitHub 附件 API、CDN 连接与区段正文读取；不保存签名查询参数、Token 或上游错误原文。
+
+2026-10-20 已部署私有附件公开代理与安全超时诊断，代码提交为 `ff05eadf33416392ce07b687fadb236d4e619a31`，Worker 版本为 `1ce8a782-7b62-4f42-8ab1-ada538eb3dd2`，每小时 Cron 保持不变。51 项服务回归通过。线上重测首次解析 7.187 秒（服务端任务 6.326 秒）；同包同步的服务端任务为 0.995～1.114 秒，本机 HTTPS 请求与公开软件源读取合计 8.235～9.265 秒，不能直接当作 iPhone UI 耗时。首次回验的下载超时记录保留，后续重测成功。
+
+线上匿名 GET、HEAD、尾部 Range 和所有公开清单入口通过；经代理分段下载的 278,097,777 字节完整 IPA 与 GitHub Release 的 SHA-256 一致。临时订阅已清理，原 7 项订阅的配置、当前版本、历史及展示信息完整保留。本次仅部署服务，未构建或发布 App，客户端无需更新。详见 [线上部署验收](../../docs/plans/evidence/private-source-proxy-deployment-20261020.json)及[首次超时记录](../../docs/plans/evidence/private-source-proxy-deployment-20261020-attempt-1.json)。
 
 新服务不使用旧 `yao-app-source` Worker 或 R2。
 

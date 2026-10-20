@@ -1,0 +1,123 @@
+{
+  "date": "2026-10-20T13:35:55.644758+00:00",
+  "repository": "Roxbili/dilidili",
+  "serviceURL": "https://signos-source-aggregator.305301890.workers.dev",
+  "sourceURL": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json",
+  "deployment": {
+    "deploymentID": "19fe65d6-6c4e-4b7b-8483-06768a617780",
+    "versions": [
+      {
+        "version_id": "1ce8a782-7b62-4f42-8ab1-ada538eb3dd2",
+        "percentage": 100
+      }
+    ],
+    "createdOn": "2026-10-20T13:35:25.742188Z",
+    "deployedCommit": "ff05eadf33416392ce07b687fadb236d4e619a31",
+    "previousVersionID": "2b6ef6f8-abf0-46d1-ad38-be939b9fcc2a",
+    "cron": "0 * * * *"
+  },
+  "scope": "Production HTTPS service deployment and temporary private repository subscription",
+  "signOsAppReleased": false,
+  "clientChanged": false,
+  "synchronizations": [
+    {
+      "observedSeconds": 7.187,
+      "serverJobSeconds": 6.326,
+      "status": "ready",
+      "kind": "first_parse"
+    },
+    {
+      "observedSeconds": 6.473,
+      "serverJobSeconds": 0.995,
+      "status": "succeeded",
+      "observedIncludingSourceSeconds": 8.235,
+      "kind": "unchanged_manual_sync"
+    },
+    {
+      "observedSeconds": 6.801,
+      "serverJobSeconds": 1.114,
+      "status": "succeeded",
+      "observedIncludingSourceSeconds": 9.265,
+      "kind": "unchanged_manual_sync"
+    }
+  ],
+  "health": {
+    "service": "signos-source-aggregator",
+    "version": 1,
+    "sourceId": "yao"
+  },
+  "metadata": {
+    "name": "嘀哩嘀哩",
+    "bundleIdentifier": "dilidili",
+    "version": "9.15.0",
+    "buildVersion": "91500100",
+    "minOSVersion": "15.0"
+  },
+  "inspection": {
+    "fullBytes": 278097777,
+    "downloadedBytes": 565132,
+    "requestCount": 8,
+    "elapsedMs": 5090,
+    "finalHost": "release-assets.githubusercontent.com"
+  },
+  "temporaryEntryConfirmed": true,
+  "releaseTag": "v9.15.0.1",
+  "assetID": 659292036,
+  "probes": {
+    "unconfirmedGET": 404,
+    "HEAD": 200,
+    "bytes=0-0": 206,
+    "bytes=-65557": 206,
+    "anonymousGET": 200
+  },
+  "fullDownload": {
+    "bytes": 278097777,
+    "sha256": "00bd16bacf980e6bd8b6bea6be03422e4f5e5f0f612409cb566e2971aaec4ad3",
+    "seconds": 667.928,
+    "method": "All bytes through anonymous production HTTPS Range proxy, up to eight concurrent 4 MiB segments",
+    "matchedGitHubDigest": true
+  },
+  "passed": true,
+  "cleanup": {
+    "temporaryEntryRemoved": true,
+    "remainingEntries": 7,
+    "existingConfigurationsAndVersionsUnchanged": true,
+    "catalogSnapshotRetainedOutsideRepository": true
+  },
+  "publicFeedsAfterCleanup": [
+    {
+      "path": "/sources/yao.json",
+      "status": 200,
+      "apps": 7
+    },
+    {
+      "path": "/source.json",
+      "status": 200,
+      "apps": 7
+    },
+    {
+      "path": "/appstore",
+      "status": 200,
+      "apps": 7
+    },
+    {
+      "path": "/sources/yao.json?legacy=1",
+      "status": 200,
+      "apps": 4
+    }
+  ],
+  "regression": {
+    "passed": 51,
+    "failed": 0,
+    "sourceSHA256": {
+      "src/catalog.mjs": "518b5bca609df52167539f9b3e46bb9d71181c6b5be59ac857d87c03f2235635",
+      "src/github-assets.mjs": "af553d9a4609d0c69277c853e7a0291dda8fcf28fe09d39901af83e69bfbaa9f",
+      "src/ipa.mjs": "b50048867998bf691bfd65bbacf7fdc32aa7617ebb983721e8263908065dd29a",
+      "src/releases.mjs": "f987a7d1577989fae7a26a6272d7afadcf8f508a79d09eb0e7da90be08506d5b",
+      "test/private-assets.test.mjs": "19ffe91fc9e33ed1fb61064896746672214b934592e46ef62ab5dcde44747a51",
+      "test/ipa.test.mjs": "4b2be56cf3d30e08738e02458fc98f7df4566db237b7e6ce318fb05acf4a978e"
+    }
+  },
+  "previousFailedProbe": "private-source-proxy-deployment-20261020-attempt-1.json",
+  "activeDeploymentRechecked": true
+}

@@ -276,7 +276,7 @@ xcrun swiftc Feather/Backend/CloudSource/CloudSourceModels.swift \
 /tmp/signos-management-regression
 ```
 
-私有 GitHub 仓库也可按仓库订阅：软件源服务使用具有仓库读取权限的服务端 GitHub Token 解析，确认发布后通过公开代理提供 IPA，持有源地址的人可匿名下载。管理 Token 仅用于管理，不是下载凭据；现有客户端无需更新。部署配置、代理范围与验收见 [Cloudflare 软件源](distribution/source-aggregator/README.md)。
+私有 GitHub 仓库也可按仓库订阅：软件源服务使用具有仓库读取权限的服务端 GitHub Token 解析，确认发布后通过公开代理提供 IPA，持有源地址的人可匿名下载。管理 Token 仅用于管理，不是下载凭据；现有客户端无需更新。该服务能力已于 2026-10-20 部署；配置、代理范围与线上验收见 [Cloudflare 软件源](distribution/source-aggregator/README.md)。
 
 远端软件源的“添加订阅”支持一次选择同一 GitHub Release 的多个 IPA。每个附件都有独立的
 匹配规则、订阅 ID、同步状态和版本历史；解析成功后仍需逐项确认发布。同 Bundle ID 的
