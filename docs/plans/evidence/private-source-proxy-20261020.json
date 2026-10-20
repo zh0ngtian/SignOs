@@ -1,0 +1,101 @@
+{
+  "date": "2026-10-20T13:14:00.227Z",
+  "repository": "Roxbili/dilidili",
+  "scope": "Local workerd with live GitHub HTTPS; no production deployment or subscription changes",
+  "baseline": "8b61fb45d53a54028ef2d93f0efbebaea4b2c1bc",
+  "sourceSHA256": {
+    "src/catalog.mjs": "1790e6a187363e3d9a3fb31bae9900dc94fbf90c13954bc2d29f838757c45113",
+    "src/releases.mjs": "f987a7d1577989fae7a26a6272d7afadcf8f508a79d09eb0e7da90be08506d5b",
+    "src/github-assets.mjs": "75bc1e0343161794055b0d00d5a8593b40c7480857fc394cdac9a3ad35a9a671"
+  },
+  "samples": [
+    {
+      "run": 1,
+      "coldSyncSeconds": 14.778,
+      "unchangedManualSyncSeconds": 1.598,
+      "cachedDiscoverySeconds": 0.004,
+      "metadata": {
+        "name": "嘀哩嘀哩",
+        "bundleIdentifier": "dilidili",
+        "version": "9.15.0",
+        "buildVersion": "91500100",
+        "minOSVersion": "15.0"
+      },
+      "fullBytes": 278097777,
+      "rangeDownloadedBytes": 565132,
+      "rangeRequests": 8,
+      "parserElapsedMs": 10305,
+      "finalHost": "release-assets.githubusercontent.com"
+    },
+    {
+      "run": 2,
+      "coldSyncSeconds": 5.623,
+      "unchangedManualSyncSeconds": 1.174,
+      "cachedDiscoverySeconds": 0.002,
+      "metadata": {
+        "name": "嘀哩嘀哩",
+        "bundleIdentifier": "dilidili",
+        "version": "9.15.0",
+        "buildVersion": "91500100",
+        "minOSVersion": "15.0"
+      },
+      "fullBytes": 278097777,
+      "rangeDownloadedBytes": 565132,
+      "rangeRequests": 8,
+      "parserElapsedMs": 3714,
+      "finalHost": "release-assets.githubusercontent.com"
+    },
+    {
+      "run": 3,
+      "coldSyncSeconds": 5.698,
+      "unchangedManualSyncSeconds": 1.916,
+      "cachedDiscoverySeconds": 0.003,
+      "metadata": {
+        "name": "嘀哩嘀哩",
+        "bundleIdentifier": "dilidili",
+        "version": "9.15.0",
+        "buildVersion": "91500100",
+        "minOSVersion": "15.0"
+      },
+      "fullBytes": 278097777,
+      "rangeDownloadedBytes": 565132,
+      "rangeRequests": 8,
+      "parserElapsedMs": 4305,
+      "finalHost": "release-assets.githubusercontent.com"
+    }
+  ],
+  "proxy": {
+    "anonymousGET": 200,
+    "fullGETProbeBytes": 3254,
+    "HEAD": 200,
+    "rangeGET": 206,
+    "unpublishedGET": 404,
+    "fullDownloadMethod": "All bytes through anonymous Worker Range proxy, 16 concurrent 2 MiB segments per batch",
+    "fullBytes": 278097777,
+    "sha256": "00bd16bacf980e6bd8b6bea6be03422e4f5e5f0f612409cb566e2971aaec4ad3",
+    "fullDownloadSeconds": 430.501,
+    "releaseTag": "v9.15.0.1",
+    "assetID": 659292036
+  },
+  "passed": true,
+  "finalRegression": {
+    "passed": 49,
+    "failed": 0,
+    "runtime": "Node tests including real workerd integration",
+    "sourceSHA256": {
+      "src/catalog.mjs": "518b5bca609df52167539f9b3e46bb9d71181c6b5be59ac857d87c03f2235635",
+      "src/releases.mjs": "f987a7d1577989fae7a26a6272d7afadcf8f508a79d09eb0e7da90be08506d5b",
+      "src/github-assets.mjs": "f447bd1728950e59e06039c8563bf02474f47dd52e4da24cd1ed2ba31d626165",
+      "test/private-assets.test.mjs": "a1ab203f7989f10c47ad2dbdd8f637706e49046b632cab3cb149aee49b3e98d4",
+      "test/catalog.test.mjs": "64f7e066ddde98c775bf7d0df174226592b728e0d9e2495cc6adb54d0a976871"
+    }
+  },
+  "liveBundleFollowups": "Live private IPA download exercises the 200/206 path. Subsequent public/private visibility switching and 416 error-body filtering are covered by the final 49 regressions.",
+  "wranglerDryRun": {
+    "passed": true,
+    "uploaded": false,
+    "totalBundleKiB": 190.64
+  },
+  "productionDeployed": false,
+  "clientChanged": false
+}

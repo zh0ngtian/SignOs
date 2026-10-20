@@ -6,6 +6,7 @@ import { subscription, publicURL } from './urls.mjs';
 import { releaseCandidates, chooseCandidate } from './releases.mjs';
 import decoderModule from '../vendor/lzfse/decoder.wasm';
 import { lzfseDecoder } from './lzfse.mjs';
+import { privateAssetTransport, privateAssetForURL, privateDownloadPath, downloadPrivateAsset } from './github-assets.mjs';
 
 const canonical = value => Array.isArray(value) ? value.map(canonical) : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).filter(k => value[k] !== undefined).sort().map(k => [k, canonical(value[k])])) : value;
 const now = () => new Date().toISOString();
@@ -95,8 +96,10 @@ export class Catalog extends DurableObject {
     for (const entry of this.data.entries) await this.schedule(entry);
   }
 
-  async inspectIPA(url, extractIcon = true) {
-    const result = await parseIPA(url, fetch, { extractIcon, makeLZFSE: () => lzfseDecoder(decoderModule) });
+  async inspectIPA(url, extractIcon = true, privateAsset = null) {
+    const transport = privateAsset ? privateAssetTransport(privateAsset, this.env) : fetch;
+    const result = await parseIPA(url, transport, { extractIcon, makeLZFSE: () => lzfseDecoder(decoderModule) });
+    if (privateAsset && transport.finalHost) result.finalHost = transport.finalHost;
     const { icon, ...inspection } = result;
     if (extractIcon) inspection.iconExtractionVersion = ICON_EXTRACTION_VERSION;
     if (icon) {
@@ -117,7 +120,7 @@ export class Catalog extends DurableObject {
       apps: this.data.entries.filter(e => e.published && e.current && (!legacyOnly || e.presentation?.legacyDefault === true)).map(entry => {
         const current = entry.current;
         const version = v => ({ version: v.metadata.version, ...(v.metadata.buildVersion ? { buildVersion: v.metadata.buildVersion } : {}),
-          date: v.date, localizedDescription: v.notes || '', downloadURL: v.downloadURL, size: v.inspection.fullBytes,
+          date: v.date, localizedDescription: v.notes || '', downloadURL: v.privateAsset ? `${origin}${privateDownloadPath(entry.id, v.privateAsset)}` : v.downloadURL, size: v.inspection.fullBytes,
           ...(v.metadata.minOSVersion ? { minOSVersion: v.metadata.minOSVersion } : {}), ...(v.sha256 ? { sha256: v.sha256 } : {}) });
         return {
           name: current.metadata.name, bundleIdentifier: current.metadata.bundleIdentifier,
@@ -149,6 +152,15 @@ export class Catalog extends DurableObject {
         const headers = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=60', ETag: etag, 'X-Content-Type-Options': 'nosniff' };
         if (request.headers.get('If-None-Match')?.split(',').some(x => x.trim() === etag || x.trim() === '*')) return new Response(null, { status: 304, headers });
         return new Response(method === 'HEAD' ? null : raw, { headers });
+      }
+      const download = /^\/downloads\/([a-f0-9-]+)\/([1-9][0-9]*)\/([^/]+)$/.exec(path);
+      if (download) {
+        if (!['GET', 'HEAD'].includes(method)) return json({ error: { code: 'METHOD_NOT_ALLOWED', message: '请求方法不支持' } }, 405);
+        const entry = this.entry(download[1]);
+        const version = entry.published && [entry.current, ...entry.history].find(v => v?.privateAsset &&
+          privateDownloadPath(entry.id, v.privateAsset) === path);
+        if (!version) throw new SourceError('ASSET_NOT_FOUND', '此私有附件未发布或已移除', 404);
+        return await downloadPrivateAsset(request, version.privateAsset, this.env);
       }
       if (!path.startsWith('/api/')) return json({ error: { code: 'NOT_FOUND', message: '接口不存在' } }, 404);
       if (!await this.authorized(request)) return json({ error: { code: 'UNAUTHORIZED', message: '管理 Token 无效或已撤销' } }, 401);
@@ -266,14 +278,15 @@ export class Catalog extends DurableObject {
     await this.ctx.storage.setAlarm(job.nextAt);
     try {
       if (job.kind === 'history') {
-        const inspection = await this.inspectIPA(job.version.downloadURL, false);
+        const privateAsset = await privateAssetForURL(job.version.downloadURL, this.env);
+        const inspection = await this.inspectIPA(job.version.downloadURL, false, privateAsset);
         const sha256 = await this.githubDigest(job.version.downloadURL, job.version.sha256, inspection.fullBytes);
         const live = this.data.entries.find(e => e.id === job.entryId);
         if (!live || live.revision !== job.entryRevision) Object.assign(job, { status: 'superseded', finishedAt: now() });
         else {
           if (inspection.metadata.bundleIdentifier !== live.current?.metadata.bundleIdentifier) throw new SourceError('BUNDLE_ID_CHANGED', '历史 IPA 的 Bundle ID 与应用不符');
           if (!live.history.some(v => v.downloadURL === job.version.downloadURL)) {
-            const version = { metadata: inspection.metadata, inspection, downloadURL: job.version.downloadURL, date: job.version.date, sha256, inspectedAt: now(), notes: '' };
+            const version = { metadata: inspection.metadata, inspection, downloadURL: job.version.downloadURL, date: job.version.date, sha256, inspectedAt: now(), notes: '', ...(privateAsset ? { privateAsset } : {}) };
             this.checkCapacity(live, live.current, [...live.history, version]);
             live.history.push(version);
           }
@@ -292,14 +305,14 @@ export class Catalog extends DurableObject {
         await checkIPAExists(candidate.url);
         inspection = entry.current.inspection;
       } else if (entry.current?.fingerprint === fingerprint && fingerprint && entry.current.downloadURL === candidate.url && entry.current.inspection.iconExtractionVersion === ICON_EXTRACTION_VERSION) inspection = entry.current.inspection;
-      else inspection = await this.inspectIPA(candidate.url);
+      else inspection = await this.inspectIPA(candidate.url, true, candidate.privateAsset);
       // Network awaits can interleave with edits or deletion. Publish only to the same revision.
       const live = this.data.entries.find(e => e.id === job.entryId);
       if (!live || live.revision !== job.entryRevision || live.config.paused) {
         Object.assign(job, { status: 'superseded', finishedAt: now() });
       } else {
         if (live.current && inspection.metadata.bundleIdentifier !== live.current.metadata.bundleIdentifier) throw new SourceError('BUNDLE_ID_CHANGED', '新 IPA 的 Bundle ID 与原应用不符，已保留原版本');
-        const current = { metadata: inspection.metadata, inspection, downloadURL: candidate.url, date: candidate.publishedAt || now(), notes: candidate.notes, tag: candidate.tag || null, assetName: candidate.name || null, fingerprint, inspectedAt: now() };
+        const current = { metadata: inspection.metadata, inspection, downloadURL: candidate.url, date: candidate.publishedAt || now(), notes: candidate.notes, tag: candidate.tag || null, assetName: candidate.name || null, fingerprint, inspectedAt: now(), ...(candidate.privateAsset ? { privateAsset: candidate.privateAsset } : {}) };
         const same = live.current && live.current.downloadURL === current.downloadURL && live.current.inspection.strongETag === inspection.strongETag && JSON.stringify(live.current.metadata) === JSON.stringify(current.metadata);
         if (!same) {
           this.checkCapacity(live, current, live.current ? [live.current, ...live.history].slice(0, HISTORY_LIMIT) : live.history);
@@ -309,7 +322,11 @@ export class Catalog extends DurableObject {
           // Backfill unchanged IPAs without duplicating a version or dropping
           // a previously attested full-file digest.
           live.current.inspection = inspection;
-          if (config.kind === 'github') live.current.notes = current.notes;
+          if (config.kind === 'github') {
+            live.current.notes = current.notes;
+            if (candidate.privateAsset) live.current.privateAsset = candidate.privateAsset;
+            else delete live.current.privateAsset;
+          }
         }
         live.lastSuccessAt = now(); live.error = null; live.status = live.published ? 'succeeded' : 'ready';
         Object.assign(job, { status: 'succeeded', finishedAt: now() });
@@ -339,7 +356,7 @@ export class Catalog extends DurableObject {
     if (url.hostname !== 'github.com' || !match || !/^[a-f0-9]{64}$/.test(expected ?? '')) throw new SourceError('DIGEST_UNVERIFIED', '完整 SHA-256 需要 GitHub Release 的附件散列证明');
     const headers = { Accept: 'application/vnd.github+json', 'User-Agent': 'SignOs-Source/1' };
     if (this.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${this.env.GITHUB_TOKEN}`;
-    const response = await fetch(`https://api.github.com/repos/${match[1]}/${match[2]}/releases/tags/${encodeURIComponent(decodeURIComponent(match[3]))}`, { headers, signal: AbortSignal.timeout(15000) });
+    const response = await fetch(`https://api.github.com/repos/${match[1]}/${match[2]}/releases/tags/${encodeURIComponent(decodeURIComponent(match[3]))}`, { headers, redirect: 'manual', signal: AbortSignal.timeout(15000) });
     if (!response.ok) { await response.body?.cancel(); throw new SourceError('DIGEST_UNVERIFIED', `GitHub 附件证明读取失败（HTTP ${response.status}）`, 422, response.status >= 500 || response.status === 429); }
     const release = await response.json();
     const asset = release.assets?.find(a => a.browser_download_url === downloadURL);

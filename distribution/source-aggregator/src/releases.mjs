@@ -1,22 +1,23 @@
 import { SourceError } from './errors.mjs';
 import { glob, publicURL, tagPrefixes } from './urls.mjs';
+import { githubHeaders, privateRepository } from './github-assets.mjs';
 
 export async function releaseCandidates(config, env, cache, transport = fetch) {
   const prefixes = tagPrefixes(config.tagPrefix);
   // Cache a bounded complete release listing, shared by subscriptions to this repo.
   const cacheKey = `github:${config.repository.toLowerCase()}`;
   const previous = await cache.get(cacheKey);
-  let releases;
-  if (previous && Date.now() - previous.checkedAt < 60000) releases = previous.releases;
+  let releases, requiresAuthentication = previous?.requiresAuthentication;
+  if (previous && typeof requiresAuthentication === 'boolean' && Date.now() - previous.checkedAt < 60000) releases = previous.releases;
   else {
-    const headers = { Accept: 'application/vnd.github+json', 'User-Agent': 'SignOs-Source/1', 'X-GitHub-Api-Version': '2022-11-28' };
-    if (env.GITHUB_TOKEN) headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
+    requiresAuthentication = await privateRepository(config.repository, env, transport);
+    const headers = githubHeaders(env);
     if (previous?.etag) headers['If-None-Match'] = previous.etag;
     let etag = null;
     releases = [];
     for (let page = 1; page <= 10; page++) {
       const response = await transport(`https://api.github.com/repos/${config.repository}/releases?per_page=100&page=${page}`, {
-        headers: page === 1 ? headers : { ...headers, 'If-None-Match': '' }, signal: AbortSignal.timeout(15000),
+        headers: page === 1 ? headers : { ...headers, 'If-None-Match': '' }, redirect: 'manual', signal: AbortSignal.timeout(15000),
       });
       if (page === 1 && response.status === 304 && previous) { releases = previous.releases; etag = previous.etag; break; }
       if (!response.ok) {
@@ -50,7 +51,7 @@ export async function releaseCandidates(config, env, cache, transport = fetch) {
       if (!response.headers.get('link')?.includes('rel="next"')) break;
       if (page === 10) throw new SourceError('RELEASE_SCAN_LIMIT', 'Release 列表超过扫描限额，请缩小仓库范围');
     }
-    await cache.put(cacheKey, { etag, releases, checkedAt: Date.now() });
+    await cache.put(cacheKey, { etag, releases, requiresAuthentication, checkedAt: Date.now() });
   }
   const eligible = releases.filter(x => (config.includePrereleases || !x.prerelease) && (!prefixes.length || prefixes.some(prefix => x.tag.startsWith(prefix))));
   eligible.sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt) || b.id - a.id);
@@ -60,6 +61,7 @@ export async function releaseCandidates(config, env, cache, transport = fetch) {
   if (!release) throw new SourceError('ASSET_NOT_FOUND', '符合 tag 和预发布规则的 Release 中没有符合匹配规则的 IPA 附件');
   const candidates = release.assets.filter(a => !config.assetPattern || glob(config.assetPattern, a.name)).map(a => ({
     ...a, url: publicURL(a.url), releaseId: release.id, tag: release.tag, publishedAt: release.publishedAt, notes: release.notes,
+    ...(requiresAuthentication ? { privateAsset: { repository: config.repository, id: a.id, name: a.name, size: a.size } } : {}),
   }));
   return candidates;
 }

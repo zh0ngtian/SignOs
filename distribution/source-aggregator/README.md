@@ -1,6 +1,6 @@
 # Cloudflare IPA 软件源
 
-免费 Worker + SQLite Durable Object 保存订阅、版本、提取的应用图标及任务；Cron 每小时检查一次。IPA 只从原始 URL 读取 Range 片段，用户下载直达原站。客户端最低 iOS 17。
+免费 Worker + SQLite Durable Object 保存订阅、版本、提取的应用图标及任务；Cron 每小时检查一次。解析 IPA 只读取 Range 片段。公开来源的用户下载直达原站；私有 GitHub 附件通过 Worker 公开代理下载。客户端最低 iOS 17。
 
 ```sh
 cd distribution/source-aggregator
@@ -13,6 +13,14 @@ python3 scripts/cloud_source.py status
 ```
 
 部署复用本机 Wrangler 登录，私有管理凭据保存到 `~/.config/signos-source-aggregator/credentials.json`（0600）。不要提交此文件。管理 Token 写入 Worker Secret。默认使用公开 GitHub API；需要增加 GitHub 限额时，应另行授权并配置专用的只读 GitHub Token，不能自动上传本机登录凭据。用户明确授权后，可运行 `python3 scripts/cloud_source.py configure-github` 将本机 GitHub Token 写入这个 Worker 的 Secret，解决匿名 API 限流。
+
+私有 GitHub 仓库订阅复用 Worker Secret 中既有的 `GITHUB_TOKEN`，该凭据须有目标仓库的读取权限。服务先读取仓库可见性，再通过 GitHub 附件 API 鉴权解析 IPA。缓存保存仓库可见性，旧缓存会在下次读取时补齐；手动同步仍会重新检查 Release，未变化的 IPA 复用已验证的解析结果。GitHub Token 只发往 `api.github.com`，CDN 跳转在服务端跟随且不带 Token；临时签名地址仅留在本次传输内存中，不写入订阅、备份或公开清单。
+
+私有订阅首次解析后仍需管理员确认发布。**确认发布即允许任何获得软件源或下载地址的人匿名下载该 IPA**，下载不再要求 GitHub 登录或管理 Token。公开清单的当前版本与保留历史使用 `/downloads/<订阅 ID>/<附件 ID>/<文件名>`；此接口只代理已发布订阅记录中的对应 IPA，不接受自定义仓库、附件或目标 URL。未确认、已删除订阅以及未保留的附件返回 404。管理接口继续要求管理 Token，现有客户端无需更新。
+
+代理支持 GET、HEAD、单区段 Range、If-Range 和条件请求，直接流式传输而不缓存完整 IPA；解析所用的尾部 Range 按附件大小换算为明确起止字节，兼容 GitHub CDN 的 501 限制。每次下载重新获取 CDN 地址，支持后续重试与续传。响应不公开临时 Location、Token 或上游 Cookie，且使用 `Cache-Control: no-store`。私有 IPA 下载流量经过 Worker。公开仓库及直接 IPA URL 保留原下载路径。此功能的本地验收范围见 [私有附件代理验收](../../docs/plans/evidence/private-source-proxy-20261020.json)；未部署前不改变线上行为。
+
+2026-10-20 本地隔离 workerd 连接真实 `Roxbili/dilidili` 仓库完成验收：49 项回归与 Worker 打包预检通过；三轮首次同步 5.623～14.778 秒，同包手动同步 1.174～1.916 秒。元信息与图标解析共 8 个 Range、565,132 字节，原 IPA 为 278,097,777 字节；通过匿名代理分段下载的完整 SHA-256 与 GitHub Release 一致。此为本机网络测量，不是线上部署后的客户端耗时；本次未部署、未修改现有订阅，未改动或构建客户端。
 
 新服务不使用旧 `yao-app-source` Worker 或 R2。
 
@@ -65,6 +73,7 @@ SignOs 原订阅已就地从 `ipa-archive` 切换到正式仓库，当前版本�
 
 | 接口 | 功能 |
 | --- | --- |
+| GET/HEAD `/downloads/<entry>/<asset>/<name>` | 已确认发布的私有 IPA 匿名代理下载 |
 | GET `/api/catalog` | 订阅、配置修订号、任务和失败原因 |
 | POST `/api/discover` | 读取 GitHub IPA 附件候选 |
 | POST `/api/entries` | 创建订阅并排队解析 |

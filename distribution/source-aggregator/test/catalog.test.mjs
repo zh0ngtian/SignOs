@@ -115,6 +115,7 @@ test('Durable catalog publishes only parsed apps, preserves old versions on fail
     assert.deepEqual(ipaRequests.map(r => r.method), ['HEAD']);
     await checkUnchanged();
     const discovery = await call('/api/discover', 'POST', { config: { kind: 'github', repository: 'owner/repo' } });
+    assert.equal(discovery.status, 200, JSON.stringify(discovery.data));
     assert.equal(discovery.data.candidates.length, 2);
     assert.ok(discovery.data.candidates.every(candidate => candidate.tag === 'v1'), 'discover skips the newer Android-only release');
     const dualDiscovery = await call('/api/discover', 'POST', { config: { kind: 'github', repository: 'owner/repo', tagPrefix: ' build- | v ', assetPattern: 'App.ipa', includePrereleases: true } });
