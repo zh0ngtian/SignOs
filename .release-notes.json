@@ -1,15 +1,16 @@
 {
   "schemaVersion": 1,
-  "batchId": "a2a75f33-8f47-4667-8273-332901bc65d2",
+  "batchId": "1d8187f0-3de5-44ab-b119-d74914d2ffb7",
   "language": "zh-Hans",
-  "version": "1.1.18",
-  "buildNumber": "40",
+  "version": "1.1.19",
+  "buildNumber": "41",
   "tasks": [
     {
-      "id": "library-refresh-caption-20261017",
-      "sha": "9ce08a00945458a0fe53eed6cf0749b44c7a2708",
+      "id": "signos-museummuse-widget-shared-group-20261020",
+      "sha": "7e7eab4840e01b3c9b8971902195ec7469e6fd80",
       "changes": [
-        "移除应用页筛选栏下方重复的更新检查进度提示，将“正在检查更新”统一显示在顶部下拉刷新图标下方，检查结束后一起收起"
+        "修复通过软件源重签博物女神后，小组件持续显示占位、无法共享刷新结果的问题",
+        "签名前同步 App 与 Widget 的授权共享组，保留既有签名包使用的组号，并在签名后拒绝共享配置不一致的安装包"
       ]
     }
   ]
