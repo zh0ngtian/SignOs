@@ -76,6 +76,8 @@ async function limitedBody(response,max) {
 export async function parseIPA(url,transport=fetch,options={}) {
  url=publicURL(url); const started=Date.now();let resolved=url,total=null,etag=null;const requests=[];
  async function range(spec,maximum) {
+  const rangeStarted=Date.now();
+  try {
   let target=resolved,response;const headers={'Range':spec,'Accept-Encoding':'identity'};if(etag)headers['If-Range']=etag;
   for(let hop=0;;hop++) {
    response=await transport(target,{headers,redirect:'manual',signal:AbortSignal.timeout(15000),cf:{cacheTtl:0}});
@@ -93,6 +95,11 @@ export async function parseIPA(url,transport=fetch,options={}) {
   const encoding=response.headers.get('content-encoding');if(encoding&&encoding!=='identity'){await response.body?.cancel();fail('ENCODED_RANGE');}
   total=length;resolved=target;if(!etag&&current&&!current.startsWith('W/'))etag=current;
   const a=await limitedBody(response,maximum);if(a.length!==hi-lo+1)fail('TRUNCATED_RANGE');requests.push({range:spec,bytes:a.length,status:206});return {a,lo};
+  } catch(error) {
+   if(['TimeoutError','AbortError'].includes(error.name))throw new SourceError('DOWNLOAD_TIMEOUT','IPA 文件区段读取超时，请重试',422,true,
+    {phase:'ipa-range',host:transport.finalHost||new URL(resolved).hostname,range:spec,elapsedMs:Date.now()-rangeStarted});
+   throw error;
+  }
  }
  const tail=await range('bytes=-65557',65557),t=view(tail.a);let eocd=-1;
  for(let p=tail.a.length-22;p>=0;p--){if(t.getUint32(p,true)===0x06054b50&&p+22+t.getUint16(p+20,true)===tail.a.length){eocd=p;break;}}

@@ -61,6 +61,23 @@ test('suffix ranges become explicit intervals using the immutable GitHub attachm
   await assert.rejects(transport(null, { headers: { Range: 'bytes=-0' } }), { code: 'INVALID_RANGE' });
 });
 
+test('private timeouts identify API versus CDN without exposing tokens or signed addresses', async () => {
+  for (const phase of ['github-asset-api', 'github-asset-cdn']) {
+    const transport = privateAssetTransport(asset, { GITHUB_TOKEN: githubToken }, async url => {
+      if (url === api && phase === 'github-asset-cdn') return new Response(null, { status: 302, headers: { Location: cdn } });
+      throw new DOMException('sensitive signed address: ' + cdn, 'TimeoutError');
+    });
+    await assert.rejects(transport(null, { headers: { Range: 'bytes=0-0' } }), error => {
+      assert.equal(error.code, 'DOWNLOAD_TIMEOUT');
+      assert.equal(error.details.phase, phase);
+      assert.equal(error.details.range, 'bytes=0-0');
+      assert.equal(JSON.stringify(error).includes('temporary-secret'), false);
+      assert.equal(JSON.stringify(error).includes(githubToken), false);
+      return true;
+    });
+  }
+});
+
 test('release cache retains repository visibility across cache hits and conditional refresh', async () => {
   const values = new Map();
   const cache = { get: async k => values.get(k), put: async (k, v) => values.set(k, v) };

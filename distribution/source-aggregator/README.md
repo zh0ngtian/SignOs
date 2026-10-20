@@ -22,6 +22,8 @@ python3 scripts/cloud_source.py status
 
 2026-10-20 本地隔离 workerd 连接真实 `Roxbili/dilidili` 仓库完成验收：49 项回归与 Worker 打包预检通过；三轮首次同步 5.623～14.778 秒，同包手动同步 1.174～1.916 秒。元信息与图标解析共 8 个 Range、565,132 字节，原 IPA 为 278,097,777 字节；通过匿名代理分段下载的完整 SHA-256 与 GitHub Release 一致。此为本机网络测量，不是线上部署后的客户端耗时；本次未部署、未修改现有订阅，未改动或构建客户端。
 
+下载超时的 `details` 只记录请求阶段、主机名、字节区段及耗时，区分 GitHub 附件 API、CDN 连接与区段正文读取；不保存签名查询参数、Token 或上游错误原文。
+
 新服务不使用旧 `yao-app-source` Worker 或 R2。
 
 公开入口为 `/sources/yao.json`，兼容 `/source.json`、`/appstore`；`/health` 为探针。管理接口使用 `Authorization: Bearer <管理 Token>`。新增与配置编辑需携带 `/api/catalog` 的当前 `revision`；冲突返回 409。Token 轮换后旧 Token 立即失效，CLI 的私有凭据也需更新。

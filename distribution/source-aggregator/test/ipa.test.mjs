@@ -68,3 +68,17 @@ test('Redirects cannot downgrade HTTPS and non-Range bodies are cancelled', asyn
   await assert.rejects(parseIPA('https://fixtures.example/app.ipa', async () => new Response(new ReadableStream({ cancel() { cancelled = true; } }), { status: 200 })), e => e.code === 'RANGE_UNSUPPORTED');
   assert.equal(cancelled, true);
 });
+
+test('body timeouts report only the host and byte interval', async () => {
+  await assert.rejects(parseIPA('https://fixtures.example/App.ipa?signature=private-secret', async () => new Response(
+    new ReadableStream({ pull(controller) { controller.error(new DOMException('private-secret', 'AbortError')); } }),
+    { status: 206, headers: { 'Content-Range': 'bytes 0-21/22' } }
+  )), error => {
+    assert.equal(error.code, 'DOWNLOAD_TIMEOUT');
+    assert.equal(error.details.phase, 'ipa-range');
+    assert.equal(error.details.host, 'fixtures.example');
+    assert.equal(error.details.range, 'bytes=-65557');
+    assert.equal(JSON.stringify(error).includes('private-secret'), false);
+    return true;
+  });
+});

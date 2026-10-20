@@ -66,8 +66,16 @@ export function privateAssetTransport(asset, env, transport = fetch) {
       const isAPI = target === api;
       const outgoing = new Headers(headers);
       if (isAPI) for (const [key, value] of Object.entries(githubHeaders(env, 'application/octet-stream'))) outgoing.set(key, value);
-      const response = await transport(target, { method: isAPI ? 'GET' : (init.method || 'GET'), headers: outgoing,
-        redirect: 'manual', signal: init.signal || AbortSignal.timeout(15000), cf: { cacheTtl: 0 } });
+      const started = Date.now();
+      let response;
+      try {
+        response = await transport(target, { method: isAPI ? 'GET' : (init.method || 'GET'), headers: outgoing,
+          redirect: 'manual', signal: init.signal || AbortSignal.timeout(15000), cf: { cacheTtl: 0 } });
+      } catch (error) {
+        if (['TimeoutError', 'AbortError'].includes(error.name)) throw new SourceError('DOWNLOAD_TIMEOUT', 'GitHub 附件请求超时，请重试', 422, true,
+          { phase: isAPI ? 'github-asset-api' : 'github-asset-cdn', host: new URL(target).hostname, range: headers.get('Range'), elapsedMs: Date.now() - started });
+        throw error;
+      }
       if (![301, 302, 303, 307, 308].includes(response.status)) {
         load.finalHost = new URL(target).hostname;
         if (!isAPI) resolved = target;
