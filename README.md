@@ -864,3 +864,11 @@ SignOs 发布任务必须在 ready 的验证 JSON 中填写具体中文 releaseN
 冻结提交 `7caa5a8a47360c594a684b2e9b447e6b7e2ef9ff` 的 [main 构建](https://github.com/zh0ngtian/SignOs/actions/runs/39353194554)与[标签发布](https://github.com/zh0ngtian/SignOs/actions/runs/39354106392)均成功，[GitHub Release](https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.19)三个附件与同提交 CI 产物一致。同一产物完成 SignOs 自身的 Ad Hoc 签名、独立验签及[固定 OTA 发布](https://192.168.123.79:8769/channels/signos/current/install.html)，完整 HTTPS 下载、版本、manifest 与中文说明回验通过。签名包为 15,758,619 字节，SHA-256 `a02652bb53b59c4cf364c4008a7eb4a75820b0042ff788de53909010a3e197f4`；软件源普通与兼容 JSON 均已同步新版。详见[发布凭证](docs/plans/evidence/release-batch-1.1.19-20261020.json)。
 
 本地回归、设备版构建和模拟器真实桌面刷新通过；真机测试服务认证被取消，用户明确要求继续发布，未将真机安装或桌面结果写成通过。更新 SignOs 后，需要重新签名并覆盖安装博物女神以应用修复；本次没有修改或发布博物女神客户端。
+
+### 2026-10-21 每应用 Bundle ID、断点下载及本地包删除发布
+
+已发布 **1.1.20（构建 42）**。应用详情支持本机保存 Bundle ID，默认原始标识符并可恢复；手动签名、自动导入、更新及换证书重签共用配置，克隆独立，手动自定义 ID 后仍按原始 ID 匹配软件源。此版本同时发布四路分段下载、暂停与持久化断点续传，以及应用页长按删除全部本地包、详情删除单个包；无法安全续传时需确认重新下载，待完成安装的包继续保留。
+
+冻结提交 `59f743b291f3cc952d508ebbc86ea1d07a230f81` 的 [main 构建](https://github.com/zh0ngtian/SignOs/actions/runs/39454887221)和[标签发布](https://github.com/zh0ngtian/SignOs/actions/runs/39456788042)均成功，[GitHub Release](https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.20)三个附件与同提交 CI 产物一致。同一产物经 `--plan` 检查后完成 Ad Hoc 签名、独立验签及[固定 OTA 发布](https://192.168.123.79:8769/channels/signos/current/install.html)。固定安装页、manifest、版本、中文日志、完整 HTTPS 下载和 SHA-256 回验通过；签名包为 15,865,220 字节，SHA-256 为 `b183a2a19b5b28be5bb40b9e096123cb1951d6bc437e9aeb30f93478b5256edb`。现有软件源普通与兼容 JSON 均已同步新版及中文日志，订阅配置未更改，未上传签名包归档。详见[共同发布凭证](docs/plans/evidence/release-batch-1.1.20-20261021.json)。
+
+功能验收覆盖完整应用模拟器中的默认值、编辑保存、重启恢复、手动签名读取与恢复原始值，生产签名/更新队列、数据库迁移、下载进程重启及本地包清理回归通过。本次未验证真机覆盖安装及数据、钥匙串保留。

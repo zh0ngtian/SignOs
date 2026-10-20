@@ -30,6 +30,8 @@
 
 本地检查：`AppBundleIdentifierPreferencesRegression`、`AutoSignManagerRegression`、`UpdateManagerRegression`、`SignedSchemaMigrationRegression`、`SigningIdentityRegression` 和 `OneViewPhaseRegression`。本次完整应用在隔离的 iOS 27 模拟器验收默认值、编辑保存、详情即时更新、重启恢复、手动签名读取和恢复原始值，完成模拟器与设备版 Release 构建；未验证真机覆盖安装及数据保留，未发布。记录见 [本机配置验收](evidence/app-bundle-id-20261020/verification.json)。
 
+2026-10-21，此功能随 1.1.20（构建 42）完成 GitHub Release 与固定 OTA 发布，软件源普通与兼容清单同步；发布冻结提交、构建、签名包散列与线上回验见[共同发布凭证](evidence/release-batch-1.1.20-20261021.json)。真机覆盖安装及数据保留未验证。
+
 ## 多源候选和缓存
 
 软件源之间、手动导入与软件源之间允许重复 Bundle ID，全部合并到一张应用卡片。启用源的当前发布版本共同参与选择；数值版本按组件比较，1.10 高于 1.9，正式版高于相同版本的预发布版，构建元数据和上传时间不证明版本更新。无法比较的格式只保留为详情中的手动选择，不自动覆盖。
