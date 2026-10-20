@@ -829,3 +829,11 @@ SignOs 发布任务必须在 ready 的验证 JSON 中填写具体中文 releaseN
 模拟器构建、设备版 Release 构建、更新检查调度回归、41 项发布相关回归和独立复查通过。iOS 26.5 模拟器通过受控原生刷新事件验证顶部文字可见及真实检查完成后收起；当前自动手势未触发下拉，未据此声称真实手势、真机覆盖安装或数据保留验收。具体范围见[控件验收记录](docs/plans/evidence/refresh-caption-20261017.json)。
 
 冻结提交 `0037cfb7b2eb5dec2460e03560c91605bd292991` 的 [main 构建](https://github.com/zh0ngtian/SignOs/actions/runs/39033872449)与[标签发布](https://github.com/zh0ngtian/SignOs/actions/runs/39034635357)均成功，[GitHub Release](https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.18)附件与同提交 CI 产物一致。[固定 OTA 安装页](https://192.168.123.79:8769/channels/signos/current/install.html)、manifest、版本、中文日志及完整签名 IPA 的 HTTPS 下载与 SHA-256 回验通过。签名包为 15,748,420 字节，SHA-256 `8c87bf4d597719ee562b4562034bc3b4f17d0feb393abb918b7e9756b98b21a2`；详见[共同发布凭证](docs/plans/evidence/release-batch-1.1.18-20261017.json)。
+
+### 2026-10-20 博物女神重签共享组修复
+
+已发布 **1.1.19（构建 41）**，修复通过 SignOs 重签博物女神后 App 与 Widget 运行共享组不匹配、桌面持续显示占位的问题。适配仅作用于博物女神，签名前对齐两目标的授权共享组，保留既有签名包使用的组号，签名后拒绝共享配置不一致的包；具体合同见[共享组适配](docs/plans/museummuse-shared-group.md)。
+
+冻结提交 `7caa5a8a47360c594a684b2e9b447e6b7e2ef9ff` 的 [main 构建](https://github.com/zh0ngtian/SignOs/actions/runs/39353194554)与[标签发布](https://github.com/zh0ngtian/SignOs/actions/runs/39354106392)均成功，[GitHub Release](https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.19)三个附件与同提交 CI 产物一致。同一产物完成 SignOs 自身的 Ad Hoc 签名、独立验签及[固定 OTA 发布](https://192.168.123.79:8769/channels/signos/current/install.html)，完整 HTTPS 下载、版本、manifest 与中文说明回验通过。签名包为 15,758,619 字节，SHA-256 `a02652bb53b59c4cf364c4008a7eb4a75820b0042ff788de53909010a3e197f4`；软件源普通与兼容 JSON 均已同步新版。详见[发布凭证](docs/plans/evidence/release-batch-1.1.19-20261020.json)。
+
+本地回归、设备版构建和模拟器真实桌面刷新通过；真机测试服务认证被取消，用户明确要求继续发布，未将真机安装或桌面结果写成通过。更新 SignOs 后，需要重新签名并覆盖安装博物女神以应用修复；本次没有修改或发布博物女神客户端。

@@ -1,0 +1,126 @@
+{
+  "date": "2026-10-20",
+  "completedAt": 1792460045.601836,
+  "coordinatorVersion": "0.1.7",
+  "id": "1d8187f0-3de5-44ab-b119-d74914d2ffb7",
+  "project": "signos-production",
+  "state": "complete",
+  "frozen": {
+    "buildNumber": "41",
+    "environment": "production",
+    "manifestSha256": "a0bb9b0c41c4ef23293e8ddc6b1a9c7c1dd5c08ad70073442da86697ac9053d7",
+    "sha": "7caa5a8a47360c594a684b2e9b447e6b7e2ef9ff",
+    "target": "com.signos.app",
+    "tasks": [
+      {
+        "id": "signos-museummuse-widget-shared-group-20261020",
+        "sha": "7e7eab4840e01b3c9b8971902195ec7469e6fd80"
+      }
+    ],
+    "version": "1.1.19"
+  },
+  "results": {
+    "build": {
+      "buildNumber": "41",
+      "commit": "7caa5a8a47360c594a684b2e9b447e6b7e2ef9ff",
+      "runId": 39353194554,
+      "sha256": "ebd714f5760a34a2d9d72affd27f64bb130a276c0533136492ba214d11493b95",
+      "version": "1.1.19"
+    },
+    "github": {
+      "runId": 39354106392,
+      "sha256": "ebd714f5760a34a2d9d72affd27f64bb130a276c0533136492ba214d11493b95",
+      "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.19"
+    },
+    "ota": {
+      "buildNumber": "41",
+      "bundleId": "com.signos.app",
+      "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.19/latest.ipa",
+      "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+      "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.19/manifest.plist",
+      "sha256": "a02652bb53b59c4cf364c4008a7eb4a75820b0042ff788de53909010a3e197f4",
+      "signed": true,
+      "size": 15758619,
+      "sourceCommit": "7caa5a8a47360c594a684b2e9b447e6b7e2ef9ff",
+      "version": "1.1.19"
+    },
+    "prepare": {
+      "buildNumber": "41",
+      "bundleIdentifier": "com.signos.app",
+      "inputFingerprint": "8720ad80c3239d31b873b6b4ede558dd39e51c31dd3561c54f9ae9244487778f",
+      "localValidation": "passed",
+      "version": "1.1.19"
+    },
+    "verify": {
+      "github": {
+        "runId": 39354106392,
+        "sha256": "ebd714f5760a34a2d9d72affd27f64bb130a276c0533136492ba214d11493b95",
+        "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.19"
+      },
+      "httpsFullDownloadVerified": true,
+      "ota": {
+        "buildNumber": "41",
+        "bundleId": "com.signos.app",
+        "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.19/latest.ipa",
+        "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+        "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.19/manifest.plist",
+        "sha256": "a02652bb53b59c4cf364c4008a7eb4a75820b0042ff788de53909010a3e197f4",
+        "signed": true,
+        "size": 15758619,
+        "sourceCommit": "7caa5a8a47360c594a684b2e9b447e6b7e2ef9ff",
+        "version": "1.1.19"
+      }
+    }
+  },
+  "checks": {
+    "mainBuild": "passed",
+    "tagWorkflow": "passed",
+    "annotatedTagFrozenCommit": "passed",
+    "githubAssetsAndFullSHA256": "passed",
+    "chineseNotes": "passed",
+    "signosOTASignature": "passed",
+    "fixedOTAHTTPS": {
+      "version": "1.1.19",
+      "build": "41",
+      "metadataNotesVerified": true,
+      "installPageVerified": true,
+      "manifestVerified": true,
+      "fullDownloadVerified": true,
+      "sha256": "a02652bb53b59c4cf364c4008a7eb4a75820b0042ff788de53909010a3e197f4",
+      "size": 15758619
+    }
+  },
+  "softwareSource": {
+    "entryId": "ba9c4295-207b-433a-b191-2c8908964159",
+    "status": "succeeded",
+    "configurationChanged": false,
+    "signedArchiveUploaded": false,
+    "publicChecks": [
+      {
+        "url": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json",
+        "version": "1.1.19",
+        "build": "41",
+        "downloadURL": "https://github.com/zh0ngtian/SignOs/releases/download/v1.1.19/SignOs.ipa",
+        "sha256": null,
+        "size": 15712043,
+        "notesVerified": true
+      },
+      {
+        "url": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json?legacy=1",
+        "version": "1.1.19",
+        "build": "41",
+        "downloadURL": "https://github.com/zh0ngtian/SignOs/releases/download/v1.1.19/SignOs.ipa",
+        "sha256": null,
+        "size": 15712043,
+        "notesVerified": true
+      }
+    ],
+    "integrityScope": "Source exposes the exact GitHub unsigned IPA URL and parsed metadata; full IPA SHA-256 verified by the release adapter, not supplied by source JSON."
+  },
+  "physicalVerification": {
+    "status": "notPerformed",
+    "reason": "UI test runner startup authentication was canceled; user explicitly requested committing and publishing after simulator verification."
+  },
+  "acceptance": "museummuse-shared-group-20261020.json",
+  "upgradeAction": "更新 SignOs 后，重新签名并覆盖安装博物女神；博物女神客户端本次未修改或发布。"
+}

@@ -33,16 +33,25 @@
     "title": "小袖 黒綸子地遠州模様"
   },
   "physicalDevice": {
-    "status": "pending",
-    "reason": "UI test runner startup: LocalAuthentication Code=-2, authentication canceled; no test installation performed"
+    "status": "notPerformed",
+    "reason": "UI test runner startup: LocalAuthentication Code=-2, authentication canceled; no test installation performed. User subsequently explicitly requested committing and publishing SignOs based on the verified simulator and build results."
   },
   "strictMacOSSignatureCheck": {
     "previousPhoneZsignArtifact": "failed",
     "nativeZsignArtifact": "failed",
-    "interpretation": "Group postcheck is not cryptographic signature acceptance; physical iOS installation/desktop verification remains pending"
+    "interpretation": "Group postcheck is not cryptographic signature acceptance; physical iOS installation and desktop verification were not performed. SignOs itself was separately signed and independently verified for OTA publication."
   },
   "sourceFiles": {
     "Feather/Utilities/MuseumMuseAppGroupSigning.swift": "3a18e94bc3fa5ce84ea85a1681bd3b97e4498edcb086322088eeb247e2f74ddf",
     "Feather/Utilities/Handlers/ZsignHandler.swift": "9809fb6f711155b2c73b688b4b1e40dedd4bac3ea473c55c8ba5235788ef646d"
+  },
+  "release": {
+    "version": "1.1.19",
+    "build": "41",
+    "sourceCommit": "7caa5a8a47360c594a684b2e9b447e6b7e2ef9ff",
+    "githubURL": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.19",
+    "installURL": "https://192.168.123.79:8769/channels/signos/current/install.html",
+    "receipt": "release-batch-1.1.19-20261020.json",
+    "softwareSource": "verified"
   }
 }

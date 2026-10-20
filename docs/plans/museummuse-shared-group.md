@@ -20,4 +20,12 @@
 
 独立 iPhone 17 Pro / iOS 27 模拟器先复现：仅授权兼容组但未写运行字段时，App 日志显示图片获取成功，结果落入私有缓存，桌面仍占位。对同一包调用本次生产适配代码并重新安装后，实际点击刷新，东京国立博物馆“小袖 黒綸子地遠州模様”显示在桌面；共享日志确认单件候选成功后停止、Widget 成功渲染，系统日志未命中图片超限、归档或 Chrono 错误。
 
-真机尚待验收：测试服务启动返回 LocalAuthentication Code=-2（认证被取消），没有安装测试包或将手机结果写成通过。macOS 严格验签对手机原有 Zsign 产物与本机重签产物均返回失败，因此上述 Zsign 后置结果仅证明共享配置与权限一致，不能替代独立验签或 iOS 实际安装验收。SignOs 发布和真机结果完成后另行回填。公开证据见 [验收摘要](evidence/museummuse-shared-group-20261020.json)。
+真机未执行验收：测试服务启动返回 LocalAuthentication Code=-2（认证被取消），没有安装测试包或将手机结果写成通过。用户随后明确要求提交并发布 SignOs，本次依据已完成的构建、回归与模拟器验证发布。macOS 严格验签对手机原有 Zsign 产物与本机重签产物均返回失败，因此上述 Zsign 后置结果仅证明共享配置与权限一致，不能替代独立验签或 iOS 实际安装验收。公开证据见 [验收摘要](evidence/museummuse-shared-group-20261020.json)。
+
+## 发布与使用
+
+2026-10-20 已发布 SignOs **1.1.19（构建 41）**，修复提交 `7e7eab4840e01b3c9b8971902195ec7469e6fd80` 随协调批次冻结到 `7caa5a8a47360c594a684b2e9b447e6b7e2ef9ff`。[main 构建](https://github.com/zh0ngtian/SignOs/actions/runs/39353194554)与[标签发布](https://github.com/zh0ngtian/SignOs/actions/runs/39354106392)均成功，[GitHub Release](https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.19)的 IPA、元数据与校验文件已验证。
+
+同一 CI 产物完成 SignOs 自身的 Ad Hoc 签名，独立验签、[固定 OTA 安装页](https://192.168.123.79:8769/channels/signos/current/install.html)、manifest、版本、中文更新说明及完整 IPA 的 HTTPS 下载与校验和回验通过。软件源原有 SignOs 订阅已同步到 1.1.19（41），普通与兼容 JSON 均返回新版 GitHub IPA 和中文说明；未更改订阅配置或上传另一份签名归档。详见 [发布凭证](evidence/release-batch-1.1.19-20261020.json)。
+
+使用时先更新 SignOs，再用新版重新签名并覆盖安装博物女神；已安装的旧签名包不会因 SignOs 升级而自动获得运行共享组修复。博物女神仍为 1.1.4（10），本次没有修改或发布博物女神客户端。真机覆盖安装、数据保留与桌面显示仍未验收。
