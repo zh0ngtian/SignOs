@@ -7,13 +7,23 @@ final class InstallPackageRetention {
 	private let defaults: UserDefaults
 	private let key = "SignOs.pendingInstallCleanup"
 
-	private struct Plan: Codable {
+	fileprivate struct Plan: Codable, Equatable {
 		var signed: Set<String> = []
 		var imported: Set<String> = []
 		var manuallyDeletedImports: Set<String> = []
 		var protected: Set<String>?
 		var installationRequested: Bool? = false
+
+        func packageUUIDs(output: String) -> Set<String> {
+            signed.union(imported).union(manuallyDeletedImports).union(protected ?? []).union([output])
+        }
 	}
+
+    /// Opaque, short-lived consent tied to the exact plans shown in the deletion confirmation.
+    struct DeletionProtection: Equatable {
+        let packageUUIDs: Set<String>
+        fileprivate let plans: [String: Plan]
+    }
 
 	init(defaults: UserDefaults = .standard) {
 		self.defaults = defaults
@@ -31,16 +41,40 @@ final class InstallPackageRetention {
 		}
 	}
 
-	/// Manual cleanup must preserve every package in pending/failed install plans.
+	/// Automatic cleanup and unconfirmed manual deletion preserve pending/failed installation packages.
 	var protectedPackageUUIDs: Set<String> {
 		plans.reduce(into: Set<String>()) { result, entry in
-			result.insert(entry.key)
-			result.formUnion(entry.value.signed)
-			result.formUnion(entry.value.imported)
-			result.formUnion(entry.value.manuallyDeletedImports)
-			result.formUnion(entry.value.protected ?? [])
+			result.formUnion(entry.value.packageUUIDs(output: entry.key))
 		}
 	}
+
+    func deletionProtection(for packageUUIDs: Set<String>) -> DeletionProtection {
+        let affected = plans.filter { !packageUUIDs.isDisjoint(with: $0.value.packageUUIDs(output: $0.key)) }
+        let protected = affected.reduce(into: Set<String>()) { result, entry in
+            result.formUnion(entry.value.packageUUIDs(output: entry.key))
+        }
+        return DeletionProtection(packageUUIDs: packageUUIDs.intersection(protected), plans: affected)
+    }
+
+    /// Only explicit deletion calls this, after files and database records were removed successfully.
+    func discardDeletedPackages(_ packageUUIDs: Set<String>) {
+        guard !packageUUIDs.isEmpty else { return }
+        var pending = plans
+        for uuid in Array(pending.keys) {
+            // A deleted signed output can no longer be retried; its installation plan is abandoned.
+            if packageUUIDs.contains(uuid) {
+                pending.removeValue(forKey: uuid)
+                continue
+            }
+            guard var plan = pending[uuid] else { continue }
+            plan.signed.subtract(packageUUIDs)
+            plan.imported.subtract(packageUUIDs)
+            plan.manuallyDeletedImports.subtract(packageUUIDs)
+            plan.protected?.subtract(packageUUIDs)
+            pending[uuid] = plan
+        }
+        plans = pending
+    }
 
 	func schedule(for signedUUID: String, signed: [String] = [], imported: [String] = [],
 				  manuallyDeletedImports: [String] = [], protected: [String] = []) {

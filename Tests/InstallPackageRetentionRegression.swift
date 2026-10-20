@@ -243,7 +243,8 @@ struct InstallPackageRetentionRegression {
 		precondition(unexpectedlyDeleted.isEmpty && !restart.protectedPackageUUIDs.contains("direct-old"),
 			"Protection-only plans unlock after installation without changing automatic deletion preferences")
 		try manualDeletion()
-		print("InstallPackageRetentionRegression passed: pending/failed retention, progress end, persisted retry, paired completion, file/metadata cleanup, replacement toggle, manual signing, manual app/package deletion, busy protection and failure retry")
+        try pendingInstallationDeletion()
+		print("InstallPackageRetentionRegression passed: pending/failed retention, installation cleanup, manual deletion, explicit abandonment/cancellation, busy recheck, stale consent, shared/legacy plan isolation and failure retry")
 	}
 
     @MainActor
@@ -303,7 +304,7 @@ struct InstallPackageRetentionRegression {
         precondition(!AppPackageDeletion.remove(request.target).failures.isEmpty, "First-time source downloads protect this application too")
         DownloadManager.shared.downloads = []
         InstallPackageRetention.shared.schedule(for: "delete-source-a", imported: ["delete-import"])
-        precondition(!AppPackageDeletion.remove(request.target).failures.isEmpty, "Pending installation retains retry packages")
+        precondition(AppPackageDeletion.remove(request.target).requiresConfirmation != nil, "Pending installation requires explicit abandonment consent")
         InstallPackageRetention.shared.installationEnded(for: "delete-source-a", replaceOldVersions: false) { _, _ in }
         AppOperations.disabledSources.insert("delete-source-b")
         let single = AppPackageDeletion.remove(.package("delete-source-b"))
@@ -335,5 +336,97 @@ struct InstallPackageRetentionRegression {
         precondition(metadataExists("partial-failure") && !metadataExists("partial-success"), "File failures preserve their database and metadata records")
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: parent.path)
         precondition(AppPackageDeletion.remove(.application(bundle)).removed == 1, "Failed deletions remain retryable")
+    }
+
+    @MainActor
+    private static func pendingInstallationDeletion() throws {
+        let storage = Storage.shared
+        let retention = InstallPackageRetention.shared
+        func package(_ uuid: String, signed: Bool, identifier: String = "pending.delete.app") throws -> StoredPackage {
+            let app = NSEntityDescription.insertNewObject(forEntityName: signed ? "Signed" : "Imported", into: storage.context) as! StoredPackage
+            app.uuid = uuid; app.name = "待安装测试"; app.version = "1.0"; app.identifier = identifier
+            let directory = storage.getUuidDirectory(for: app as! any AppInfoPresentable)!
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try Data(uuid.utf8).write(to: directory.appendingPathComponent("package"))
+            try storage.context.save()
+            return app
+        }
+        func exists(_ uuid: String) -> Bool { AppOperations.packages().contains { $0.uuid == uuid } }
+        _ = try package("pending-output", signed: true)
+        _ = try package("pending-input", signed: false)
+        _ = try package("other-output", signed: true, identifier: "other.pending.app")
+        _ = try package("other-input", signed: false, identifier: "other.pending.app")
+        retention.scheduleAfterSigning(for: "pending-output", protected: ["pending-output", "pending-input"])
+        retention.schedule(for: "other-output", imported: ["other-input"], protected: ["pending-input"])
+        let target = AppPackageDeletion.Target.application("pending.delete.app")
+        let prompt = AppPackageDeletion.remove(target)
+        let consent = prompt.requiresConfirmation!
+        precondition(prompt.removed == 0 && prompt.failures.isEmpty)
+        precondition(exists("pending-output") && exists("pending-input"), "Showing or cancelling the second confirmation must leave every package intact")
+        precondition(InstallPackageRetention(defaults: .standard).protectedPackageUUIDs.isSuperset(of: ["pending-output", "pending-input", "other-output", "other-input"]), "Automatic cleanup protection survives cancellation and restart")
+
+        // Work may begin after the dialog was shown; consent must not bypass any runtime guard.
+        SourceAccessManager.shared.activeIdentifiers = ["pending.delete.app"]
+        let busy = AppPackageDeletion.remove(target, abandoning: consent)
+        precondition(busy.removed == 0 && !busy.failures.isEmpty && busy.requiresConfirmation == nil)
+        SourceAccessManager.shared.activeIdentifiers = []
+        AutoSignManager.shared.queue = [.init(appUUID: "pending-input", appIdentifier: "pending.delete.app")]
+        precondition(!AppPackageDeletion.remove(target, abandoning: consent).failures.isEmpty)
+        AutoSignManager.shared.queue = []
+        DownloadManager.shared.downloads = [.init(targetAppUUID: "pending-output")]
+        precondition(!AppPackageDeletion.remove(target, abandoning: consent).failures.isEmpty)
+        DownloadManager.shared.downloads = []
+        precondition(exists("pending-output") && retention.protectedPackageUUIDs.contains("pending-input"))
+
+        retention.beginInstallation(for: "pending-output", protected: ["pending-output", "pending-input"])
+        let changed = AppPackageDeletion.remove(target, abandoning: consent)
+        precondition(changed.removed == 0 && changed.requiresConfirmation != nil && changed.requiresConfirmation != consent,
+                     "A changed installation plan invalidates previous consent")
+        let deleted = AppPackageDeletion.remove(target, abandoning: changed.requiresConfirmation)
+        precondition(deleted.removed == 2 && deleted.failures.isEmpty && deleted.requiresConfirmation == nil)
+        precondition(!exists("pending-output") && !exists("pending-input"))
+        let afterRestart = InstallPackageRetention(defaults: .standard)
+        precondition(!afterRestart.protectedPackageUUIDs.contains("pending-output") && !afterRestart.protectedPackageUUIDs.contains("pending-input"))
+        precondition(afterRestart.protectedPackageUUIDs.isSuperset(of: ["other-output", "other-input"]), "Shared input references are pruned without cancelling another application's retry plan")
+
+        // A single imported/history package may be removed while keeping its signed output retryable.
+        _ = try package("single-output", signed: true, identifier: "single.pending.app")
+        _ = try package("single-history", signed: true, identifier: "single.pending.app")
+        _ = try package("single-input", signed: false, identifier: "single.pending.app")
+        retention.schedule(for: "single-output", signed: ["single-history"], imported: ["single-input"], manuallyDeletedImports: ["single-input"], protected: ["single-input"])
+        let single = AppPackageDeletion.Target.package("single-input")
+        let singleConsent = AppPackageDeletion.remove(single).requiresConfirmation!
+        precondition(AppPackageDeletion.remove(single, abandoning: singleConsent).removed == 1)
+        precondition(retention.protectedPackageUUIDs.isSuperset(of: ["single-output", "single-history"]) && !retention.protectedPackageUUIDs.contains("single-input"))
+        var laterCleanup = Set<String>()
+        retention.installationEnded(for: "single-output", replaceOldVersions: true) { uuid, _ in laterCleanup.insert(uuid) }
+        precondition(laterCleanup == ["single-history"], "Later cleanup must not refer to an explicitly deleted input")
+
+        _ = try package("pending-failure", signed: true, identifier: "failure.pending.app")
+        retention.schedule(for: "pending-failure")
+        let failedTarget = AppPackageDeletion.Target.package("pending-failure")
+        let failedConsent = AppPackageDeletion.remove(failedTarget).requiresConfirmation!
+        let parent = FileManager.default.signed("pending-failure").deletingLastPathComponent()
+        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: parent.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: parent.path) }
+        let failure = AppPackageDeletion.remove(failedTarget, abandoning: failedConsent)
+        precondition(failure.removed == 0 && failure.failures.count == 1)
+        precondition(exists("pending-failure") && retention.protectedPackageUUIDs.contains("pending-failure"), "Deletion failure retains the package and its retry protection")
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: parent.path)
+        precondition(AppPackageDeletion.remove(failedTarget, abandoning: failedConsent).removed == 1)
+        precondition(!retention.protectedPackageUUIDs.contains("pending-failure"))
+
+        // Legacy plans lack an installationRequested marker; only explicit consent releases them.
+        _ = try package("legacy-output", signed: true, identifier: "legacy.pending.app")
+        _ = try package("legacy-input", signed: false, identifier: "legacy.pending.app")
+        let key = "SignOs.pendingInstallCleanup"
+        var legacy = try JSONSerialization.jsonObject(with: UserDefaults.standard.data(forKey: key)!) as! [String: Any]
+        legacy["legacy-output"] = ["signed": [], "imported": ["legacy-input"], "manuallyDeletedImports": []]
+        UserDefaults.standard.set(try JSONSerialization.data(withJSONObject: legacy), forKey: key)
+        let legacyTarget = AppPackageDeletion.Target.application("legacy.pending.app")
+        let legacyConsent = AppPackageDeletion.remove(legacyTarget).requiresConfirmation!
+        precondition(AppPackageDeletion.remove(legacyTarget, abandoning: legacyConsent).removed == 2)
+        precondition(!InstallPackageRetention(defaults: .standard).protectedPackageUUIDs.contains("legacy-output"))
+        precondition(retention.protectedPackageUUIDs.isSuperset(of: ["other-output", "other-input"]))
     }
 }

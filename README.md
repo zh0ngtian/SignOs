@@ -67,7 +67,7 @@ contributors for their work, this wouldn't exist without them.
   and source removal; configuration backup, management access and local subscription sections are omitted
 - Search across every source with recent searches (tab currently hidden; implementation retained)
 - Applications combines Library and Updates, groups retained packages by Bundle ID, and exposes version/source/certificate history in app details
-- 应用卡片长按「删除」可清除该应用全部本地包和历史版本；详情的「操作 → 删除本地包」支持单独删除手动导入及软件源包。保留软件源订阅，不卸载桌面应用；正在处理或待完成安装的包会保留供重试，删除失败会显示原因。
+- 应用卡片长按「删除」可清除该应用全部本地包和历史版本；详情的「操作 → 删除本地包」支持单独删除手动导入及软件源包。保留软件源订阅，不卸载桌面应用；正在处理的包继续拦截。仅被待安装记录保护时，可二次确认「放弃重试并删除」；取消则保留包与保护，自动清理仍保留待安装包，删除失败显示原因。
 - Applications sorts current source releases by publication date, newest first, across all filters; apps without publication dates appear last
 - Pull down Applications to synchronize enabled subscribed sources and check updates from the same fresh data
 - 更新检查中的“正在检查更新”显示在应用页顶部下拉刷新图标下方，筛选栏与应用列表之间不再显示重复进度提示。

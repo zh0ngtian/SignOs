@@ -44,7 +44,14 @@ enum AppPackageDeletion {
         }
     }
 
-    static func remove(_ target: Target) -> StorageCleanup.Report {
+    struct Result {
+        var removed = 0
+        var failures: [String] = []
+        var requiresConfirmation: InstallPackageRetention.DeletionProtection?
+    }
+
+    static func remove(_ target: Target,
+                       abandoning protection: InstallPackageRetention.DeletionProtection? = nil) -> Result {
         // Resolve again after confirmation so newly started work cannot lose its input.
         let packages: [any AppInfoPresentable]
         switch target {
@@ -54,7 +61,6 @@ enum AppPackageDeletion {
             packages = AppOperations.packages().filter { $0.uuid == uuid }
         }
         let jobs = AutoSignManager.shared.queue + (AutoSignManager.shared.currentJob.map { [$0] } ?? [])
-        let protected = InstallPackageRetention.shared.protectedPackageUUIDs
         for app in packages {
             let busy = SourceAccessManager.shared.isInUse(app.uuid)
                 || app.identifier.map { SourceAccessManager.shared.hasActiveApplication($0) } == true
@@ -67,13 +73,21 @@ enum AppPackageDeletion {
             if busy {
                 return .init(failures: ["这个应用正在下载、签名或安装，请等待当前任务结束后重试。"])
             }
-            if let uuid = app.uuid, protected.contains(uuid) {
-                return .init(failures: ["这个本地包仍用于待完成的安装，已保留供重试。请完成安装后再删除。"])
-            }
         }
-        let report = StorageCleanup.remove(packages) { try Storage.shared.deleteAppReportingErrors(for: $0) }
+        let retention = InstallPackageRetention.shared
+        let current = retention.deletionProtection(for: Set(packages.compactMap(\.uuid)))
+        if !current.packageUUIDs.isEmpty, current != protection {
+            return .init(requiresConfirmation: current)
+        }
+        var deleted = Set<String>()
+        let report = StorageCleanup.remove(packages) { app in
+            let uuid = app.uuid
+            try Storage.shared.deleteAppReportingErrors(for: app)
+            if let uuid { deleted.insert(uuid) }
+        }
+        retention.discardDeletedPackages(deleted)
         UpdateManager.shared.sourceAvailabilityChanged(localApps: AppOperations.packages())
         AutoUpdateManager.shared.updateBadgeFromState()
-        return report
+        return .init(removed: report.removed, failures: report.failures)
     }
 }

@@ -1,0 +1,46 @@
+{
+  "date": "2026-10-21",
+  "baseline": "f0a6c4d31307c64ccc63fb94f42d9d2330cdd7b9",
+  "authorization": "用户确认：无任务占用时允许二次确认放弃安装重试并删除本地包，自动清理仍保留保护",
+  "scope": "仅交付代码，不发布；本地包删除及安装记录，不执行系统安装",
+  "environment": {
+    "xcode": "27.0",
+    "runtime": "iOS 27.0 Simulator",
+    "application": "隔离 Bundle ID 的完整 SignOs 应用",
+    "fixture": "三个虚构本地包，两个应用，两份安装计划，一条无网络连接的占位软件源订阅"
+  },
+  "regressions": {
+    "InstallPackageRetentionRegression": "passed: production retention/deletion/storage with real Core Data and temporary files; controlled task collections cover live task guards with consent, stale confirmation, shared input isolation, single-package deletion, legacy plans and file failure retry",
+    "OneViewPhaseRegression": "6 passed",
+    "simulatorBuild": "complete application Debug build and launch passed",
+    "deviceBuild": "make iphoneos Release build and IPA packaging passed"
+  },
+  "runtimeChecks": {
+    "secondConfirmation": "普通删除确认后显示“放弃安装重试并删除？”，明确保留软件源订阅及桌面应用",
+    "cancelled": {
+      "signedRecords": 2,
+      "importedRecords": 1,
+      "persistedInstallPlans": 2,
+      "allFilesRetained": true
+    },
+    "confirmed": {
+      "signedRecords": 1,
+      "importedRecords": 0,
+      "persistedInstallPlans": 1,
+      "selectedPackageDirectoriesRemoved": true,
+      "unrelatedPackageAndPlanRetained": true,
+      "sourceSubscriptionsRetained": 1,
+      "bundleIdentifierPreferenceRetained": true
+    }
+  },
+  "screenshots": [
+    "confirmation.png",
+    "cancelled.png",
+    "deleted.png"
+  ],
+  "limitations": [
+    "未执行或取消 iOS 系统安装请求",
+    "未验证真机覆盖安装、数据或钥匙串保留"
+  ],
+  "published": false
+}
