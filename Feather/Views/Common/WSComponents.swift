@@ -173,6 +173,12 @@ final class WSSpeedometer {
 	private var lastDate = Date()
 	public private(set) var speed: Double = 0
 
+	func reset(bytes: Int64) {
+		lastBytes = bytes
+		lastDate = Date()
+		speed = 0
+	}
+
 	func sample(_ bytes: Int64) -> Double {
 		let now = Date()
 		let elapsed = now.timeIntervalSince(lastDate)

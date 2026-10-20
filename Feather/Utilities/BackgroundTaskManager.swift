@@ -29,10 +29,12 @@ class BackgroundTaskManager: ObservableObject {
 				self.activeTasks[task.identifier] = task
 				
 				task.expirationHandler = {
-					if let download = DownloadManager.shared.getDownload(by: downloadId) {
-						DownloadManager.shared.cancelDownload(download)
+					Task { @MainActor in
+						if let download = DownloadManager.shared.getDownload(by: downloadId) {
+							DownloadManager.shared.pauseDownload(download)
+						}
+						self.activeTasks.removeValue(forKey: task.identifier)
 					}
-					self.activeTasks.removeValue(forKey: task.identifier)
 				}
 			}
 			self.registeredTasks.insert(taskIdentifier)

@@ -1,306 +1,291 @@
-//
-//  DownloadManager.swift
-//  Feather
-//
-//  Created by samara on 3.05.2025.
-//
-
 import Foundation
 import Combine
-import UIKit.UIImpactFeedbackGenerator
+import UIKit
 import BackgroundTasks
 import UserNotifications
 
-class Download: Identifiable, @unchecked Sendable {
-	@Published var progress: Double = 0.0
-	@Published var bytesDownloaded: Int64 = 0
-	@Published var totalBytes: Int64 = 0
-	@Published var unpackageProgress: Double = 0.0
+@MainActor
+final class DownloadManager: NSObject, ObservableObject {
+    static let shared = DownloadManager()
+    @Published private(set) var downloads: [Download] = []
+    var manualDownloads: [Download] { downloads.filter { isManualDownload($0.id) } }
 
-	var overallProgress: Double {
-		onlyArchiving
-		? unpackageProgress
-		: (0.3 * unpackageProgress) + (0.7 * progress)
-	}
+    private struct Context: Codable {
+        let id: String
+        let provenance: SourceAppProvenance?
+        let targetAppUUID: String?
+    }
+    private let store: DownloadTransferStore?
+    private let transport = HTTPRangeTransfer()
+    private let limiter = DownloadTransferLimiter()
+    private var engines: [UUID: SegmentedDownloadEngine] = [:]
+    private var operations: [UUID: Task<Void, Never>] = [:]
+    private var cleanups: [UUID: Task<Void, Never>] = [:]
 
-	var task: URLSessionDownloadTask?
-	var resumeData: Data?
-	var lastNotificationProgress: Double = 0.0
+    override init() {
+        do { store = try .applicationStore() }
+        catch { store = nil; AppLogger(category: "下载").error("下载缓存无法打开：\(error.localizedDescription)") }
+        super.init()
+        restore()
+    }
 
-	let id: String
-	let url: URL
-	let fileName: String
-	let onlyArchiving: Bool
-	var sourceProvenance: SourceAppProvenance?
-	var targetAppUUID: String?
+    init(store: DownloadTransferStore) {
+        self.store = store
+        super.init()
+        restore()
+    }
 
-	init(
-		id: String,
-		url: URL,
-		onlyArchiving: Bool = false,
-		sourceProvenance: SourceAppProvenance? = nil
-	) {
-		self.id = id
-		self.url = url
-		self.onlyArchiving = onlyArchiving
-		self.sourceProvenance = sourceProvenance
-		self.fileName = url.lastPathComponent
-	}
-}
+    deinit { transport.invalidate() }
 
-class DownloadManager: NSObject, ObservableObject {
-	static let shared = DownloadManager()
-
-	@Published var downloads: [Download] = []
-
-	var manualDownloads: [Download] {
-		downloads.filter { isManualDownload($0.id) }
-	}
-
-	private var _session: URLSession!
-
-	#if !targetEnvironment(macCatalyst)
-	private func _updateBackgroundAudioState() {
-		if #unavailable(iOS 26.0){
-			if !downloads.isEmpty {
-				BackgroundAudioManager.shared.start()
-			} else  {
-				BackgroundAudioManager.shared.stop()
-			}
-		}
-	}
-	#endif
-
-	override init() {
-		super.init()
-		let configuration = URLSessionConfiguration.default
-		_session = URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
-	}
-
-	func startDownload(
-		from url: URL,
-		id: String = UUID().uuidString,
-		sourceProvenance: SourceAppProvenance? = nil,
-		targetAppUUID: String? = nil
-	) -> Download {
-		if let origin = sourceProvenance, !SourcePolicy.isEnabled(url: origin.sourceRepositoryURL, identifier: origin.sourceRepositoryIdentifier) || SourcePolicy.isSubscriptionDeleted(url: origin.sourceRepositoryURL, identifier: origin.sourceRepositoryIdentifier, appIdentifier: origin.sourceAppIdentifier) {
-            DispatchQueue.main.async { AppOperations.showError("来源已禁用或订阅已删除，请先启用软件源。") }
-            return Download(id: id, url: url, sourceProvenance: sourceProvenance)
+    private func restore() {
+        guard let store else { return }
+        let saved = store.load()
+        for issue in saved.issues { AppLogger(category: "下载").error(issue) }
+        for record in saved.records {
+            do {
+                if (try? String(contentsOf: store.directory(record.id).appendingPathComponent("imported"), encoding: .utf8)) == record.id.uuidString {
+                    try store.remove(record.id)
+                    continue
+                }
+                let context = try JSONDecoder().decode(Context.self, from: record.context)
+                let download = makeDownload(record, context: context)
+                download.state = record.phase == .requiresRestart ? .requiresRestart : .paused
+                download.message = record.phase == .requiresRestart ? record.message : "已保留下载进度，点击继续。"
+                let bytes = try (0..<record.partCount).reduce(Int64(0)) { $0 + (try store.size(store.part(record.id, $1))) }
+                apply(.init(bytes: bytes, total: record.representation?.length ?? 0), to: download, updateState: false)
+                downloads.append(download)
+                engines[record.id] = makeEngine(record, store: store)
+            } catch { AppLogger(category: "下载").error("下载记录恢复失败，缓存已保留：\(error.localizedDescription)") }
         }
-        let requestHasSourceProvenance = sourceProvenance != nil
-		if let existingDownload = downloads.first(where: {
-			$0.url == url && ($0.sourceProvenance != nil) == requestHasSourceProvenance && $0.sourceProvenance?.sourceVersionID == sourceProvenance?.sourceVersionID && $0.targetAppUUID == targetAppUUID
-		}) {
-			resumeDownload(existingDownload)
-			return existingDownload
-		}
+    }
 
-		let download = Download(id: id, url: url, sourceProvenance: sourceProvenance)
-		download.targetAppUUID = targetAppUUID
+    private func makeDownload(_ record: DownloadCheckpoint, context: Context) -> Download {
+        Download(id: context.id, url: record.url, sourceProvenance: context.provenance,
+                 targetAppUUID: context.targetAppUUID, checkpointID: record.id, transferDirectory: store?.directory(record.id))
+    }
 
-		let task = _session.downloadTask(with: url)
-		download.task = task
+    private func makeEngine(_ record: DownloadCheckpoint, store: DownloadTransferStore) -> SegmentedDownloadEngine {
+        SegmentedDownloadEngine(record: record, store: store, transport: transport, limiter: limiter)
+    }
 
-		downloads.append(download)
-		AppLogger(category: "下载").info("开始下载：\(url.absoluteString)")
-		task.resume()
+    func startDownload(from url: URL, id: String = UUID().uuidString, sourceProvenance: SourceAppProvenance? = nil,
+                       targetAppUUID: String? = nil) -> Download {
+        if let existing = downloads.first(where: {
+            $0.url == url && ($0.sourceProvenance != nil) == (sourceProvenance != nil)
+                && $0.sourceProvenance?.sourceVersionID == sourceProvenance?.sourceVersionID && $0.targetAppUUID == targetAppUUID
+        }) {
+            resumeDownload(existing)
+            return existing
+        }
+        let context = Context(id: id, provenance: sourceProvenance, targetAppUUID: targetAppUUID)
+        do {
+            guard let store else { throw DownloadTransferFailure.interrupted("下载缓存不可用，暂时无法开始下载。") }
+            let record = DownloadCheckpoint(id: UUID(), url: url, context: try JSONEncoder().encode(context), fileName: url.lastPathComponent)
+            let download = makeDownload(record, context: context)
+            guard allowed(download) else { return download }
+            try store.save(record)
+            downloads.append(download)
+            engines[record.id] = makeEngine(record, store: store)
+            begin(download)
+            return download
+        } catch {
+            AppLogger(category: "下载").error("无法创建下载：\(error.localizedDescription)")
+            AppOperations.showError("无法保存下载记录，请检查剩余空间。")
+            let failed = Download(id: id, url: url, sourceProvenance: sourceProvenance, targetAppUUID: targetAppUUID)
+            failed.state = .failed
+            return failed
+        }
+    }
 
-		#if !targetEnvironment(macCatalyst)
-		if #available(iOS 26.0, *) {
-			BackgroundTaskManager.shared.startTask(for: id, filename: url.lastPathComponent)
-		} else {
-			_updateBackgroundAudioState()
-		}
-		#endif
+    func startArchive(from url: URL, id: String = UUID().uuidString) -> Download {
+        let download = Download(id: id, url: url, onlyArchiving: true)
+        downloads.append(download)
+        updateBackgroundAudio()
+        return download
+    }
 
-		return download
-	}
+    private func allowed(_ download: Download) -> Bool {
+        guard let origin = download.sourceProvenance else { return true }
+        let allowed = SourcePolicy.isEnabled(url: origin.sourceRepositoryURL, identifier: origin.sourceRepositoryIdentifier)
+            && !SourcePolicy.isSubscriptionDeleted(url: origin.sourceRepositoryURL, identifier: origin.sourceRepositoryIdentifier, appIdentifier: origin.sourceAppIdentifier)
+        if !allowed { AppOperations.showError("来源已禁用或订阅已删除，请先启用软件源。") }
+        return allowed
+    }
 
-	func startArchive(
-		from url: URL,
-		id: String = UUID().uuidString
-	) -> Download {
-		let download = Download(id: id, url: url, onlyArchiving: true)
-		downloads.append(download)
+    func resumeDownload(_ download: Download) {
+        guard download.canContinue, allowed(download) else { return }
+        begin(download)
+    }
 
-		#if !targetEnvironment(macCatalyst)
-		_updateBackgroundAudioState()
-		#endif
+    func pauseDownload(_ download: Download) {
+        guard download.canPause, let id = download.checkpointID else { return }
+        download.state = .pausing
+        operations[id]?.cancel()
+    }
 
-		return download
-	}
+    /// Invoked only after the user confirms discarding the previous byte ranges.
+    func restartDownload(_ download: Download) {
+        guard download.state == .requiresRestart, let id = download.checkpointID,
+              operations[id] == nil, let engine = engines[id], let store, allowed(download) else { return }
+        download.state = .pausing
+        operations[id] = Task { [weak self] in
+            let old = await engine.checkpoint()
+            guard let self else { return }
+            do {
+                try Task.checkCancellation()
+                guard self.downloads.contains(where: { $0 === download }) else { return }
+                let context = try JSONDecoder().decode(Context.self, from: old.context)
+                var replacement = DownloadCheckpoint(id: UUID(), url: old.url, context: old.context, fileName: old.fileName)
+                replacement.mode = old.restartInSingleMode ? .single : .segmented
+                try store.markDiscarded(id)
+                try store.save(replacement)
+                let next = self.makeDownload(replacement, context: context)
+                self.operations[id] = nil
+                self.engines[id] = nil
+                self.downloads.removeAll { $0 === download }
+                self.downloads.append(next)
+                self.engines[replacement.id] = self.makeEngine(replacement, store: store)
+                do { try store.remove(id) }
+                catch { AppLogger(category: "下载").error("旧断点清理失败，将在重启时清理：\(error.localizedDescription)") }
+                self.begin(next)
+            } catch {
+                self.operations[id] = nil
+                download.state = .requiresRestart
+                download.message = "无法重新创建下载，请检查剩余空间。"
+                AppLogger(category: "下载").error("重新下载失败：\(error.localizedDescription)")
+            }
+        }
+    }
 
-	func resumeDownload(_ download: Download) {
-		// Reuse live tasks so repeated requests cannot orphan an active transfer.
-		if let task = download.task {
-			switch task.state {
-			case .running, .canceling:
-				return
-			case .suspended:
-				task.resume()
-				return
-			case .completed:
-				// A completed transfer may still be unpacking/importing.
-				guard download.resumeData != nil else { return }
-			@unknown default:
-				return
-			}
-		}
+    func cancelDownload(_ download: Download) {
+        guard download.state != .importing else { return }
+        if let id = download.checkpointID, let store {
+            do { try store.markDiscarded(id) }
+            catch { AppOperations.showError("取消状态无法保存，请稍后重试。"); return }
+            let operation = operations.removeValue(forKey: id)
+            operation?.cancel()
+            engines[id] = nil
+            cleanups[id] = Task { [weak self] in
+                await operation?.value
+                do { try store.remove(id) }
+                catch { AppLogger(category: "下载").error("已取消下载的缓存清理失败：\(error.localizedDescription)") }
+                self?.cleanups[id] = nil
+            }
+        }
+        downloads.removeAll { $0 === download }
+        removeProgressNotification(download)
+        stopBackgroundTask(download, success: false)
+        updateBackgroundAudio()
+    }
 
-		if let resumeData = download.resumeData {
-			let task = _session.downloadTask(withResumeData: resumeData)
-			download.resumeData = nil
-			download.task = task
-			task.resume()
+    private func begin(_ download: Download) {
+        guard let id = download.checkpointID, let engine = engines[id], operations[id] == nil else { return }
+        download.state = .checking
+        download.message = nil
+        startBackgroundTask(download)
+        AppLogger(category: "下载").info("开始或继续下载：\(download.url.absoluteString)")
+        operations[id] = Task { [weak self] in
+            do {
+                let result = try await engine.run { [weak self] value in await self?.update(value, id: id) }
+                try Task.checkCancellation()
+                guard let self, self.downloads.contains(where: { $0 === download }) else { return }
+                self.operations[id] = nil
+                download.state = .importing
+                download.progress = 1
+                try self.handlePachageFile(url: result.file, dl: download)
+            } catch {
+                let record = await engine.checkpoint()
+                let saved = try? await engine.savedProgress()
+                guard let self, self.downloads.contains(where: { $0 === download }) else { return }
+                self.operations[id] = nil
+                if let saved { self.apply(saved, to: download, updateState: false) }
+                download.state = record.phase == .requiresRestart ? .requiresRestart : (record.phase == .failed ? .failed : .paused)
+                download.message = record.message
+                self.removeProgressNotification(download)
+                self.stopBackgroundTask(download, success: false)
+                self.updateBackgroundAudio()
+                if !(error is CancellationError) { AppLogger(category: "下载").error("下载已保留：\(error.localizedDescription)") }
+            }
+        }
+        updateBackgroundAudio()
+    }
 
-			#if !targetEnvironment(macCatalyst)
-			_updateBackgroundAudioState()
-			#endif
-		}
-	}
+    private func update(_ progress: SegmentedDownloadEngine.Progress, id: UUID) {
+        guard let download = downloads.first(where: { $0.checkpointID == id }), download.state != .pausing else { return }
+        apply(progress, to: download)
+        postProgressIfDue(download)
+        #if !targetEnvironment(macCatalyst)
+        if #available(iOS 26.0, *) { BackgroundTaskManager.shared.updateProgress(for: download.id, progress: download.overallProgress) }
+        #endif
+    }
 
-	func cancelDownload(_ download: Download) {
-		download.task?.cancel()
-		_removeProgressNotification(for: download)
+    private func apply(_ value: SegmentedDownloadEngine.Progress, to download: Download, updateState: Bool = true) {
+        download.bytesDownloaded = value.bytes
+        download.totalBytes = value.total
+        download.progress = value.total > 0 ? min(1, Double(value.bytes) / Double(value.total)) : 0
+        if updateState { download.state = value.assembling ? .preparing : .downloading }
+    }
 
-		if let index = downloads.firstIndex(where: { $0.id == download.id }) {
-			downloads.remove(at: index)
-
-			#if !targetEnvironment(macCatalyst)
-			_updateBackgroundAudioState()
-
-			if #available(iOS 26.0, *) {
-				BackgroundTaskManager.shared.stopTask(for: download.id, success: false)
-			}
-			#endif
-		}
-	}
-
-	func isManualDownload(_ string: String) -> Bool {
-		return string.contains("FeatherManualDownload")
-	}
-
-	func getDownload(by id: String) -> Download? {
-		return downloads.first(where: { $0.id == id })
-	}
-
-	func getDownloadIndex(by id: String) -> Int? {
-		return downloads.firstIndex(where: { $0.id == id })
-	}
-
-	func getDownloadTask(by task: URLSessionDownloadTask) -> Download? {
-		return downloads.first(where: { $0.task == task })
-	}
-
-	/// Updates a single notification in place, App Store style.
-	private func _postProgressIfDue(_ download: Download) {
-		guard UserDefaults.standard.object(forKey: "SignOs.notificationsEnabled") as? Bool ?? true else { return }
-		guard download.progress - download.lastNotificationProgress >= 0.1 else { return }
-		download.lastNotificationProgress = download.progress
-
-		let content = UNMutableNotificationContent()
-		content.title = download.fileName
-		content.body = .localized("Downloading… %lld%%", arguments: Int(download.overallProgress * 100))
-
-		let request = UNNotificationRequest(
-			identifier: "signos.download.\(download.id)",
-			content: content,
-			trigger: nil
-		)
-		UNUserNotificationCenter.current().add(request)
-	}
-
-	func _removeProgressNotification(for download: Download) {
-		UNUserNotificationCenter.current().removeDeliveredNotifications(
-			withIdentifiers: ["signos.download.\(download.id)"]
-		)
-	}
-}
-
-extension DownloadManager: URLSessionDownloadDelegate {
-
-	func handlePachageFile(url: URL, dl: Download) throws {
-		FR.handlePackageFile(url, download: dl) { err in
-			if err != nil {
-				let generator = UINotificationFeedbackGenerator()
-				generator.notificationOccurred(.error)
-			}
-
-			DispatchQueue.main.async {
-				DownloadManager.shared._removeProgressNotification(for: dl)
-				if let index = DownloadManager.shared.getDownloadIndex(by: dl.id) {
-					DownloadManager.shared.downloads.remove(at: index)
+    func handlePachageFile(url: URL, dl: Download) throws {
+        dl.state = .importing
+        FR.handlePackageFile(url, download: dl) { [weak self, weak dl] error in
+            Task { @MainActor in
+                guard let self, let dl else { return }
+                self.removeProgressNotification(dl)
+                if let error {
+                    dl.state = .failed
+                    dl.message = "导入失败，已保留下载文件，可点击重试。"
+                    if dl.checkpointID == nil { self.downloads.removeAll { $0 === dl } }
+                    UINotificationFeedbackGenerator().notificationOccurred(.error)
+                    AppLogger(category: "下载").error("导入下载文件失败：\(error.localizedDescription)")
+                    self.stopBackgroundTask(dl, success: false)
+                } else {
+                    if let id = dl.checkpointID, let store = self.store {
+                        do { try store.markDiscarded(id); try store.remove(id) }
+                        catch { AppLogger(category: "下载").error("下载缓存清理失败：\(error.localizedDescription)") }
+                        self.engines[id] = nil
+                    }
+                    self.downloads.removeAll { $0 === dl }
+                    self.stopBackgroundTask(dl, success: true)
                     AppOperations.resumeDeferredUpdates()
+                }
+                self.updateBackgroundAudio()
+            }
+        }
+    }
 
-					#if !targetEnvironment(macCatalyst)
-					if #available(iOS 26.0, *) {
-						BackgroundTaskManager.shared.updateProgress(for: dl.id, progress: 1.0)
-					}
+    func isManualDownload(_ string: String) -> Bool { string.contains("FeatherManualDownload") }
+    func getDownload(by id: String) -> Download? { downloads.first { $0.id == id } }
+    func getDownloadIndex(by id: String) -> Int? { downloads.firstIndex { $0.id == id } }
 
-					self._updateBackgroundAudioState()
-					#endif
-				}
-			}
-		}
-	}
-
-	func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
-		guard let download = getDownloadTask(by: downloadTask) else { return }
-		AppLogger(category: "下载").info("下载完成：\(download.fileName)")
-
-		let tempDirectory = FileManager.default.temporaryDirectory
-		let customTempDir = tempDirectory.appendingPathComponent("FeatherDownloads", isDirectory: true)
-
-		do {
-			try FileManager.default.createDirectoryIfNeeded(at: customTempDir)
-
-			let suggestedFileName = downloadTask.response?.suggestedFilename ?? download.fileName
-			let destinationURL = customTempDir.appendingPathComponent(suggestedFileName)
-
-			try FileManager.default.removeFileIfNeeded(at: destinationURL)
-			try FileManager.default.moveItem(at: location, to: destinationURL)
-
-			try handlePachageFile(url: destinationURL, dl: download)
-		} catch {
-			AppLogger(category: "下载").error("处理下载文件失败：\(error.localizedDescription)")
-		}
-	}
-
-	func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
-		guard let download = getDownloadTask(by: downloadTask) else { return }
-
-		DispatchQueue.main.async {
-			download.progress = totalBytesExpectedToWrite > 0
-			? Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
-			: 0
-			download.bytesDownloaded = totalBytesWritten
-			download.totalBytes = totalBytesExpectedToWrite
-
-			#if !targetEnvironment(macCatalyst)
-			if #available(iOS 26.0, *) {
-				BackgroundTaskManager.shared.updateProgress(for: download.id, progress: download.overallProgress)
-			}
-			#endif
-
-			self._postProgressIfDue(download)
-		}
-	}
-
-	func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-		guard
-			let _ = error,
-			let downloadTask = task as? URLSessionDownloadTask,
-			let download = getDownloadTask(by: downloadTask)
-		else {
-			return
-		}
-
-		AppLogger(category: "下载").error("下载结束：\(download.fileName)\n\(error?.localizedDescription ?? "未知错误")")
-		DispatchQueue.main.async {
-			self._removeProgressNotification(for: download)
-			if let index = self.getDownloadIndex(by: download.id) {
-				self.downloads.remove(at: index)
-			}
-		}
-	}
+    private func updateBackgroundAudio() {
+        #if !targetEnvironment(macCatalyst)
+        if #unavailable(iOS 26.0) {
+            if downloads.contains(where: \.isActive) { BackgroundAudioManager.shared.start() }
+            else { BackgroundAudioManager.shared.stop() }
+        }
+        #endif
+    }
+    private func startBackgroundTask(_ download: Download) {
+        #if !targetEnvironment(macCatalyst)
+        if #available(iOS 26.0, *) { BackgroundTaskManager.shared.startTask(for: download.id, filename: download.fileName) }
+        #endif
+    }
+    private func stopBackgroundTask(_ download: Download, success: Bool) {
+        #if !targetEnvironment(macCatalyst)
+        if #available(iOS 26.0, *) { BackgroundTaskManager.shared.stopTask(for: download.id, success: success) }
+        #endif
+    }
+    private func postProgressIfDue(_ download: Download) {
+        guard UserDefaults.standard.object(forKey: "SignOs.notificationsEnabled") as? Bool ?? true,
+              download.progress - download.lastNotificationProgress >= 0.1 else { return }
+        download.lastNotificationProgress = download.progress
+        let content = UNMutableNotificationContent()
+        content.title = download.fileName
+        content.body = .localized("Downloading… %lld%%", arguments: Int(download.overallProgress * 100))
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "signos.download.\(download.id)", content: content, trigger: nil))
+    }
+    private func removeProgressNotification(_ download: Download) {
+        UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: ["signos.download.\(download.id)"])
+    }
 }

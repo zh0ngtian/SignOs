@@ -87,13 +87,8 @@ struct WSOneViewGetButton: View {
 	) private var _importedApps: FetchedResults<Imported>
 
 	@State private var _startedAt = Date()
-	@State private var _progress: Double = 0
-	@State private var _speedText = ""
 	@State private var _presentingInstall = false
 	@State private var _presentingSign = false
-	@State private var _cancellable: AnyCancellable?
-	@State private var _speedometer = WSSpeedometer()
-	@State private var _observedDownload: Download?
 
 	var body: some View {
 		let tracker = OneViewTracker(sourceURL: sourceURL, source: source, app: app, startedAt: _startedAt)
@@ -124,29 +119,10 @@ struct WSOneViewGetButton: View {
 						.frame(minHeight: 44)
 				}
 				.buttonStyle(.borderless)
-			case .downloading:
-				VStack(spacing: 2) {
-					ZStack {
-						Circle()
-							.trim(from: 0, to: max(0.02, _progress))
-							.stroke(Color.accentColor, style: StrokeStyle(lineWidth: 2.3, lineCap: .round))
-							.rotationEffect(.degrees(-90))
-							.frame(width: 31, height: 31)
-						Text(verbatim: "\(Int(_progress * 100))")
-							.font(.system(size: 9, weight: .bold).monospacedDigit())
-							.foregroundStyle(.tint)
-					}
-					Text(verbatim: _speedText.isEmpty ? "…" : _speedText)
-						.font(.system(size: 8, weight: .medium).monospacedDigit())
-						.foregroundStyle(.secondary)
-						.lineLimit(1)
-				}
-				.frame(width: 56)
-				.onTapGesture {
-					if let download = downloadManager.getDownload(by: app.currentUniqueId) {
-						downloadManager.cancelDownload(download)
-					}
-				}
+            case .downloading:
+                if let download = downloadManager.getDownload(by: app.currentUniqueId) {
+                    DownloadCompactProgressView(download: download)
+                }
 			case .preparing:
 				VStack(spacing: 3) {
 					ProgressView()
@@ -220,35 +196,16 @@ struct WSOneViewGetButton: View {
 		}
 		.onAppear {
 			_startedAt = Date()
-			_setupObserver()
 		}
 		.onChange(of: phase) { newPhase in
 			if newPhase == .installed || newPhase == .ready || newPhase == .needsSign { _tappedGet = false }
 		}
-		.onDisappear { _cancellable?.cancel() }
-		.onChange(of: downloadManager.downloads.description) { _ in
-			_setupObserver()
-		}
-	}
-
-	private func _setupObserver() {
-		_cancellable?.cancel()
-		guard let download = downloadManager.getDownload(by: app.currentUniqueId) else {
-			_observedDownload = nil
-			_progress = 0
-			_speedText = ""
-			return
-		}
-		if _observedDownload !== download {
-			_speedometer = WSSpeedometer()
-			_observedDownload = download
-		}
-		_progress = download.overallProgress
-		_cancellable = Publishers.CombineLatest(download.$progress, download.$bytesDownloaded).sink { _, bytes in
-			_progress = download.overallProgress
-			let speed = _speedometer.sample(bytes)
-			_speedText = speed.formattedSpeed
-		}
+        .onChange(of: downloadManager.downloads.map(\.id)) {
+            if tracker.phase(downloadManager: downloadManager, autoSignManager: autoSignManager,
+                             signed: Array(_signedApps), imported: Array(_importedApps)) == .idle {
+                _tappedGet = false
+            }
+        }
 	}
 
 	private func _provenance() -> SourceAppProvenance? {
@@ -410,6 +367,12 @@ struct OneViewInstallView: View {
 				SigningView(app: imported)
 			}
 			.onAppear { _startedAt = Date() }
+            .onChange(of: downloadManager.downloads.map(\.id)) {
+                if tracker.phase(downloadManager: downloadManager, autoSignManager: autoSignManager,
+                                 signed: Array(_signedApps), imported: Array(_importedApps)) == .idle {
+                    _tappedGet = false
+                }
+            }
 			.onChange(of: _phase) { newPhase in
 				if newPhase == .installed || newPhase == .ready || newPhase == .needsSign { _tappedGet = false }
 			}
@@ -456,38 +419,12 @@ extension OneViewInstallView {
 					.font(.caption)
 					.foregroundStyle(.secondary)
 
-			case .downloading:
-				if let download = _download {
-					HStack {
-						Text("Downloading")
-							.font(.subheadline.weight(.semibold))
-						Spacer()
-						Text(verbatim: "\(Int(download.overallProgress * 100))%")
-							.font(.subheadline.weight(.semibold).monospacedDigit())
-							.contentTransition(.numericText())
-					}
-					ProgressView(value: download.overallProgress)
-						.progressViewStyle(.linear)
-					HStack {
-						if download.totalBytes > 0 {
-							Text(verbatim: .localized("%@ of %@", arguments: download.bytesDownloaded.formattedByteCount, download.totalBytes.formattedByteCount))
-						}
-						Spacer()
-						Button {
-							downloadManager.cancelDownload(download)
-						} label: {
-							Text("Cancel")
-								.font(.footnote.weight(.semibold))
-								.foregroundStyle(.red)
-						}
-					}
-					.font(.caption2)
-					.foregroundStyle(.secondary)
-					Text("After the download it signs and installs automatically.")
-						.font(.caption2)
-						.foregroundStyle(.tertiary)
-						.frame(maxWidth: .infinity, alignment: .leading)
-				}
+            case .downloading:
+                if let download = _download {
+                    DownloadProgressContent(download: download)
+                    Text("After the download it signs and installs automatically.")
+                        .font(.caption2).foregroundStyle(.tertiary)
+                }
 
 			case .preparing:
 				HStack(spacing: 12) {

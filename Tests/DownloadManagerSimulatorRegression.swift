@@ -1,176 +1,206 @@
-// Compile with the production DownloadManager.swift; replace only app integrations.
+// Production downloader and persistence; only signing/import/UI integrations are replaced.
 import Foundation
+import CryptoKit
 import Darwin
 
-struct SourceAppProvenance {
+struct SourceAppProvenance: Codable, Sendable {
     var sourceRepositoryURL = URL(string: "https://example.com/source.json")!
     var sourceRepositoryIdentifier: String? = "fixture.source"
     var sourceAppIdentifier = "fixture.app"
     var sourceVersionID = "fixture|1"
 }
 @MainActor enum AppOperations {
-    static func showError(_ message: String) {}
+    static var errors: [String] = []
+    static func showError(_ message: String) { errors.append(message) }
     static func resumeDeferredUpdates() {}
 }
-final class BackgroundAudioManager {
+@MainActor final class BackgroundAudioManager {
     static let shared = BackgroundAudioManager()
     func start() {}
     func stop() {}
 }
-final class BackgroundTaskManager {
+@MainActor final class BackgroundTaskManager {
     static let shared = BackgroundTaskManager()
     func startTask(for id: String, filename: String) {}
     func stopTask(for id: String, success: Bool) {}
     func updateProgress(for id: String, progress: Double) {}
 }
-enum FR {
-    struct Receipt {
-        let bytes: Int
-        let responseURL: URL?
-        let status: Int?
-    }
-    static let lock = NSLock()
+@MainActor enum FR {
+    struct Receipt { let bytes: Int; let sha256: String; let provenance: SourceAppProvenance?; let target: String? }
     static var receipts: [String: Receipt] = [:]
-    static func receipt(_ id: String) -> Receipt? {
-        lock.lock(); defer { lock.unlock() }
-        return receipts[id]
-    }
+    static var counts: [String: Int] = [:]
+    static var callbacks: [String: (Error?) -> Void] = [:]
     static func handlePackageFile(_ url: URL, download: Download, completion: @escaping (Error?) -> Void) {
-        let bytes = (try? Data(contentsOf: url).count) ?? 0
-        try? FileManager.default.removeItem(at: url)
-        lock.lock(); defer { lock.unlock() }
-        receipts[download.id] = Receipt(bytes: bytes, responseURL: download.task?.response?.url,
-                                       status: (download.task?.response as? HTTPURLResponse)?.statusCode)
-        // Retain the record to simulate unpacking/importing still in progress.
+        let data = try! Data(contentsOf: url)
+        receipts[download.id] = Receipt(bytes: data.count, sha256: SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined(),
+                                        provenance: download.sourceProvenance, target: download.targetAppUUID)
+        counts[download.id, default: 0] += 1
+        callbacks[download.id] = completion
     }
-}
-extension FileManager {
-    func createDirectoryIfNeeded(at url: URL) throws {
-        try createDirectory(at: url, withIntermediateDirectories: true)
-    }
-    func removeFileIfNeeded(at url: URL) throws {
-        if fileExists(atPath: url.path) { try removeItem(at: url) }
-    }
-}
-
-final class BenchmarkDownloadManager: DownloadManager {
-    private let metricsLock = NSLock()
-    private var collectedMetrics: URLSessionTaskMetrics?
-    var metrics: URLSessionTaskMetrics? {
-        metricsLock.lock(); defer { metricsLock.unlock() }
-        return collectedMetrics
-    }
-    func urlSession(_ session: URLSession, task: URLSessionTask, didFinishCollecting metrics: URLSessionTaskMetrics) {
-        metricsLock.lock(); defer { metricsLock.unlock() }
-        collectedMetrics = metrics
-    }
+    static func finish(_ id: String) { callbacks.removeValue(forKey: id)?(nil) }
 }
 
 @main
 struct DownloadManagerSimulatorRegression {
-    @MainActor
-    static func wait(_ description: String, timeout: TimeInterval = 10, until condition: () -> Bool) async throws {
-        let end = Date().addingTimeInterval(timeout)
+    @MainActor static func wait(_ description: String, timeout: TimeInterval = 20, until condition: () -> Bool) async throws {
+        let deadline = Date().addingTimeInterval(timeout)
         while !condition() {
-            precondition(Date() < end, "Timed out: \(description)")
-            try await Task.sleep(nanoseconds: 20_000_000)
+            precondition(Date() < deadline, "Timed out: \(description)")
+            try await Task.sleep(for: .milliseconds(15))
         }
     }
+    static func get(_ path: String, base: URL) async throws -> Data {
+        try await URLSession.shared.data(from: URL(string: path, relativeTo: base)!.absoluteURL).0
+    }
+    @MainActor static func complete(_ download: Download, manager: DownloadManager, sha: String) async throws {
+        try await wait("import of \(download.id)") { FR.receipts[download.id] != nil }
+        precondition(download.state == .importing && FR.receipts[download.id]!.sha256 == sha)
+        precondition(FR.counts[download.id] == 1)
+        FR.finish(download.id)
+        try await wait("download cleanup") { manager.getDownload(by: download.id) == nil }
+    }
 
-    @MainActor
-    static func main() async throws {
+    @MainActor static func main() async throws {
         UserDefaults.standard.set(false, forKey: "SignOs.notificationsEnabled")
         let base = URL(string: CommandLine.arguments[1])!
-        if CommandLine.arguments.contains("--benchmark") {
-            try await benchmark(base)
+        let mode = CommandLine.arguments.count > 2 ? CommandLine.arguments[2] : "normal"
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let store = try DownloadTransferStore(root: support.appendingPathComponent("DownloadRegression", isDirectory: true))
+        let manager = DownloadManager(store: store)
+        let fixture = try JSONSerialization.jsonObject(with: await get("/fixture.json", base: base)) as! [String: Any]
+        let sha = fixture["sha256"] as! String, changedSHA = fixture["changedSHA256"] as! String
+        let size = fixture["bytes"] as! Int
+
+        if mode == "prepare-kill" {
+            let download = manager.startDownload(from: base.appendingPathComponent("restart.ipa"), id: "restart",
+                sourceProvenance: SourceAppProvenance(), targetAppUUID: "baseline-uuid")
+            try await wait("bytes before forced termination") { download.bytesDownloaded > 262144 }
+            print("READY_TO_TERMINATE")
+            fflush(nil)
+            while true {
+                precondition(manager.getDownload(by: "restart") != nil)
+                try await Task.sleep(for: .seconds(1))
+            }
+        }
+        if mode == "restore" {
+            let before = try JSONSerialization.jsonObject(with: await get("/stats", base: base)) as! [String: Any]
+            guard let restored = manager.getDownload(by: "restart") else { preconditionFailure("Checkpoint was not restored") }
+            precondition(restored.state == .paused && restored.bytesDownloaded > 0 && restored.bytesDownloaded < size)
+            precondition(restored.sourceProvenance?.sourceVersionID == "fixture|1" && restored.targetAppUUID == "baseline-uuid")
+            try await Task.sleep(for: .milliseconds(250))
+            let after = try JSONSerialization.jsonObject(with: await get("/stats", base: base)) as! [String: Any]
+            precondition((before["requests"] as! [[String: Any]]).count == (after["requests"] as! [[String: Any]]).count,
+                         "Restoring the app automatically resumed a download")
+            manager.resumeDownload(restored)
+            try await wait("resumed import") { FR.receipts["restart"] != nil }
+            precondition(FR.receipts["restart"]!.bytes == size && FR.receipts["restart"]!.sha256 == sha)
+            precondition(FR.receipts["restart"]!.provenance?.sourceVersionID == "fixture|1")
+            precondition(FR.receipts["restart"]!.target == "baseline-uuid")
+            let repeated = manager.startDownload(from: restored.url, id: "duplicate", sourceProvenance: SourceAppProvenance(), targetAppUUID: "baseline-uuid")
+            precondition(repeated === restored && FR.counts["restart"] == 1)
+            FR.finish("restart")
+            try await wait("restored download cleanup") { manager.downloads.isEmpty }
+            precondition(store.load().records.isEmpty)
+            print("PASS: forced process termination, retained partial files, manual resume, provenance, target identity and single import")
             return
         }
-        let manager = DownloadManager()
-        let url = base.appendingPathComponent("slow.ipa")
-        let first = manager.startDownload(from: url, id: "first")
-        let originalTask = first.task!
-        try await wait("initial bytes") { first.bytesDownloaded > 0 }
-        let before = first.bytesDownloaded
-        for index in 0..<8 {
-            let repeated = manager.startDownload(from: url, id: "repeat-\(index)")
-            precondition(repeated === first && repeated.task === originalTask)
-        }
-        precondition(manager.downloads.count == 1 && first.bytesDownloaded >= before)
-        try await wait("continued progress") { first.bytesDownloaded > before }
 
-        originalTask.suspend()
-        try await wait("task suspension") { originalTask.state == .suspended }
-        let suspendedBytes = first.bytesDownloaded
-        manager.resumeDownload(first)
-        precondition(first.task === originalTask)
-        try await wait("resumed transfer") {
-            originalTask.state == .running && first.bytesDownloaded > suspendedBytes
-        }
-        manager.cancelDownload(first)
         precondition(manager.downloads.isEmpty)
-        try await wait("cancellation") { originalTask.state == .completed }
+        let url = base.appendingPathComponent("range.ipa")
+        let first = manager.startDownload(from: url, id: "first")
+        try await wait("initial parallel bytes") { first.bytesDownloaded > 262144 }
+        for i in 0..<8 { precondition(manager.startDownload(from: url, id: "duplicate-\(i)") === first) }
+        manager.pauseDownload(first)
+        try await wait("pause") { first.state == .paused }
+        let saved = first.bytesDownloaded
+        precondition(saved > 0 && saved < size)
+        try await Task.sleep(for: .milliseconds(100))
+        precondition(first.bytesDownloaded == saved)
+        manager.resumeDownload(first)
+        try await complete(first, manager: manager, sha: sha)
+        print("PASS: duplicate coalescing, partial pause, continuation and import exactly once")
 
-        let canceling = manager.startDownload(from: base.appendingPathComponent("canceling.ipa"))
-        let cancelingTask = canceling.task!
-        cancelingTask.cancel()
-        manager.resumeDownload(canceling)
-        precondition(canceling.task === cancelingTask)
-        manager.cancelDownload(canceling)
+        let failed = manager.startDownload(from: base.appendingPathComponent("disconnect.ipa"), id: "failure")
+        try await wait("network failure") { failed.state == .failed }
+        precondition(failed.bytesDownloaded > 0 && FR.receipts[failed.id] == nil)
+        _ = try await get("/control?operation=heal", base: base)
+        manager.resumeDownload(failed)
+        try await complete(failed, manager: manager, sha: sha)
+        print("PASS: failure retains downloaded bytes and can continue")
 
-        let finished = manager.startDownload(from: base.appendingPathComponent("finish.ipa"), id: "finished")
-        try await wait("finished transfer") { FR.receipt(finished.id) != nil && finished.task?.state == .completed }
-        let finishedTask = finished.task!
-        let repeatedFinished = manager.startDownload(from: finished.url)
-        precondition(repeatedFinished === finished && finished.task === finishedTask)
-        manager.cancelDownload(finished)
+        let unsupported = manager.startDownload(from: base.appendingPathComponent("ignore.ipa"), id: "unsupported")
+        try await wait("unsupported Range prompt") { unsupported.state == .requiresRestart }
+        precondition(unsupported.bytesDownloaded == 0)
+        manager.resumeDownload(unsupported)
+        try await Task.sleep(for: .milliseconds(100))
+        precondition(unsupported.state == .requiresRestart)
+        manager.restartDownload(unsupported)
+        try await wait("confirmed new task") { manager.getDownload(by: "unsupported") !== unsupported }
+        let single = manager.getDownload(by: "unsupported")!
+        precondition(single.checkpointID != unsupported.checkpointID)
+        try await wait("single stream partial data") { single.bytesDownloaded > 262144 }
+        manager.pauseDownload(single)
+        try await wait("single paused") { single.state == .paused }
+        let singleBytes = single.bytesDownloaded
+        manager.resumeDownload(single)
+        try await wait("single stream requires another confirmation") { single.state == .requiresRestart }
+        precondition(single.bytesDownloaded == singleBytes)
+        manager.restartDownload(single)
+        try await wait("new single stream task") { manager.getDownload(by: "unsupported") !== single }
+        try await complete(manager.getDownload(by: "unsupported")!, manager: manager, sha: sha)
+        print("PASS: unsupported resume never silently discards data or starts over")
 
-        let (countsData, _) = try await URLSession.shared.data(from: base.appendingPathComponent("counts"))
-        let counts = try JSONSerialization.jsonObject(with: countsData) as! [String: Int]
-        precondition(counts["/slow.ipa"] == 1 && counts["/finish.ipa"] == 1,
-                     "Repeated calls created extra HTTP requests: \(counts)")
+        let mutable = manager.startDownload(from: base.appendingPathComponent("mutable.ipa"), id: "mutable")
+        try await wait("mutable prefix") { mutable.bytesDownloaded > 262144 }
+        manager.pauseDownload(mutable)
+        try await wait("mutable paused") { mutable.state == .paused }
+        let oldBytes = mutable.bytesDownloaded
+        _ = try await get("/control?operation=mutate", base: base)
+        manager.resumeDownload(mutable)
+        try await wait("changed file prompt") { mutable.state == .requiresRestart }
+        precondition(mutable.bytesDownloaded == oldBytes)
+        manager.restartDownload(mutable)
+        try await wait("changed task replacement") { manager.getDownload(by: "mutable") !== mutable }
+        try await complete(manager.getDownload(by: "mutable")!, manager: manager, sha: changedSHA)
+        print("PASS: changed files require confirmation and never mix old and new bytes")
 
         let manual = manager.startDownload(from: url, id: "manual")
         let source = manager.startDownload(from: url, id: "source", sourceProvenance: SourceAppProvenance())
         precondition(manual !== source && manager.downloads.count == 2)
         manager.cancelDownload(manual)
         manager.cancelDownload(source)
-        print("PASS: running/suspended/canceling/completed task reuse, progress, cancellation, provenance separation")
-    }
-
-    @MainActor
-    static func benchmark(_ url: URL) async throws {
-        var directURL: URL?
-        for index in 0..<4 {
-            let manager = BenchmarkDownloadManager()
-            let target = index % 2 == 1 ? directURL! : url
-            let start = Date()
-            let download = manager.startDownload(from: target, id: "benchmark-\(index)")
-            try await wait("benchmark", timeout: 120) { FR.receipt(download.id) != nil && manager.metrics != nil }
-            let duration = Date().timeIntervalSince(start)
-            let receipt = FR.receipt(download.id)!
-            precondition(receipt.status == 200 && receipt.bytes > 0)
-            directURL = receipt.responseURL
-            let metrics = manager.metrics!
-            let transactions: [[String: Any]] = metrics.transactionMetrics.map { transaction in
-                func interval(_ start: Date?, _ end: Date?) -> Double {
-                    guard let start, let end else { return 0 }
-                    return end.timeIntervalSince(start)
-                }
-                return ["host": transaction.request.url?.host ?? "",
-                    "protocol": transaction.networkProtocolName ?? "unknown",
-                    "proxy": transaction.isProxyConnection,
-                    "firstByteSeconds": interval(transaction.fetchStartDate, transaction.responseStartDate),
-                    "bodySeconds": interval(transaction.responseStartDate, transaction.responseEndDate),
-                    "dnsSeconds": interval(transaction.domainLookupStartDate, transaction.domainLookupEndDate),
-                    "tlsSeconds": interval(transaction.secureConnectionStartDate, transaction.secureConnectionEndDate)]
-            }
-            let result: [String: Any] = ["route": index % 2 == 0 ? "github-release" : "resolved-asset",
-                "seconds": duration, "bytes": receipt.bytes, "bytesPerSecond": Double(receipt.bytes) / duration,
-                "finalHost": receipt.responseURL?.host ?? "", "status": receipt.status!,
-                "redirectCount": metrics.redirectCount, "transactions": transactions]
-            print(String(data: try JSONSerialization.data(withJSONObject: result, options: .sortedKeys), encoding: .utf8)!)
-            fflush(stdout)
-            manager.cancelDownload(download)
+        try await wait("explicit cancellation files removed") {
+            !FileManager.default.fileExists(atPath: store.directory(manual.checkpointID!).path)
+                && !FileManager.default.fileExists(atPath: store.directory(source.checkpointID!).path)
         }
+        precondition(manager.downloads.isEmpty && store.load().records.isEmpty)
+        print("PASS: provenance isolation and explicit cancellation cleanup")
+
+        let gated = manager.startDownload(from: base.appendingPathComponent("range.ipa"), id: "gated", sourceProvenance: SourceAppProvenance())
+        try await wait("source progress") { gated.bytesDownloaded > 262144 }
+        manager.pauseDownload(gated)
+        try await wait("source paused") { gated.state == .paused }
+        let pausedBytes = gated.bytesDownloaded
+        UserDefaults.standard.set(Array(SourcePolicy.keys(url: gated.sourceProvenance!.sourceRepositoryURL,
+            identifier: gated.sourceProvenance!.sourceRepositoryIdentifier)), forKey: "SignOs.disabledSources")
+        let beforeGate = try JSONSerialization.jsonObject(with: await get("/stats", base: base)) as! [String: Any]
+        manager.resumeDownload(gated)
+        try await Task.sleep(for: .milliseconds(100))
+        let afterGate = try JSONSerialization.jsonObject(with: await get("/stats", base: base)) as! [String: Any]
+        precondition(gated.state == .paused && gated.bytesDownloaded == pausedBytes && !AppOperations.errors.isEmpty)
+        precondition((beforeGate["requests"] as! [[String: Any]]).count == (afterGate["requests"] as! [[String: Any]]).count)
+        UserDefaults.standard.removeObject(forKey: "SignOs.disabledSources")
+        manager.cancelDownload(gated)
+        try await wait("gated cleanup") { !FileManager.default.fileExists(atPath: store.directory(gated.checkpointID!).path) }
+        print("PASS: disabled sources cannot resume retained checkpoints")
+
+        let committed = DownloadCheckpoint(id: UUID(), url: url,
+            context: try JSONSerialization.data(withJSONObject: ["id": "committed"]), fileName: "committed.ipa")
+        try store.save(committed)
+        try Data(committed.id.uuidString.utf8).write(to: store.directory(committed.id).appendingPathComponent("imported"))
+        let relaunched = DownloadManager(store: store)
+        precondition(relaunched.downloads.isEmpty && !FileManager.default.fileExists(atPath: store.directory(committed.id).path))
+        print("PASS: committed imports are not imported again after restart")
+        print("DownloadManagerSimulatorRegression passed")
     }
 }

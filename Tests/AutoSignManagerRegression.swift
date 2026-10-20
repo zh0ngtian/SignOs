@@ -116,9 +116,14 @@ final class InstallationProxy {
     func install(at url: URL, suspend: Bool) async throws {}
 }
 @MainActor final class ServerInstaller {
+    let id = UUID()
     var packageUrl: URL?; var pageEndpoint = URL(string: "https://example.com")!; var iTunesLink = "https://example.com"
     init(app: Signed, viewModel: InstallerStatusViewModel) throws {}
     func getServerMethod() -> Int { 0 }
+}
+@MainActor final class InstallationBrowserPresentation {
+    init(url: URL, viewModel: InstallerStatusViewModel, onDismiss: @escaping () -> Void) {}
+    func present(from controller: UIViewController) {}
 }
 extension UIApplication { static func topViewController() -> UIViewController? { nil } }
 

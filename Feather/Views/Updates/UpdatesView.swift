@@ -92,69 +92,10 @@ struct WSAvailableUpdateCard<Icon: View>: View {
 // MARK: - Download Card
 
 struct WSDownloadCard: View {
-	let download: Download
-
-	@State private var _speedometer = WSSpeedometer()
-	@State private var _speedText = ""
-	@State private var _etaText = ""
-
-	var body: some View {
-		VStack(alignment: .leading, spacing: WSSpacing.sm) {
-			HStack(spacing: WSSpacing.sm + 2) {
-				Image(systemName: "arrow.down.circle.fill")
-					.font(.title3)
-					.foregroundStyle(.tint)
-					.symbolRenderingMode(.hierarchical)
-
-				Text(download.fileName)
-					.font(.footnote.weight(.semibold))
-					.lineLimit(1)
-
-				Spacer()
-
-				Text(verbatim: "\(Int(download.overallProgress * 100))%")
-					.font(.caption.weight(.semibold).monospacedDigit())
-					.foregroundStyle(.secondary)
-					.contentTransition(.numericText())
-
-				Button {
-					if let dl = DownloadManager.shared.getDownload(by: download.id) {
-						DownloadManager.shared.cancelDownload(dl)
-					}
-				} label: {
-					Image(systemName: "xmark.circle.fill")
-						.foregroundStyle(.tertiary)
-				}
-				.buttonStyle(.plain)
-			}
-
-			ProgressView(value: download.overallProgress)
-				.progressViewStyle(.linear)
-
-			HStack(spacing: WSSpacing.xs) {
-				if download.totalBytes > 0 {
-					Text(verbatim: download.totalBytes.formattedByteCount)
-				}
-				if !_speedText.isEmpty {
-					Text(verbatim: "• \(_speedText)")
-				}
-				if !_etaText.isEmpty {
-					Text(verbatim: "• \(_etaText)")
-				}
-			}
-			.font(WSType.micro)
-			.foregroundStyle(.tertiary)
-		}
-		.padding(WSSpacing.cardPadding)
-		.background(WSRadius.continuous(WSRadius.lg).fill(WSSurface.card))
-		.onReceive(download.$bytesDownloaded) { bytes in
-			let speed = _speedometer.sample(bytes)
-			_speedText = speed.formattedSpeed
-			if speed > 0, download.totalBytes > bytes {
-				_etaText = (Double(download.totalBytes - bytes) / speed).formattedEta
-			} else {
-				_etaText = ""
-			}
-		}
-	}
+    @ObservedObject var download: Download
+    var body: some View {
+        DownloadProgressContent(download: download, showFileName: true)
+            .padding(WSSpacing.cardPadding)
+            .background(WSRadius.continuous(WSRadius.lg).fill(WSSurface.card))
+    }
 }

@@ -43,6 +43,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/test_auto_update_check.py
+          python3 scripts/test_segmented_download.py
           for TEST in OneViewPhase SourceRepositoryIdentity SourceSubscriptionIdentity SourceMigrationReadiness AppVersion SigningIdentity MachOEntitlements; do
             BINARY="$RUNNER_TEMP/signos-$TEST"
             xcrun swiftc "Feather/Utilities/$TEST.swift" "Tests/${TEST}Regression.swift" -o "$BINARY"

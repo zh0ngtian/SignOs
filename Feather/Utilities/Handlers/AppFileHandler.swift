@@ -8,10 +8,11 @@
 import Foundation
 import Zip
 import SwiftUI
+import CoreData
 
 final class AppFileHandler: NSObject, @unchecked Sendable {
 	private let _fileManager = FileManager.default
-	private let _uuid = UUID().uuidString
+	private let _uuid: String
 	private let _uniqueWorkDir: URL
 	var uniqueWorkDirPayload: URL?
 
@@ -26,6 +27,7 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 		download: Download? = nil,
 		sourceProvenance: SourceAppProvenance? = nil
 	) {
+		self._uuid = download?.importUUID ?? UUID().uuidString
 		self._ipa = ipa
 		self._install = install
 		self._download = download
@@ -99,6 +101,13 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 		guard _fileManager.fileExists(atPath: payloadURL.path) else {
 			throw ImportedFileHandlerError.payloadNotFound
 		}
+
+		// A resumed, completed download reuses its own import identity. A previous
+		// attempt may already have moved the full Payload before the app stopped.
+		if _fileManager.fileExists(atPath: destinationURL.path) {
+			guard _fileManager.getPath(in: destinationURL, for: "app") != nil else { throw ImportedFileHandlerError.payloadNotFound }
+			return
+		}
 		
 		try _fileManager.moveItem(at: payloadURL, to: destinationURL)
 		
@@ -110,19 +119,24 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 		let app = try await _directory()
 		
 		guard let appUrl = _fileManager.getPath(in: app, for: "app") else {
-			return
+			throw ImportedFileHandlerError.payloadNotFound
 		}
 		
 		let bundle = Bundle(url: appUrl)
 		
-		Storage.shared.addImported(
-			uuid: _uuid,
-			source: _sourceProvenance?.sourceRepositoryURL,
-			appName: bundle?.name,
-			appIdentifier: bundle?.bundleIdentifier,
-			appVersion: bundle?.version,
-			appIcon: bundle?.iconFileName
-		) { _ in }
+		let existing: NSFetchRequest<Imported> = Imported.fetchRequest()
+		existing.predicate = NSPredicate(format: "uuid == %@", _uuid)
+		existing.fetchLimit = 1
+		if try Storage.shared.context.count(for: existing) == 0 {
+			Storage.shared.addImported(
+				uuid: _uuid,
+				source: _sourceProvenance?.sourceRepositoryURL,
+				appName: bundle?.name,
+				appIdentifier: bundle?.bundleIdentifier,
+				appVersion: bundle?.version,
+				appIcon: bundle?.iconFileName
+			) { _ in }
+		}
 		
 		if let sourceProvenance = _sourceProvenance {
 			Storage.shared.addSourceMetadata(
@@ -130,6 +144,12 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 				kind: .imported,
 				provenance: sourceProvenance
 			)
+		}
+		// Storage's legacy helpers defer saving. Commit before declaring this
+		// persistent download imported, and propagate any database failure.
+		if Storage.shared.context.hasChanges { try Storage.shared.context.save() }
+		if let directory = _download?.transferDirectory {
+			try Data(_uuid.utf8).write(to: directory.appendingPathComponent("imported"), options: .atomic)
 		}
 
 		// SignOs: route fresh imports into the background signing queue.
@@ -149,6 +169,8 @@ final class AppFileHandler: NSObject, @unchecked Sendable {
 				AutoSignManager.shared.enqueueImported(uuid: _uuid, targetAppUUID: _download?.targetAppUUID, force: _download?.targetAppUUID != nil && !isAutoUpdateDownload)
 			}
 		}
+		// Subscription removal can race with an import that has already started.
+		SourceAccessManager.shared.cleanupDeletedSubscriptions()
 	}
 	
 	private func _directory() async throws -> URL {
@@ -165,6 +187,8 @@ private enum ImportedFileHandlerError: Error, LocalizedError {
 	case payloadNotFound
 
 	var errorDescription: String? {
-		.localized("The IPA does not contain a valid Payload application.")
+		switch self {
+		case .payloadNotFound: .localized("The IPA does not contain a valid Payload application.")
+		}
 	}
 }

@@ -190,8 +190,8 @@ struct LibraryView: View {
             VStack(spacing: 5) { ProgressView(); Text("安装处理中").font(.caption2).foregroundStyle(.secondary) }
         } else if signer.queue.contains(where: { $0.appIdentifier == application.id }) {
             Text("等待处理").font(.caption).foregroundStyle(.secondary)
-        } else if download(for: application) != nil {
-            Text("下载中").font(.caption).foregroundStyle(.secondary)
+        } else if let download = download(for: application) {
+            DownloadCompactProgressView(download: download)
         } else if let update {
             WSSearchCapsuleButton(title: signer.installErrors[application.id] == nil ? "Update" : "重试更新") { AppOperations.update(update) }
         } else if let installed = application.installed {
