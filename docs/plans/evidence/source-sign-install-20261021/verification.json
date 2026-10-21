@@ -63,5 +63,18 @@
     "local-packages.jpg": "86b0ff70881d1d5351111c7381a3e1b79894ee6b017e32568ae92a63cbc9d276",
     "settings.jpg": "e9c974fc012804dcd2d30ae7b61dde9544dc58f69fd02933a7addc623730d26b",
     "signing-readonly.jpg": "4b7b77e5e067d0af1c2f698856dff6d9a65e96ca1bc1e85d9b8d41fcf0834e24"
+  },
+  "repository": {
+    "codeCommit": "08a6b97a66d7b3d67e56c2b03d394865a5aed6c9",
+    "remoteMainVerified": true,
+    "ci": {
+      "run": 39540655765,
+      "url": "https://github.com/zh0ngtian/SignOs/actions/runs/39540655765",
+      "conclusion": "failure",
+      "failedStep": "Check frozen release batch",
+      "reason": "Build the exact commit introducing this frozen batch; do not borrow a later main commit",
+      "compilation": "skipped"
+    },
+    "publication": "not requested; no release task, tag, version change or OTA update"
   }
 }
