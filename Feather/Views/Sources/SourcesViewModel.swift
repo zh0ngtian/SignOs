@@ -22,6 +22,44 @@ final class SourcesViewModel: ObservableObject {
 	var isFinished = true
 	@Published var sources: [AltSource: ASRepository] = [:]
 	@MainActor private var _revision = 0
+	@MainActor private var _synchronizationTask: Task<Void, Never>?
+	@Published private(set) var isSynchronizingSources = false
+	@Published private(set) var sourceRefreshIssues: [String] = []
+
+    /// Keep manual synchronization alive when SwiftUI cancels the refresh waiter.
+    @MainActor
+    func synchronizeAndRefreshSources() async {
+        if let task = _synchronizationTask {
+            await task.value
+            return
+        }
+        let task = Task { @MainActor in
+            defer {
+                self._synchronizationTask = nil
+                self.isSynchronizingSources = false
+            }
+            self.isSynchronizingSources = true
+            self.sourceRefreshIssues = []
+            // Do not let an older browsing fetch overwrite the manual refresh.
+            self._revision += 1
+            let sources = Storage.shared.getSources().filter { !$0.isDeleted }
+            let enabled = sources.filter { SourcePolicy.isEnabled(url: $0.sourceURL, identifier: $0.identifier) }
+            do {
+                self.sourceRefreshIssues = try await SourceSynchronization.synchronizeManagedSources(enabled)
+            } catch {
+                self.sourceRefreshIssues = [error.localizedDescription]
+            }
+            for source in sources where !source.isDeleted && source.managedObjectContext != nil {
+                do {
+                    try await self.refreshSource(source)
+                } catch {
+                    self.sourceRefreshIssues.append("\(source.name ?? .localized("Source")): \(error.localizedDescription)")
+                }
+            }
+        }
+        _synchronizationTask = task
+        await task.value
+    }
 
 	/// Replace the browsing cache with the exact snapshot used by the update check.
 	@MainActor
@@ -64,6 +102,7 @@ final class SourcesViewModel: ObservableObject {
     }
 
 	func fetchSources(_ sources: FetchedResults<AltSource>, refresh: Bool = false, batchSize: Int = 4) async {
+		if let task = await MainActor.run(body: { self._synchronizationTask }) { await task.value }
 		guard isFinished else { return }
 		
 		// check if sources to be fetched are the same as before, if yes, return
@@ -75,9 +114,11 @@ final class SourcesViewModel: ObservableObject {
 		defer { isFinished = true }
 		
 		let revision = await MainActor.run {
+			guard self._synchronizationTask == nil else { return nil as Int? }
 			self.sources = [:]
-			return self._revision
+			return self._revision as Int?
 		}
+		guard let revision else { return }
 		
 		let sourcesArray = Array(sources)
 		

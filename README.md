@@ -622,8 +622,23 @@ clears GitHub release caches and waits for parsing to finish; remote failures re
 as an incomplete check.
 Cancelled checks retain pending updates and leave the source cache and completed-check date
 unchanged; they do not start automatic downloads and can be retried by pulling down again.
-The Updates tab has no separate Check button. Source cards have no Sync capsule;
-pull down on the Sources tab to refresh its catalog, or open a card to manage its source.
+The Updates tab has no separate Check button. Source cards have no Sync capsule.
+Pull down on the Sources tab to immediately synchronize enabled sources with saved management
+credentials, wait for remote parsing, then reload the catalogs without the local HTTP cache.
+Static sources and sources without management credentials reload their published catalogs directly.
+Synchronization and catalog errors appear on the Sources page; failed catalog requests retain the
+last successful data. Repeated pulls share the active task, which continues across tab changes.
+This action refreshes source browsing data without starting automatic app downloads or signing.
+Open a source card to manage its source.
+
+The source refresh regression runs the production view model, synchronization and HTTP clients
+with isolated Core Data, in-memory credentials and controlled HTTP responses. It covers ordering,
+enabled/credential rules, cancelled waiters, repeated pulls, errors, retained data, deletion and retry:
+
+```sh
+python3 -B scripts/test_source_refresh_simulator.py <SIMULATOR_UDID>
+```
+
 Source fetch failures report their actual error (including HTTP status) without treating the source as removed.
 
 The production update manager and Core Data metadata writer regression covers

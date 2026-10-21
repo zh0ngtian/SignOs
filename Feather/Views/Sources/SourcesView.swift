@@ -18,6 +18,16 @@ struct SourcesView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: WSSpacing.sectionGap) {
                     WSHeroHeader(eyebrow: "SignOs", title: .localized("Sources"))
+                    if viewModel.isSynchronizingSources {
+                        ProgressView("正在同步软件源…")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    if !viewModel.sourceRefreshIssues.isEmpty {
+                        Label(viewModel.sourceRefreshIssues.joined(separator: "\n"), systemImage: "exclamationmark.circle")
+                            .font(.footnote)
+                            .foregroundStyle(.orange)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                     VStack(spacing: WSSpacing.md) {
                         ForEach(sources) { source in sourceCard(source) }
                     }
@@ -36,7 +46,7 @@ struct SourcesView: View {
             }
             .background(WSSurface.background)
             .toolbar(.hidden, for: .navigationBar)
-            .refreshable { await viewModel.fetchSources(sources, refresh: true) }
+            .refreshable { await SourcesViewModel.shared.synchronizeAndRefreshSources() }
             .sheet(isPresented: $isAdding) { SourcesAddView() }
             .confirmationDialog("移除软件源？", isPresented: $confirmsRemoval, titleVisibility: .visible) {
                 Button("移除软件源", role: .destructive) {
