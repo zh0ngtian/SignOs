@@ -1,0 +1,123 @@
+{
+  "date": "2026-10-21",
+  "completedAt": 1792566120.060364,
+  "coordinatorVersion": "0.1.7",
+  "id": "ea512a4e-ecb2-4962-81b6-78551dd4be6d",
+  "project": "signos-production",
+  "state": "complete",
+  "frozen": {
+    "sha": "b6ac7fc8c0572825779c878f3e3d710064456ad8",
+    "version": "1.1.22",
+    "buildNumber": "44",
+    "manifestSha256": "ccff69d866a76a4e6a5d1fd15051611e8e47340a324fa4da2ec66a1bfada67e7",
+    "environment": "production",
+    "target": "com.signos.app",
+    "tasks": [
+      {
+        "id": "4ed63a4c-46fa-480c-958e-22a82659a821",
+        "sha": "473414b481ab1c1a24f0d7ede28d1a29bc51dcc3"
+      },
+      {
+        "id": "627035bc-5d32-4c51-b40d-b70e625605dd",
+        "sha": "473414b481ab1c1a24f0d7ede28d1a29bc51dcc3"
+      }
+    ]
+  },
+  "results": {
+    "prepare": {
+      "version": "1.1.22",
+      "buildNumber": "44",
+      "bundleIdentifier": "com.signos.app",
+      "localValidation": "passed",
+      "inputFingerprint": "ebd6260c6d85fd616b343b77afef75ab6947ea019ac75cc1b01829f0a34d82ef"
+    },
+    "build": {
+      "version": "1.1.22",
+      "buildNumber": "44",
+      "runId": 39558168058,
+      "commit": "b6ac7fc8c0572825779c878f3e3d710064456ad8",
+      "sha256": "15faade560ae741fcc2845e43622b575802eb03dcea5d6a41effb8fb92b5ce15"
+    },
+    "github": {
+      "runId": 39559115253,
+      "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.22",
+      "sha256": "15faade560ae741fcc2845e43622b575802eb03dcea5d6a41effb8fb92b5ce15"
+    },
+    "ota": {
+      "version": "1.1.22",
+      "buildNumber": "44",
+      "bundleId": "com.signos.app",
+      "signed": true,
+      "size": 15883941,
+      "sha256": "c2ef2dccbf4cee181e6b9c8a38168dcb2769c2b26fb3608e52b923f3db77c1ae",
+      "sourceCommit": "b6ac7fc8c0572825779c878f3e3d710064456ad8",
+      "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.22/latest.ipa",
+      "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+      "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.22/manifest.plist"
+    },
+    "verify": {
+      "httpsFullDownloadVerified": true
+    }
+  },
+  "recovery": {
+    "failedBatch": "d4f3bc05-b38f-40aa-ae00-a308fbff9535",
+    "failedBeforeFreeze": true,
+    "cause": "发布主机的默认 Swift 包缓存不完整；保留旧缓存并重新解析锁定依赖，标准 make iphoneos 通过后以关联修复批次继续",
+    "originalTask": "4ed63a4c-46fa-480c-958e-22a82659a821",
+    "originalTaskState": "recovered",
+    "repairTask": "627035bc-5d32-4c51-b40d-b70e625605dd",
+    "repairTaskState": "complete"
+  },
+  "checks": {
+    "mainBuild": "passed",
+    "tagWorkflow": "passed",
+    "annotatedTagFrozenCommit": "passed",
+    "githubAssetsAndFullSHA256": "passed",
+    "chineseNotes": "passed",
+    "signosOTASignature": "passed",
+    "otaPlan": {
+      "inputIpaInspected": true,
+      "capabilitiesVerified": true
+    },
+    "fixedOTAHTTPS": {
+      "version": "1.1.22",
+      "build": "44",
+      "metadataNotesVerified": true,
+      "installPageVerified": true,
+      "manifestVerified": true,
+      "fullDownloadVerified": true,
+      "sha256": "c2ef2dccbf4cee181e6b9c8a38168dcb2769c2b26fb3608e52b923f3db77c1ae",
+      "size": 15883941
+    }
+  },
+  "softwareSource": {
+    "entryId": "ba9c4295-207b-433a-b191-2c8908964159",
+    "status": "succeeded",
+    "configurationChanged": false,
+    "signedArchiveUploaded": false,
+    "publicChecks": [
+      {
+        "url": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json",
+        "version": "1.1.22",
+        "build": "44",
+        "downloadURL": "https://github.com/zh0ngtian/SignOs/releases/download/v1.1.22/SignOs.ipa",
+        "size": 15837231,
+        "notesVerified": true
+      },
+      {
+        "url": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json?legacy=1",
+        "version": "1.1.22",
+        "build": "44",
+        "downloadURL": "https://github.com/zh0ngtian/SignOs/releases/download/v1.1.22/SignOs.ipa",
+        "size": 15837231,
+        "notesVerified": true
+      }
+    ],
+    "integrityScope": "The source exposes the exact GitHub unsigned IPA URL and parsed metadata; full IPA SHA-256 was verified by the release adapter."
+  },
+  "physicalVerification": {
+    "status": "notPerformed",
+    "reason": "功能在隔离 iOS 27 模拟器及生产回归验证，未验证真机 Ad Hoc 覆盖安装、数据或钥匙串保留。"
+  },
+  "acceptance": "source-sign-install-20261021/verification.json"
+}

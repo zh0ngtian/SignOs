@@ -881,3 +881,11 @@ SignOs 发布任务必须在 ready 的验证 JSON 中填写具体中文 releaseN
 冻结提交 `1fa5589ce8a174053db1808085872ea5da1d2c5f` 的 [main 构建](https://github.com/zh0ngtian/SignOs/actions/runs/39461497023)和[标签工作流](https://github.com/zh0ngtian/SignOs/actions/runs/39463158030)均成功，[GitHub Release](https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.21)附件与同提交 CI 产物一致。同一产物经 `--plan`、Ad Hoc 签名及独立验签后更新[固定 OTA 安装页](https://192.168.123.79:8769/channels/signos/current/install.html)。固定页面、manifest、中文日志及完整 HTTPS 下载回验通过；签名包为 15,873,297 字节，SHA-256 为 `07fd386c1a629d7ce84e55b3a328ce8e16f4b5363e07a7bf4d2533a746ea62f0`。现有软件源普通与兼容清单均同步到 1.1.21（43），订阅配置未更改，未上传签名包归档。详见[共同发布凭证](docs/plans/evidence/release-batch-1.1.21-20261021.json)。
 
 生产保留策略、Core Data/文件回归、6 项 OneView 状态检查及完整应用模拟器验收通过，覆盖取消、任务重新开始、旧确认失效、共享输入隔离和失败重试。本次未执行或取消系统安装，未验证真机覆盖安装及数据、钥匙串保留。
+
+### 2026-10-21 软件源签名安装与本机 Bundle ID 设置发布
+
+已发布 **1.1.22（构建 44）**。每应用 Bundle ID 的唯一编辑入口统一到「软件源 → 软件源设置 → 本机 Bundle ID」，无需管理 Token，仅保存在本机，不修改远端软件源。签名页只展示目标 ID，签名成功关闭页面后继续安装本次输出包；原始下载包归入目标应用的本地包，避免重复待安装卡片。不同签名身份和克隆继续独立展示，原有软件源更新关联及安装重试保护保留。
+
+冻结提交 `b6ac7fc8c0572825779c878f3e3d710064456ad8` 的 [main 构建](https://github.com/zh0ngtian/SignOs/actions/runs/39558168058)和[标签工作流](https://github.com/zh0ngtian/SignOs/actions/runs/39559115253)均成功，[GitHub Release](https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.22)附件与同提交 CI 产物一致。同一产物经 `--plan`、Ad Hoc 签名和独立验签后更新[固定 OTA 安装页](https://192.168.123.79:8769/channels/signos/current/install.html)。固定页面、manifest、版本、构建号、中文日志和完整 HTTPS 下载回验通过；签名包为 15,883,941 字节，SHA-256 为 `c2ef2dccbf4cee181e6b9c8a38168dcb2769c2b26fb3608e52b923f3db77c1ae`。软件源普通与兼容清单同步新版，未更改订阅配置或上传签名包归档。详见[共同发布凭证](docs/plans/evidence/release-batch-1.1.22-20261021.json)。
+
+本地生产队列、更新、保留与删除、偏好及安装状态回归和完整模拟器验收通过；未验证真机覆盖安装及数据、钥匙串保留。首次预构建因不完整依赖缓存失败，原记录保留；缓存修复并通过标准构建后，由关联子批次完成发布，原任务状态为 recovered。
