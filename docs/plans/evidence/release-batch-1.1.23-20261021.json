@@ -1,0 +1,126 @@
+{
+  "id": "ca34074c-7940-4d9f-8d68-656140dd5800",
+  "project": "signos-production",
+  "completedAt": 1792580529.8960462,
+  "coordinatorVersion": "0.1.7",
+  "frozen": {
+    "buildNumber": "45",
+    "environment": "production",
+    "manifestSha256": "e2c856b60766f48a9154c23d0692a1c4b9a634ddd9496245a54737579340616a",
+    "sha": "aea264e482ac02006a7e1a47b808a51919ead7af",
+    "target": "com.signos.app",
+    "tasks": [
+      {
+        "id": "signos-source-pull-sync-20261021",
+        "sha": "f3decb37d122c7f7c5f2906a685c31e22648627b"
+      }
+    ],
+    "version": "1.1.23"
+  },
+  "results": {
+    "build": {
+      "buildNumber": "45",
+      "commit": "aea264e482ac02006a7e1a47b808a51919ead7af",
+      "runId": 39587727778,
+      "sha256": "2125ac6b85add08e01351366128c2fb688ec54803baa941b7fd4eb8fb3668bde",
+      "version": "1.1.23"
+    },
+    "github": {
+      "runId": 39588859072,
+      "sha256": "2125ac6b85add08e01351366128c2fb688ec54803baa941b7fd4eb8fb3668bde",
+      "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.23"
+    },
+    "ota": {
+      "buildNumber": "45",
+      "bundleId": "com.signos.app",
+      "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.23/latest.ipa",
+      "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+      "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.23/manifest.plist",
+      "sha256": "956629ad28f6ec1310759d7d448de48316782f8ac6a7fec401828ef06954e5c7",
+      "signed": true,
+      "size": 15888128,
+      "sourceCommit": "aea264e482ac02006a7e1a47b808a51919ead7af",
+      "version": "1.1.23"
+    },
+    "prepare": {
+      "buildNumber": "45",
+      "bundleIdentifier": "com.signos.app",
+      "inputFingerprint": "f1e2bfadcfba3e1be0e49365c0a6f9f72c2323f518c4d90585cf5abe4e31db8c",
+      "localValidation": "passed",
+      "version": "1.1.23"
+    },
+    "verify": {
+      "github": {
+        "runId": 39588859072,
+        "sha256": "2125ac6b85add08e01351366128c2fb688ec54803baa941b7fd4eb8fb3668bde",
+        "url": "https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.23"
+      },
+      "httpsFullDownloadVerified": true,
+      "ota": {
+        "buildNumber": "45",
+        "bundleId": "com.signos.app",
+        "downloadUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.23/latest.ipa",
+        "installUrl": "https://192.168.123.79:8769/channels/signos/current/install.html",
+        "manifestUrl": "https://192.168.123.79:8769/channels/signos/releases/1.1.23/manifest.plist",
+        "sha256": "956629ad28f6ec1310759d7d448de48316782f8ac6a7fec401828ef06954e5c7",
+        "signed": true,
+        "size": 15888128,
+        "sourceCommit": "aea264e482ac02006a7e1a47b808a51919ead7af",
+        "version": "1.1.23"
+      }
+    }
+  },
+  "date": "2026-10-21",
+  "state": "complete",
+  "checks": {
+    "mainBuild": "passed",
+    "tagWorkflow": "passed",
+    "annotatedTagFrozenCommit": "passed",
+    "githubAssetsAndFullSHA256": "passed",
+    "chineseNotes": "passed",
+    "signosOTASignature": "passed",
+    "otaPlan": {
+      "inputIpaInspected": true,
+      "capabilitiesVerified": true
+    },
+    "fixedOTAHTTPS": {
+      "version": "1.1.23",
+      "build": "45",
+      "metadataNotesVerified": true,
+      "installPageVerified": true,
+      "manifestVerified": true,
+      "fullDownloadVerified": true,
+      "sha256": "956629ad28f6ec1310759d7d448de48316782f8ac6a7fec401828ef06954e5c7",
+      "size": 15888128
+    }
+  },
+  "softwareSource": {
+    "entryId": "ba9c4295-207b-433a-b191-2c8908964159",
+    "status": "succeeded",
+    "configurationChanged": false,
+    "signedArchiveUploaded": false,
+    "publicChecks": [
+      {
+        "url": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json",
+        "version": "1.1.23",
+        "build": "45",
+        "downloadURL": "https://github.com/zh0ngtian/SignOs/releases/download/v1.1.23/SignOs.ipa",
+        "size": 15841013,
+        "notesVerified": true
+      },
+      {
+        "url": "https://signos-source-aggregator.305301890.workers.dev/sources/yao.json?legacy=1",
+        "version": "1.1.23",
+        "build": "45",
+        "downloadURL": "https://github.com/zh0ngtian/SignOs/releases/download/v1.1.23/SignOs.ipa",
+        "size": 15841013,
+        "notesVerified": true
+      }
+    ],
+    "historyCount": 20
+  },
+  "physicalVerification": {
+    "status": "notPerformed",
+    "reason": "功能已在生产回归与 iOS 27 模拟器验证；未验证真机 Ad Hoc 覆盖安装、数据或钥匙串保留。"
+  }
+}

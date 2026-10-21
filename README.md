@@ -904,3 +904,11 @@ SignOs 发布任务必须在 ready 的验证 JSON 中填写具体中文 releaseN
 冻结提交 `b6ac7fc8c0572825779c878f3e3d710064456ad8` 的 [main 构建](https://github.com/zh0ngtian/SignOs/actions/runs/39558168058)和[标签工作流](https://github.com/zh0ngtian/SignOs/actions/runs/39559115253)均成功，[GitHub Release](https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.22)附件与同提交 CI 产物一致。同一产物经 `--plan`、Ad Hoc 签名和独立验签后更新[固定 OTA 安装页](https://192.168.123.79:8769/channels/signos/current/install.html)。固定页面、manifest、版本、构建号、中文日志和完整 HTTPS 下载回验通过；签名包为 15,883,941 字节，SHA-256 为 `c2ef2dccbf4cee181e6b9c8a38168dcb2769c2b26fb3608e52b923f3db77c1ae`。软件源普通与兼容清单同步新版，未更改订阅配置或上传签名包归档。详见[共同发布凭证](docs/plans/evidence/release-batch-1.1.22-20261021.json)。
 
 本地生产队列、更新、保留与删除、偏好及安装状态回归和完整模拟器验收通过；未验证真机覆盖安装及数据、钥匙串保留。首次预构建因不完整依赖缓存失败，原记录保留；缓存修复并通过标准构建后，由关联子批次完成发布，原任务状态为 recovered。
+
+### 2026-10-21 软件源下拉立即同步发布
+
+已发布 **1.1.23（构建 45）**。软件源页下拉现会先同步已启用且保存管理 Token 的远端软件源，等待解析完成后重新获取清单；静态源和无管理凭据的源直接读取已发布清单。页面显示同步进度与失败原因，清单失败保留上次成功数据；重复下拉共用同一任务，切页后继续执行。此操作只刷新浏览数据，不启动自动下载或签名。
+
+冻结提交 `aea264e482ac02006a7e1a47b808a51919ead7af` 的 [main 构建](https://github.com/zh0ngtian/SignOs/actions/runs/39587727778)和[标签工作流](https://github.com/zh0ngtian/SignOs/actions/runs/39588859072)均成功，[GitHub Release](https://github.com/zh0ngtian/SignOs/releases/tag/v1.1.23)附件与同提交 CI 产物一致。同一产物经 `--plan`、Ad Hoc 签名及独立验签后更新[固定 OTA 安装页](https://192.168.123.79:8769/channels/signos/current/install.html)。固定页面、manifest、版本、中文日志和完整 HTTPS 下载回验通过；签名包为 15,888,128 字节，SHA-256 为 `956629ad28f6ec1310759d7d448de48316782f8ac6a7fec401828ef06954e5c7`。软件源普通与兼容清单均同步到新版，订阅配置保持一致。共同凭证见[发布验收记录](docs/plans/evidence/release-batch-1.1.23-20261021.json)。
+
+生产软件源刷新、更新检查和调度回归、设备版 Release 与完整模拟器构建通过；完整应用通过受控原生刷新事件验证清单刷新完成。自动手势未证明真实下拉触发，本次未验证真机覆盖安装及数据、钥匙串保留。
