@@ -8,6 +8,7 @@
 import SwiftUI
 import PhotosUI
 import NimbleViews
+import CoreData
 
 // MARK: - View
 struct SigningView: View {
@@ -36,19 +37,24 @@ struct SigningView: View {
 	}
 	
 	var app: AppInfoPresentable
+	private let purpose: ManualSigningFlow.Purpose
+	private let onInstallReady: @MainActor (Signed) -> Void
 	
-	init(app: AppInfoPresentable) {
+	init(app: AppInfoPresentable, purpose: ManualSigningFlow.Purpose = .sign,
+         onInstallReady: @escaping @MainActor (Signed) -> Void = { AutoSignManager.shared.enqueueInstall(app: $0) }) {
 		self.app = app
+		self.purpose = purpose
+		self.onInstallReady = onInstallReady
 		let existing = AppOperations.certificate(for: app, targetIdentifier: AppOperations.signingOptions(for: app).appIdentifier)
         let storedCert = existing.flatMap { cert in Storage.shared.getAllCertificates().firstIndex { $0.uuid == cert.uuid } } ?? UserDefaults.standard.integer(forKey: "feather.selectedCert")
 		__temporaryCertificate = State(initialValue: storedCert)
-		__temporaryOptions = State(initialValue: Self._initialOptions(for: app, certificate: Storage.shared.getCertificate(for: storedCert)))
+		__temporaryOptions = State(initialValue: Self._initialOptions(for: app, certificate: Storage.shared.getCertificate(for: storedCert), purpose: purpose))
 	}
 
-    private static func _initialOptions(for app: AppInfoPresentable, certificate: CertificatePair?) -> Options {
+    private static func _initialOptions(for app: AppInfoPresentable, certificate: CertificatePair?, purpose: ManualSigningFlow.Purpose) -> Options {
         var options = AppOperations.signingOptions(for: app)
         let original = AppOperations.originalIdentifier(for: app)
-        if original.flatMap({ AppBundleIdentifierPreferences.shared.configuredIdentifier(for: $0) }) == nil {
+        if purpose != .sourceInstall, original.flatMap({ AppBundleIdentifierPreferences.shared.configuredIdentifier(for: $0) }) == nil {
             if options.ppqProtection, certificate?.ppQCheck == true, let identifier = app.identifier {
                 options.appIdentifier = "\(identifier).\(options.ppqString)"
             }
@@ -84,7 +90,7 @@ struct SigningView: View {
 					style: .text,
 					placement: .topBarTrailing
 				) {
-					_temporaryOptions = Self._initialOptions(for: app, certificate: _selectedCert())
+					_temporaryOptions = Self._initialOptions(for: app, certificate: _selectedCert(), purpose: purpose)
 					appIcon = nil
 				}
 			}
@@ -172,13 +178,10 @@ extension SigningView {
 					bindingValue: $_temporaryOptions.appName
 				)
 			}
-			_infoCell(.localized("Identifier"), desc: _temporaryOptions.appIdentifier ?? app.identifier) {
-				SigningPropertiesView(
-					title: .localized("Identifier"),
-					initialValue: _temporaryOptions.appIdentifier ?? (app.identifier ?? ""),
-					bindingValue: $_temporaryOptions.appIdentifier
-				)
-			}
+            LabeledContent(.localized("Identifier")) {
+                Text(_temporaryOptions.appIdentifier ?? app.identifier ?? "")
+                    .foregroundStyle(.secondary).textSelection(.enabled)
+            }
 			_infoCell(.localized("Version"), desc: _temporaryOptions.appVersion ?? app.version) {
 				SigningPropertiesView(
 					title: .localized("Version"),
@@ -188,6 +191,8 @@ extension SigningView {
 			}
 		} header: {
 			Text(.localized("Identity"))
+		} footer: {
+            Text("Bundle ID 使用本机配置，请在软件源设置中修改。")
 		}
 	}
 	
@@ -206,7 +211,7 @@ extension SigningView {
 						} else {
 							Image(systemName: "signature")
 						}
-						Text(verbatim: _isSigning ? .localized("Signing") : .localized("Sign"))
+						Text(verbatim: _isSigning ? .localized("Signing") : .localized(purpose == .sourceInstall ? "Sign & Install" : "Sign"))
 							.font(.headline)
 					}
 					.foregroundStyle(.white)
@@ -317,7 +322,15 @@ extension SigningView {
 // MARK: - Extension: View (import)
 extension SigningView {
 	private func _start() {
-        if AutoSignManager.shared.currentJob?.appIdentifier == app.identifier || AutoSignManager.shared.queue.contains(where: { $0.appIdentifier == app.identifier }) {
+        guard AppOperations.isAllowed(app) else {
+            AppOperations.showError(AppOperations.sourceStatus(app) ?? "来源不可用。")
+            return
+        }
+        let identifiers = Set([app.identifier, _temporaryOptions.appIdentifier].compactMap { $0 })
+        let jobs = AutoSignManager.shared.queue + (AutoSignManager.shared.currentJob.map { [$0] } ?? [])
+        if SourceAccessManager.shared.isInUse(app.uuid) || jobs.contains(where: {
+            $0.appUUID == app.uuid || $0.appIdentifier.map(identifiers.contains) == true
+        }) || identifiers.contains(where: SourceAccessManager.shared.hasActiveApplication) {
             AppOperations.showError("这个应用正在处理，请等待当前任务结束。"); return
         }
 		guard
@@ -331,20 +344,27 @@ extension SigningView {
 			return
 		}
 
+        let options: Options
+        do {
+            options = try ManualSigningFlow.prepare(_temporaryOptions, for: app, purpose: purpose)
+        } catch {
+            AppOperations.showError(error.localizedDescription)
+            return
+        }
+
 		let generator = UIImpactFeedbackGenerator(style: .light)
 		generator.impactOccurred()
 		_isSigning = true
 		
 		FR.signPackageFile(
 			app,
-			using: _temporaryOptions,
+			using: options,
 			icon: appIcon,
 			certificate: _selectedCert()
 		) { error in
+			_isSigning = false
 			if let error {
-				let ok = UIAlertAction(title: .localized("Dismiss"), style: .cancel) { _ in
-					dismiss()
-				}
+				let ok = UIAlertAction(title: .localized("Dismiss"), style: .cancel)
 				
 				UIAlertController.showAlert(
 					title: "Error",
@@ -352,13 +372,16 @@ extension SigningView {
 					actions: [ok]
 				)
 			} else {
-                if _temporaryOptions.post_installAppAfterSigned,
-                    !SourceAccessManager.shared.wasSuppressed(app.uuid),
-                    let result = AppOperations.signedResult(for: app), AppOperations.isAllowed(result) {
-                    AutoSignManager.shared.enqueueInstall(app: result)
-                }
                 UpdateManager.shared.sourceAvailabilityChanged(localApps: AppOperations.packages())
                 AutoUpdateManager.shared.updateBadgeFromState()
+                do {
+                    if let result = try ManualSigningFlow.installationResult(for: app, options: options, purpose: purpose) {
+                        onInstallReady(result)
+                    }
+                } catch {
+                    AppOperations.showError(error.localizedDescription)
+                    return
+                }
 				dismiss()
 			}
 		}

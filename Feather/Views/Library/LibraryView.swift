@@ -37,7 +37,7 @@ struct LibraryView: View {
         downloads.downloads.filter { download in
             guard let origin = download.sourceProvenance else { return true }
             let bundle = SourceSubscriptionIdentity.bundleIdentifier(from: origin.sourceAppIdentifier)
-            return !applications.contains { $0.id == bundle }
+            return !applications.contains { $0.id == AppBundleIdentifierPreferences.shared.identifier(for: bundle) }
         }
     }
 
@@ -58,7 +58,7 @@ struct LibraryView: View {
                     }
                     LazyVStack(spacing: WSSpacing.md) {
                         ForEach(filtered) { application in
-                            NavigationLink { ApplicationDetailView(identifier: application.id) } label: {
+                            NavigationLink { ApplicationDetailView(identifier: application.id, packageUUID: application.primary.uuid) } label: {
                                 applicationCard(application)
                             }
                             .buttonStyle(.plain)
@@ -219,7 +219,9 @@ struct LibraryView: View {
     private func download(for application: ManagedApplication) -> Download? {
         downloads.downloads.first { download in
             application.packages.contains { $0.uuid == download.targetAppUUID } ||
-            download.sourceProvenance.map { SourceSubscriptionIdentity.bundleIdentifier(from: $0.sourceAppIdentifier) == application.id } == true
+            download.sourceProvenance.map {
+                AppBundleIdentifierPreferences.shared.identifier(for: SourceSubscriptionIdentity.bundleIdentifier(from: $0.sourceAppIdentifier)) == application.id
+            } == true
         }
     }
 

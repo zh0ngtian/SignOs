@@ -9,8 +9,9 @@ import Darwin
 protocol AppInfoPresentable {
     var uuid: String? { get }; var identifier: String? { get }; var name: String? { get }; var isSigned: Bool { get }
     var originalIdentifier: String? { get }
+    var date: Date? { get }
 }
-extension AppInfoPresentable { var originalIdentifier: String? { nil } }
+extension AppInfoPresentable { var originalIdentifier: String? { nil }; var date: Date? { nil } }
 @objc(Signed) final class Signed: NSManagedObject, AppInfoPresentable {
     var originalIdentifier: String?
     @NSManaged var uuid: String?; @NSManaged var identifier: String?; @NSManaged var name: String?
@@ -57,19 +58,25 @@ struct Metadata { let sourceVersionID: String }
     func getAllCertificates() -> [CertificatePair] { [] }
     func getCertificate(for index: Int) -> CertificatePair? { nil }
 }
-struct Options { enum SigningOption { case `default`, adhoc }; var signingOption = SigningOption.adhoc; var appIdentifier: String?; var appName: String?; var originalIdentifier: String? }
+struct Options { enum SigningOption { case `default`, adhoc }; var signingOption = SigningOption.adhoc; var appIdentifier: String?; var appName: String?; var originalIdentifier: String?; var post_installAppAfterSigned = false }
 @MainActor final class OptionsManager { static let shared = OptionsManager(); var options = Options() }
 @MainActor enum AppOperations {
     static var disabled = Set<String>()
     static func isAllowed(_ app: AppInfoPresentable) -> Bool { !disabled.contains(app.uuid ?? "") }
     static func packages() -> [any AppInfoPresentable] { [] }
-    static func signedResult(for app: AppInfoPresentable) -> Signed? { nil }
+    static func signedResult(for app: AppInfoPresentable) -> Signed? {
+        guard let input = app.uuid, let output = SourceAccessManager.shared.signedResults[input] else { return nil }
+        return (try? Storage.shared.context.fetch(Signed.fetchRequest()))?.first { $0.uuid == output }
+    }
     static func resumeDeferredUpdates() {}
     static func certificate(for app: AppInfoPresentable, targetIdentifier: String? = nil) -> CertificatePair? { CertificatePair() }
     static func signingError(for app: AppInfoPresentable, certificate: CertificatePair?, targetIdentifier: String? = nil) -> String? { nil }
 }
 @MainActor final class SourceAccessManager {
     static let shared = SourceAccessManager()
+    var signedResults: [String: String] = [:]
+    var suppressed = Set<String>()
+    func wasSuppressed(_ uuid: String?) -> Bool { uuid.map(suppressed.contains) ?? false }
     func cleanupDeletedSubscriptions() {}
     func beginUse(_ app: AppInfoPresentable) {}
     func hasActiveApplication(_ identifier: String) -> Bool { false }
@@ -226,7 +233,59 @@ extension UIApplication { static func topViewController() -> UIViewController? {
         manager.cancelPending { $0.uuid == imported.uuid }
         FR.completion!(nil); FR.completion = nil
         try await waitUntil { manager.currentJob == nil }
-        print("AutoSignManagerRegression passed: direct install, serial queue, deduplication, saved Bundle ID on import, original identity on re-sign/reset, independent clone signing/update preferences")
+
+        // Follow the source manual-sign handoff with Auto-Sign and the global post-install option off.
+        let sourceImport = Imported(context: Storage.shared.context)
+        sourceImport.uuid = "source-input"; sourceImport.identifier = "fixture.source"; sourceImport.name = "Source App"
+        var draft = Options(); draft.appIdentifier = "fixture.unrelated.global.rule"
+        let originalOptions = try ManualSigningFlow.prepare(draft, for: sourceImport, purpose: .sourceInstall)
+        precondition(originalOptions.appIdentifier == sourceImport.identifier, "Source signing defaults to the original ID")
+        precondition(preferences.configuredIdentifier(for: "fixture.source") == nil, "Signing does not create a preference outside source settings")
+        preferences.save("fixture.source.personal", for: "fixture.source")
+        let prepared = try ManualSigningFlow.prepare(draft, for: sourceImport, purpose: .sourceInstall)
+        precondition(!prepared.post_installAppAfterSigned)
+        precondition(prepared.appIdentifier == "fixture.source.personal" && prepared.originalIdentifier == "fixture.source")
+        precondition(AppBundleIdentifierPreferences().identifier(for: "fixture.source") == prepared.appIdentifier, "Source signing reads the persisted source setting")
+        precondition(AppInventory.applications([sourceImport])[0].id == prepared.appIdentifier)
+        preferences.save("fixture..broken", for: "fixture.source")
+        do { _ = try ManualSigningFlow.prepare(draft, for: sourceImport, purpose: .sourceInstall); preconditionFailure("Invalid stored IDs must not start signing") }
+        catch {}
+        preferences.save(prepared.appIdentifier!, for: "fixture.source")
+        do { _ = try ManualSigningFlow.installationResult(for: sourceImport, options: prepared, purpose: .sourceInstall); preconditionFailure("Missing output must not use an older package") }
+        catch {}
+        let sourceOutput = signed("source-output", identifier: prepared.appIdentifier!)
+        sourceOutput.originalIdentifier = prepared.originalIdentifier
+        SourceAccessManager.shared.signedResults[sourceImport.uuid!] = sourceOutput.uuid!
+        let grouped = AppInventory.applications([sourceImport, sourceOutput])
+        precondition(grouped.count == 1 && grouped[0].packages.count == 2 && grouped[0].installed?.uuid == sourceOutput.uuid, "The original input belongs to the target app without another pending card")
+        let originalSigned = signed("original-identity", identifier: "fixture.source")
+        precondition(AppInventory.applications([sourceImport, sourceOutput, originalSigned, clone]).count == 3, "Different signed identities and clones stay independent")
+        var temporary = prepared; temporary.appIdentifier = "fixture.temporary"
+        _ = try ManualSigningFlow.prepare(temporary, for: sourceImport, purpose: .sign)
+        precondition(preferences.identifier(for: "fixture.source") == prepared.appIdentifier, "Ordinary signing does not change the saved source setting")
+        let manualResult = try ManualSigningFlow.installationResult(for: sourceImport, options: prepared, purpose: .sign)
+        precondition(manualResult == nil, "Ordinary manual signing honors its post-install setting")
+        do { _ = try ManualSigningFlow.installationResult(for: sourceImport, options: temporary, purpose: .sourceInstall); preconditionFailure("Wrong target must not install") }
+        catch {}
+        SourceAccessManager.shared.suppressed.insert(sourceImport.uuid!)
+        let suppressedResult = try ManualSigningFlow.installationResult(for: sourceImport, options: prepared, purpose: .sourceInstall)
+        precondition(suppressedResult == nil, "A disabled then reenabled source cannot resume the cancelled handoff")
+        SourceAccessManager.shared.suppressed.removeAll()
+        AppOperations.disabled.insert(sourceOutput.uuid!)
+        let disabledResult = try ManualSigningFlow.installationResult(for: sourceImport, options: prepared, purpose: .sourceInstall)
+        precondition(disabledResult == nil)
+        AppOperations.disabled.removeAll()
+        let result = try ManualSigningFlow.installationResult(for: sourceImport, options: prepared, purpose: .sourceInstall)!
+        let previousCalls = FR.signCalls
+        manager.enqueueInstall(app: result)
+        try await waitUntil { ArchiveHandler.entered.last == sourceOutput.uuid }
+        precondition(manager.currentJob?.appUUID == sourceOutput.uuid && manager.currentJob?.appIdentifier == prepared.appIdentifier && FR.signCalls == previousCalls, "Install the exact custom-ID output without signing again")
+        ArchiveHandler.finish()
+        try await waitUntil { manager.currentJob == nil }
+        preferences.save("fixture.source.next", for: "fixture.source")
+        let moved = AppInventory.applications([sourceImport, sourceOutput])
+        precondition(moved.count == 2 && moved.first { $0.id == "fixture.source.next" }?.installed == nil, "A changed preference must not relabel an existing signature as installed")
+        print("AutoSignManagerRegression passed: direct/serial/deduplicated installs, source signing reads local settings and installs exact output, original defaults, invalid/missing/wrong output protection, disabled-source suppression, merged input grouping and independent signed identities/clones")
         fflush(stdout)
     }
 }

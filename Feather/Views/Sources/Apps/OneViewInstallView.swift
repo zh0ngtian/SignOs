@@ -90,6 +90,7 @@ struct WSOneViewGetButton: View {
 	@State private var _startedAt = Date()
 	@State private var _presentingInstall = false
 	@State private var _presentingSign = false
+	@State private var _pendingInstall: Signed?
 
 	var body: some View {
 		let tracker = OneViewTracker(sourceURL: sourceURL, source: source, app: app, startedAt: _startedAt)
@@ -138,7 +139,7 @@ struct WSOneViewGetButton: View {
 				Button {
 					_presentingSign = true
 				} label: {
-					Text(.localized("Sign"))
+					Text(.localized("Sign & Install"))
 						.lineLimit(0)
 						.font(.headline.bold())
 						.foregroundStyle(Color.accentColor)
@@ -191,9 +192,12 @@ struct WSOneViewGetButton: View {
 				InstallPreviewView(app: installed)
 			}
 		}
-		.fullScreenCover(isPresented: $_presentingSign) {
+		.fullScreenCover(isPresented: $_presentingSign, onDismiss: {
+            if let signed = _pendingInstall { autoSignManager.enqueueInstall(app: signed) }
+            _pendingInstall = nil
+        }) {
 			if let imported = _newestImported() {
-				SigningView(app: imported)
+				SigningView(app: imported, purpose: .sourceInstall) { _pendingInstall = $0 }
 			}
 		}
 		.onAppear {
@@ -255,6 +259,7 @@ struct OneViewInstallView: View {
 	@State private var _startedAt = Date()
 	@State private var _presentingInstall = false
 	@State private var _signingApp: Imported?
+	@State private var _pendingInstall: Signed?
 	@State private var _tappedGet = false
 	@State private var _installError: String?
 
@@ -368,8 +373,11 @@ struct OneViewInstallView: View {
 					InstallPreviewView(app: installed)
 				}
 			}
-			.fullScreenCover(item: $_signingApp) { imported in
-				SigningView(app: imported)
+			.fullScreenCover(item: $_signingApp, onDismiss: {
+                if let signed = _pendingInstall { autoSignManager.enqueueInstall(app: signed) }
+                _pendingInstall = nil
+            }) { imported in
+				SigningView(app: imported, purpose: .sourceInstall) { _pendingInstall = $0 }
 			}
 			.onAppear { _startedAt = Date() }
             .onChange(of: downloadManager.downloads.map(\.id)) {

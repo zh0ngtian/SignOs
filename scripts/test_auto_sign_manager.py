@@ -35,6 +35,8 @@ def main():
             "Feather/Backend/Observable/AutoSignManager.swift",
             "Feather/Utilities/AppBundleIdentifierPreferences.swift",
             "Feather/Utilities/ApplicationSigningOptions.swift",
+            "Feather/Utilities/ManualSigningFlow.swift",
+            "Feather/Utilities/AppInventory.swift",
             "NimbleKit/Sources/NimbleExtensions/String/String+localized.swift",
             "Tests/AutoSignManagerRegression.swift"]], "-o", str(binary)], check=True, env=env)
         bundle_id = "com.signos.auto-sign-test-" + uuid.uuid4().hex

@@ -7,9 +7,17 @@ struct ManagedApplication: Identifiable {
     var primary: any AppInfoPresentable { installed ?? packages[0] }
 }
 
+@MainActor
 enum AppInventory {
+    static func groupIdentifier(for app: any AppInfoPresentable) -> String {
+        if !app.isSigned, let identifier = app.identifier {
+            return AppBundleIdentifierPreferences.shared.identifier(for: identifier)
+        }
+        return app.identifier ?? app.uuid ?? "unknown"
+    }
+
     static func applications(_ packages: [any AppInfoPresentable], sourceUpdateDates: [String: Date] = [:]) -> [ManagedApplication] {
-        Dictionary(grouping: packages, by: { $0.identifier ?? $0.uuid ?? "unknown" })
+        Dictionary(grouping: packages, by: groupIdentifier)
             .map { key, values in
                 ManagedApplication(id: key, packages: values.sorted {
                     if $0.date != $1.date { return ($0.date ?? .distantPast) > ($1.date ?? .distantPast) }

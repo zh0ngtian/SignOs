@@ -133,11 +133,10 @@ struct SourceAppsView: View {
 					_sortActions()
 				}
 			}
-			if object.count == 1, let source = object.first, !source.isDeleted,
-				let endpoint = _managementEndpoint {
+			if object.count == 1, let source = object.first, !source.isDeleted {
 				ToolbarItem(placement: .topBarTrailing) {
 					NavigationLink {
-						CloudSourceManagerView(source: source, managementAddress: endpoint.absoluteString)
+						CloudSourceManagerView(source: source, managementAddress: _managementEndpoint?.absoluteString)
 					} label: {
 						Label("软件源设置", systemImage: "gearshape")
 					}

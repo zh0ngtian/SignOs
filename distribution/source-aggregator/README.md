@@ -93,7 +93,7 @@ SignOs 原订阅已就地从 `ipa-archive` 切换到正式仓库，当前版本�
 | POST `/api/entries/<id>/attest` | 校验 GitHub 全包散列证明 |
 | POST `/api/entries/<id>/history` | 独立解析并导入历史 IPA |
 
-备份含完整性签名，不含 Token。在同一持久实例恢复时保留已验证版本、历史和 ID；文件被修改会拒绝恢复。全新存储实例不能验证旧签名时，仅恢复配置和 ID，重新解析后确认发布；历史版本可通过 `history` 接口重新校验导入。应用名称、Bundle ID、版本等不允许手填。
+备份含完整性签名，不含 Token。在同一持久实例恢复时保留已验证版本、历史和 ID；文件被修改会拒绝恢复。全新存储实例不能验证旧签名时，仅恢复配置和 ID，重新解析后确认发布；历史版本可通过 `history` 接口重新校验导入。远端发布的应用名称、Bundle ID、版本等不允许手填。客户端「软件源设置 → 本机 Bundle ID」可在无管理 Token 时设置本机签名目标，仅写入设备偏好，不修改远端发布身份，也不进入远端备份。
 
 Range 支持 ZIP64、binary/XML plist、Store/Deflate、最大 ZIP 注释和中央目录补读；限制中央目录 4 MiB、plist 解压 512 KiB。忽略 Range 的响应会立即取消。CRC-32 只证明 plist 完整性；公开全包 SHA-256 必须与 GitHub Release 附件的 `digest`、大小一致。
 

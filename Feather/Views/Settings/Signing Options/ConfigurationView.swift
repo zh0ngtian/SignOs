@@ -25,15 +25,8 @@ struct ConfigurationView: View {
 				) {
 					Label(.localized("Display Names"), systemImage: "character.cursor.ibeam")
 				}
-				NavigationLink(destination: ConfigurationDictView(
-					title: .localized("Identifiers"),
-					dataDict: $_optionsManager.options.identifiers
-				)
-				) {
-					Label(.localized("Identifiers"), systemImage: "person.text.rectangle")
-				}
 			}footer: {
-				Text(.localized("This allows you to set rules for automatically replacing the Bundle ID/Display Name when signing an app."))
+				Text("在这里设置签名时的名称替换规则。Bundle ID 请在软件源设置中配置。")
 			}
 			SigningOptionsView(options: $_optionsManager.options)
 		}

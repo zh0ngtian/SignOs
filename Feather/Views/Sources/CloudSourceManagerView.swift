@@ -1,34 +1,39 @@
 import SwiftUI
+import AltSourceKit
 
 struct CloudSourceManagerView: View {
     let source: AltSource
-    let managementAddress: String
+    let managementAddress: String?
+    @ObservedObject private var sources = SourcesViewModel.shared
     @State private var store = CloudSourceStore()
     @State private var token = ""
     @State private var isAdding = false
 
     var body: some View {
         Form {
-            if let snapshot = store.snapshot {
-                Section {
-                    LabeledContent("软件源", value: snapshot.settings.name)
-                    Button { Task { await store.synchronize() } } label: { Label("立即同步", systemImage: "arrow.triangle.2.circlepath") }
-                        .disabled(store.isBusy)
-                } footer: {
-                    Text("IPA 从原始地址直接下载。配置保存在远端，应用默认每小时检查一次更新。")
-                }
-                subscriptionSection(snapshot)
-            } else {
-                Section {
-                    LabeledContent("服务 HTTPS 地址") { Text(managementAddress).font(.caption).textSelection(.enabled) }
-                    SecureField("管理 Token", text: $token)
-                        .textInputAutocapitalization(.never).autocorrectionDisabled()
-                        .accessibilityIdentifier("cloud-source-token")
-                    Button("连接") { Task { await store.connect(address: managementAddress, token: token, expectedIdentifier: source.identifier) } }
-                        .disabled(store.isBusy || token.isEmpty)
-                        .accessibilityIdentifier("cloud-source-connect")
-                } header: { Text("连接远端软件源") } footer: {
-                    Text("输入管理 Token 后，可以添加订阅和查看同步结果。")
+            localBundleIdentifierSection
+            if let managementAddress {
+                if let snapshot = store.snapshot {
+                    Section {
+                        LabeledContent("软件源", value: snapshot.settings.name)
+                        Button { Task { await store.synchronize() } } label: { Label("立即同步", systemImage: "arrow.triangle.2.circlepath") }
+                            .disabled(store.isBusy)
+                    } footer: {
+                        Text("IPA 从原始地址直接下载。配置保存在远端，应用默认每小时检查一次更新。")
+                    }
+                    subscriptionSection(snapshot)
+                } else {
+                    Section {
+                        LabeledContent("服务 HTTPS 地址") { Text(managementAddress).font(.caption).textSelection(.enabled) }
+                        SecureField("管理 Token", text: $token)
+                            .textInputAutocapitalization(.never).autocorrectionDisabled()
+                            .accessibilityIdentifier("cloud-source-token")
+                        Button("连接") { Task { await store.connect(address: managementAddress, token: token, expectedIdentifier: source.identifier) } }
+                            .disabled(store.isBusy || token.isEmpty)
+                            .accessibilityIdentifier("cloud-source-connect")
+                    } header: { Text("连接远端软件源") } footer: {
+                        Text("输入管理 Token 后，可以添加订阅和查看同步结果。")
+                    }
                 }
             }
             SourceManagementSection(source: source, viewModel: SourcesViewModel.shared)
@@ -40,9 +45,13 @@ struct CloudSourceManagerView: View {
         .navigationTitle("软件源设置")
         .toolbar(.visible, for: .navigationBar)
         .navigationBarTitleDisplayMode(.inline)
-        .refreshable { await store.refresh() }
+        .refreshable {
+            try? await sources.refreshSource(source)
+            if store.snapshot != nil { await store.refresh() }
+        }
         .sheet(isPresented: $isAdding) { NavigationStack { CloudSourceSubscriptionForm(store: store) } }
-        .task {
+        .task(id: managementAddress) {
+            guard let managementAddress else { return }
             store.onEntryDeleted = { [weak store] entry, url, identifier in
                 if let url {
                     let bundle = entry.current?.metadata.bundleIdentifier ?? entry.history.first?.metadata.bundleIdentifier
@@ -61,6 +70,41 @@ struct CloudSourceManagerView: View {
                 do { try await Task.sleep(for: .seconds(2)) } catch { return }
                 if store.snapshot?.entries.contains(where: \.isWorking) == true { await store.refresh() }
             }
+        }
+    }
+
+    private var localApps: [ASRepository.App] {
+        let apps = sources.sources[source]?.apps ?? []
+        var seen = Set<String>()
+        return apps.filter { app in app.id.map { seen.insert($0).inserted } ?? false }
+            .sorted { $0.currentName.localizedStandardCompare($1.currentName) == .orderedAscending }
+    }
+
+    private var localBundleIdentifierSection: some View {
+        Section {
+            ForEach(localApps, id: \.id) { app in
+                if let identifier = app.id {
+                    NavigationLink {
+                        ApplicationBundleIdentifierView(originalIdentifier: identifier)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(app.currentName)
+                            Text(AppBundleIdentifierPreferences.shared.identifier(for: identifier))
+                                .font(.caption).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .accessibilityIdentifier("source.bundleIdentifier.\(identifier)")
+                }
+            }
+            if localApps.isEmpty {
+                Text("加载软件源应用后即可配置 Bundle ID，请下拉刷新。")
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("本机 Bundle ID")
+        } footer: {
+            Text("无需管理 Token。默认使用原始 ID，修改仅保存在本机，不会更改软件源。相同应用的不同版本和软件源共用此配置。")
         }
     }
 

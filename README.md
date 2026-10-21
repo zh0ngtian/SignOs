@@ -53,7 +53,8 @@ contributors for their work, this wouldn't exist without them.
 
 ### Signing Tools
 - App Cloner — run two accounts of the same app side by side
-- 应用详情 → 签名设置 → 应用标识符（Bundle ID）：按应用在本机保存签名 ID，默认原始 ID，可恢复原始值；后续手动签名、自动导入、更新和换证书重签沿用，克隆应用独立配置。保存不会立即签名或安装，修改 ID 后由 iOS 视为另一个应用。签名页的临时修改仍只影响当次任务。
+- 软件源 → 右上角软件源设置 → 本机 Bundle ID → 选择应用：无需管理 Token，默认原始 ID，可保存或恢复原始值；只写入本机，不修改远端软件源。应用详情、签名页和全局标识符替换不再提供编辑入口；签名页只展示实际目标 ID。保存不会立即签名或安装，后续手动签名、自动导入、更新和换证书重签沿用，原始身份继续关联软件源，克隆身份独立。
+- 软件源下载后的「签名并安装」会在签名页关闭后，把这次生成的实际目标包交给安装队列，不受全局「签名后安装」开关影响。原始下载包归入配置目标 ID 的本地包，避免多出一张待安装卡片；已经签名的不同 ID 及克隆仍各自保留，安装未确认时继续保护包和重试入口。
 - Tweak Vault — save your favorite .deb and .dylib tweaks once, inject them in one tap
 - PPQ protection, Liquid Glass patching, appearance changes, minimum iOS version
 - Injection path and folder configuration

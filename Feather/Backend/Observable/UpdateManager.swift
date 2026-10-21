@@ -221,8 +221,9 @@ final class UpdateManager: ObservableObject {
         var available: [String: [AppUpdate]] = [:]
         for application in AppInventory.applications(localApps) {
             let local = application.primary
-            guard let uuid = local.uuid, let identifier = local.identifier else { continue }
-            let originalIdentifier = local.originalIdentifier ?? identifier
+            guard let uuid = local.uuid, let packageIdentifier = local.identifier else { continue }
+            let identifier = application.id
+            let originalIdentifier = local.originalIdentifier ?? packageIdentifier
             var metadata = Storage.shared.sourceMetadata(for: local)
             // Repair legacy signing records only when their retained provenance is unambiguous.
             if metadata == nil, local.isSigned {

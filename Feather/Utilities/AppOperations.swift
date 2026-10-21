@@ -154,8 +154,8 @@ enum AppOperations {
             downloadURL: url, sourceURL: provenance.sourceRepositoryURL, sourceProvenance: provenance,
             whatsNew: nil,
             releaseHistory: [UpdateRelease(version: version, date: provenance.sourceAppVersionDate, notes: nil)],
-            managedIdentifier: baseline.identifier)
-        UpdateManager.shared.selectCandidate(candidate, for: bundle)
+            managedIdentifier: AppInventory.groupIdentifier(for: baseline))
+        UpdateManager.shared.selectCandidate(candidate, for: target)
         update(candidate, allowReplacement: true, downloadID: id)
     }
 

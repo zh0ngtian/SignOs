@@ -34,7 +34,7 @@ struct ApplicationBundleIdentifierView: View {
             } header: {
                 Text("原始 Bundle ID")
             } footer: {
-                Text("仅保存在本机，从下次签名开始生效。同一应用的不同版本和软件源共用此设置，克隆应用独立配置。修改 Bundle ID 后，iOS 会将其视为另一个应用。")
+                Text("无需管理 Token，仅保存在本机，不修改软件源。从下次签名开始生效，同一应用的不同版本和软件源共用。修改 Bundle ID 后，iOS 会将其视为另一个应用。")
             }
         }
         .navigationTitle("Bundle ID 配置")
@@ -43,6 +43,8 @@ struct ApplicationBundleIdentifierView: View {
             ToolbarItem(placement: .confirmationAction) {
                 Button("保存") {
                     AppBundleIdentifierPreferences.shared.save(normalizedIdentifier, for: originalIdentifier)
+                    UpdateManager.shared.sourceAvailabilityChanged(localApps: AppOperations.packages())
+                    AutoUpdateManager.shared.updateBadgeFromState()
                     dismiss()
                 }
                 .disabled(validationError != nil || normalizedIdentifier == savedIdentifier)

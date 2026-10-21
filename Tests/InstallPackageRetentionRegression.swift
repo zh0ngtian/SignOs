@@ -336,6 +336,19 @@ struct InstallPackageRetentionRegression {
         precondition(metadataExists("partial-failure") && !metadataExists("partial-success"), "File failures preserve their database and metadata records")
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: parent.path)
         precondition(AppPackageDeletion.remove(.application(bundle)).removed == 1, "Failed deletions remain retryable")
+
+        AppBundleIdentifierPreferences.shared.save("custom.delete.target", for: "custom.delete.original")
+        _ = try package("custom-input", signed: false, identifier: "custom.delete.original")
+        _ = try package("custom-output", signed: true, identifier: "custom.delete.target")
+        _ = try package("custom-clone", signed: true, identifier: "custom.delete.target.clone")
+        let custom = AppInventory.applications(AppOperations.packages()).first { $0.id == "custom.delete.target" }!
+        precondition(custom.packages.count == 2)
+        SourceAccessManager.shared.activeUUIDs = ["custom-input"]
+        precondition(!AppPackageDeletion.remove(.application(custom.id)).failures.isEmpty, "Merged inputs remain protected while used")
+        SourceAccessManager.shared.activeUUIDs = []
+        let customDeleted = AppPackageDeletion.remove(.application(custom.id))
+        precondition(customDeleted.removed == 2 && uuids().contains("custom-clone"), "Deleting the target card includes its original input and preserves clones")
+        precondition(AppBundleIdentifierPreferences.shared.identifier(for: "custom.delete.original") == custom.id)
     }
 
     @MainActor

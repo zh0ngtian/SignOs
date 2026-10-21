@@ -29,6 +29,7 @@ def main():
             *[str(ROOT / source) for source in [
                 "Feather/Utilities/InstallPackageRetention.swift",
                 "Feather/Utilities/AppInventory.swift",
+                "Feather/Utilities/AppBundleIdentifierPreferences.swift",
                 "Feather/Utilities/AppPackageDeletion.swift",
                 "Feather/Utilities/StorageCleanup.swift",
                 "Feather/Utilities/SourceSubscriptionIdentity.swift",

@@ -9,6 +9,7 @@ struct CertificateReplacementRequest: Identifiable {
 
 struct ApplicationDetailView: View {
     let identifier: String
+    let packageUUID: String?
     @ObservedObject private var updates = UpdateManager.shared
     @ObservedObject private var signer = AutoSignManager.shared
     @ObservedObject private var access = SourceAccessManager.shared
@@ -22,14 +23,18 @@ struct ApplicationDetailView: View {
     @FetchRequest(entity: Imported.entity(), sortDescriptors: [NSSortDescriptor(keyPath: \Imported.date, ascending: false)], animation: .snappy)
     private var imported: FetchedResults<Imported>
 
-    private var packages: [any AppInfoPresentable] {
-        signed.filter { $0.identifier == identifier }.map { $0 as any AppInfoPresentable } +
-        imported.filter { $0.identifier == identifier }.map { $0 as any AppInfoPresentable }
+    private var application: ManagedApplication? {
+        let applications = AppInventory.applications(signed.map { $0 as any AppInfoPresentable } + imported.map { $0 as any AppInfoPresentable })
+        return applications.first { $0.id == identifier } ?? applications.first {
+            $0.packages.contains { !$0.isSigned && ($0.uuid == packageUUID || $0.identifier == identifier) }
+        }
     }
-    private var application: ManagedApplication? { AppInventory.applications(packages).first }
-    private var alternatives: [AppUpdate] { updates.candidates[identifier] ?? [] }
+    private var packages: [any AppInfoPresentable] { application?.packages ?? [] }
+    private var currentIdentifier: String { application?.id ?? identifier }
+    private var alternatives: [AppUpdate] { updates.candidates[currentIdentifier] ?? [] }
 
     var body: some View {
+        let identifier = currentIdentifier
         Form {
             if let application {
                 Section {
@@ -55,20 +60,6 @@ struct ApplicationDetailView: View {
                         Label(AppOperations.sourceStatus(application.primary) ?? "来源不可用", systemImage: "pause.circle").font(.footnote).foregroundStyle(.secondary)
                     }
                     if let error = signer.installErrors[identifier] { Text(error).font(.footnote).foregroundStyle(.orange) }
-                }
-                if let original = AppOperations.originalIdentifier(for: application.primary) {
-                    Section("签名设置") {
-                        NavigationLink {
-                            ApplicationBundleIdentifierView(originalIdentifier: original)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 5) {
-                                Text("Bundle ID")
-                                Text(AppBundleIdentifierPreferences.shared.identifier(for: original))
-                                    .font(.caption).foregroundStyle(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                        }
-                    }
                 }
                 Section("更新设置") {
                     Toggle("自动更新", isOn: Binding(get: { AutoUpdateManager.shared.isAutoUpdateEnabled(for: identifier) }, set: {

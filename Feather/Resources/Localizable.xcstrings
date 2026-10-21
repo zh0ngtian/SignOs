@@ -1,6 +1,13 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Sign & Install": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Sign & Install" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "签名并安装" } }
+      }
+    },
   "Keep the imported package until installation ends, so failed installations can be retried without downloading again.": {
     "extractionState": "manual",
     "localizations": {

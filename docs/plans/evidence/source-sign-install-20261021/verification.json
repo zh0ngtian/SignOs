@@ -1,0 +1,67 @@
+{
+  "date": "2026-10-21",
+  "baseline": "83c68575bde697aa0f203ae24d57f7e5f57f38ab",
+  "scope": "软件源签名后安装、源设置内唯一的本机 Bundle ID 入口、原始下载包归入目标应用",
+  "environment": "隔离的完整 SignOs 应用，iPhone 17 Pro / iOS 27 模拟器，本机公开 HTTP 软件源夹具，无管理 Token，无签名证书",
+  "checks": [
+    {
+      "name": "AppBundleIdentifierPreferencesRegression",
+      "result": "passed",
+      "coverage": "原始默认值、保存重载、独立应用/克隆、显式恢复和输入验证，Swift 6 strict concurrency"
+    },
+    {
+      "name": "AutoSignManagerRegression",
+      "result": "passed",
+      "coverage": "生产安装队列；自动签名及全局签名后安装关闭；读取源设置；精确输出 UUID 及目标 ID；错误/缺失输出、禁用源保护；下载包分组与独立签名身份"
+    },
+    {
+      "name": "UpdateManagerRegression",
+      "result": "passed",
+      "coverage": "生产更新管理器及 Core Data；配置目标下的未签名候选、日期、暂停；原始身份关联及既有更新/多源回归"
+    },
+    {
+      "name": "InstallPackageRetentionRegression",
+      "result": "passed",
+      "coverage": "生产本地包删除及保护；合并后的输入/输出一并删除、任务占用保护、克隆及本机偏好保留"
+    },
+    {
+      "name": "OneViewPhaseRegression",
+      "result": "passed",
+      "cases": 6
+    },
+    {
+      "name": "Full simulator Debug build",
+      "result": "passed"
+    },
+    {
+      "name": "make iphoneos",
+      "result": "passed",
+      "configuration": "Release, CODE_SIGNING_ALLOWED=NO, reused resolved dependency checkouts"
+    },
+    {
+      "name": "Complete application UI",
+      "result": "passed",
+      "coverage": [
+        "普通源可打开软件源设置，无需 Token",
+        "软件源设置保存 B 的自定义 ID，源 JSON SHA-256 不变",
+        "签名页读取已保存 ID，标识符仅展示",
+        "签名并安装自动到达系统 iTunes 接管提示",
+        "重启后配置和未确认安装保护均保留",
+        "A/B 各一张卡片，B 详情包含已签名和原始未签名共 2 个包，保留软件源关联",
+        "C 保持未下载和未配置，留给用户验收"
+      ]
+    }
+  ],
+  "limitations": [
+    "模拟器夹具使用 onlyModify 走真实包修改/记录/安装队列，未执行证书签名或证明 Ad Hoc 实际安装",
+    "未验证真机覆盖安装、数据或钥匙串保留",
+    "未发布、未修改版本或构建号"
+  ],
+  "screenshots": {
+    "applications.jpg": "1f06619aa4f36491e543b35cbb64b71063a6e5097df199e1b4b5fb119b5714b5",
+    "installation-handoff.jpg": "009f5afddf4cb5ee80666ad7cf26d19479930e13a91b9063605c8fbb0b5aefd9",
+    "local-packages.jpg": "86b0ff70881d1d5351111c7381a3e1b79894ee6b017e32568ae92a63cbc9d276",
+    "settings.jpg": "e9c974fc012804dcd2d30ae7b61dde9544dc58f69fd02933a7addc623730d26b",
+    "signing-readonly.jpg": "4b7b77e5e067d0af1c2f698856dff6d9a65e96ca1bc1e85d9b8d41fcf0834e24"
+  }
+}
